@@ -189,6 +189,119 @@ fn tint(base: egui::Color32, accent: egui::Color32, t: f32) -> egui::Color32 {
     )
 }
 
+/// One tree plate: a **3-column × tiers-row grid** of skill tiles (row = tier,
+/// column = slot), with the tree colour filling the plate as points are spent.
+fn tree_card(
+    ui: &mut egui::Ui,
+    tree: &crate::skills::SkillTree,
+    grades: &[i32],
+    grade_of: &impl Fn(&str) -> Option<usize>,
+    textures: &std::collections::HashMap<String, Option<egui::TextureHandle>>,
+    edit: &mut Option<(usize, i32)>,
+) {
+    const TILE: f32 = 74.0;
+    const GAP: f32 = 6.0;
+    const COLS: usize = 3;
+
+    let accent = crate::skills::tree_accent(&tree.color);
+    let tree_total: i32 = tree
+        .tiers
+        .iter()
+        .flat_map(|t| &t.skills)
+        .filter_map(|n| grade_of(&n.skill))
+        .map(|i| grades[i].max(0))
+        .sum();
+    let rows = tree.tiers.len().max(1);
+    let grid_w = COLS as f32 * TILE + (COLS as f32 - 1.0) * GAP;
+    let grid_h = rows as f32 * TILE + (rows as f32 - 1.0) * GAP;
+
+    egui::Frame::default()
+        .fill(tint(Tokens::SURFACE, accent, 0.05))
+        .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
+        .corner_radius(egui::CornerRadius::same(8))
+        .inner_margin(egui::Margin::same(10))
+        .show(ui, |ui| {
+            ui.vertical(|ui| {
+                ui.set_width(grid_w);
+                ui.spacing_mut().item_spacing = egui::vec2(GAP, GAP);
+
+                // The tree colour fills from the bottom as points are spent (cap 26).
+                let frac = (tree_total as f32 / 26.0).clamp(0.0, 1.0);
+                let area =
+                    egui::Rect::from_min_size(ui.cursor().min, egui::vec2(grid_w, grid_h));
+                if frac > 0.0 {
+                    let filled = egui::Rect::from_min_max(
+                        egui::pos2(area.left(), area.bottom() - grid_h * frac),
+                        area.max,
+                    );
+                    ui.painter().rect_filled(
+                        filled,
+                        egui::CornerRadius::same(6),
+                        accent.gamma_multiply(0.22),
+                    );
+                }
+
+                for tier in &tree.tiers {
+                    let unlocked = crate::skills::tier_unlocked(tree_total, tier.level);
+                    ui.horizontal(|ui| {
+                        for col in 0..COLS {
+                            match tier.skills.get(col) {
+                                Some(node) => {
+                                    let idx = grade_of(&node.skill);
+                                    let grade = idx.map(|i| grades[i]).unwrap_or(0);
+                                    let max = node.max.max(1);
+                                    let tex = textures.get(&node.icon).cloned().flatten();
+                                    let response = skill_tile(
+                                        ui,
+                                        node,
+                                        tex.as_ref(),
+                                        grade,
+                                        max,
+                                        unlocked,
+                                        accent,
+                                    );
+                                    if unlocked {
+                                        if let Some(i) = idx {
+                                            if response.clicked() && grade < max {
+                                                *edit = Some((i, grade + 1));
+                                            } else if response.secondary_clicked() && grade > 0 {
+                                                *edit = Some((i, grade - 1));
+                                            }
+                                        }
+                                    }
+                                }
+                                None => {
+                                    ui.allocate_exact_size(
+                                        egui::vec2(TILE, TILE),
+                                        egui::Sense::hover(),
+                                    );
+                                }
+                            }
+                        }
+                    });
+                }
+
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new(tree.name.to_uppercase())
+                            .strong()
+                            .size(13.0)
+                            .color(accent),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(
+                            egui::RichText::new(tree_total.to_string())
+                                .strong()
+                                .size(13.0)
+                                .color(accent),
+                        );
+                    });
+                });
+            });
+        });
+}
+
 /// One skill tile: icon-centred with a metal frame and a rank badge, matching the
 /// community calculator. Partial/full/locked/hover states are all visualised.
 fn skill_tile(
@@ -2239,32 +2352,6 @@ impl LootsmithApp {
             }
         }
 
-        // Reserve the pinned description bar before laying out content.
-        let mut hover_desc: Option<(String, String)> = None;
-        egui::Panel::bottom("skill_desc")
-            .frame(
-                egui::Frame::default()
-                    .fill(Tokens::SURFACE)
-                    .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
-                    .corner_radius(egui::CornerRadius::same(6))
-                    .inner_margin(egui::Margin::symmetric(10, 6)),
-            )
-            .show(ui, |ui| {
-                ui.set_min_height(44.0);
-                match &hover_desc {
-                    Some((name, desc)) if !desc.is_empty() => {
-                        ui.label(
-                            egui::RichText::new(name)
-                                .strong()
-                                .size(13.0)
-                                .color(Tokens::ACCENT),
-                        );
-                        ui.label(egui::RichText::new(desc).size(12.0).color(Tokens::TEXT_DIM));
-                    }
-                    _ => theme::faint(ui, "Hover a skill to see what it does."),
-                }
-            });
-
         // Header.
         ui.add_space(6.0);
         ui.horizontal(|ui| {
@@ -2319,110 +2406,10 @@ impl LootsmithApp {
                         );
                         ui.add_space(16.0);
                     }
-                    ui.allocate_ui_with_layout(
-                        egui::vec2(840.0, ui.available_height()),
-                        egui::Layout::top_down(egui::Align::Min),
-                        |ui| {
-                            ui.columns(3, |cols| {
-                            for (ti, tree) in class.trees.iter().enumerate() {
-                                let col = &mut cols[ti];
-                                let accent = crate::skills::tree_accent(&tree.color);
-                                let tree_total: i32 = tree
-                                    .tiers
-                                    .iter()
-                                    .flat_map(|t| &t.skills)
-                                    .filter_map(|n| grade_of(&n.skill))
-                                    .map(|i| grades[i].max(0))
-                                    .sum();
-                                egui::Frame::default()
-                                    .fill(tint(Tokens::SURFACE, accent, 0.05))
-                                    .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
-                                    .corner_radius(egui::CornerRadius::same(8))
-                                    .inner_margin(egui::Margin::same(8))
-                                    .show(col, |ui| {
-                                        ui.set_min_width(256.0);
-                                        ui.set_min_height(440.0);
-                                        let (bar, _) = ui.allocate_exact_size(
-                                            egui::vec2(ui.available_width(), 3.0),
-                                            egui::Sense::hover(),
-                                        );
-                                        ui.painter().rect_filled(
-                                            bar,
-                                            egui::CornerRadius::same(2),
-                                            accent,
-                                        );
-                                        ui.add_space(8.0);
-                                        for tier in &tree.tiers {
-                                            let unlocked = crate::skills::tier_unlocked(
-                                                tree_total,
-                                                tier.level,
-                                            );
-                                            ui.horizontal_wrapped(|ui| {
-                                                for node in &tier.skills {
-                                                    let idx = grade_of(&node.skill);
-                                                    let grade =
-                                                        idx.map(|i| grades[i]).unwrap_or(0);
-                                                    let max = node.max.max(1);
-                                                    let tex =
-                                                        textures.get(&node.icon).cloned().flatten();
-                                                    let response = skill_tile(
-                                                        ui,
-                                                        node,
-                                                        tex.as_ref(),
-                                                        grade,
-                                                        max,
-                                                        unlocked,
-                                                        accent,
-                                                    );
-                                                    if response.hovered() && !node.desc.is_empty() {
-                                                        hover_desc = Some((
-                                                            node.skill.clone(),
-                                                            node.desc.clone(),
-                                                        ));
-                                                    }
-                                                    if unlocked {
-                                                        if let Some(i) = idx {
-                                                            if response.clicked() && grade < max {
-                                                                edit = Some((i, grade + 1));
-                                                            } else if response.secondary_clicked()
-                                                                && grade > 0
-                                                            {
-                                                                edit = Some((i, grade - 1));
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                            ui.add_space(8.0);
-                                        }
-                                        // Push the name/total footer to the bottom of the plate.
-                                        let remaining = (ui.available_height() - 26.0).max(0.0);
-                                        ui.add_space(remaining);
-                                        ui.horizontal(|ui| {
-                                            ui.label(
-                                                egui::RichText::new(tree.name.to_uppercase())
-                                                    .strong()
-                                                    .size(14.0)
-                                                    .color(accent),
-                                            );
-                                            ui.with_layout(
-                                                egui::Layout::right_to_left(egui::Align::Center),
-                                                |ui| {
-                                                    ui.label(
-                                                        egui::RichText::new(tree_total.to_string())
-                                                            .strong()
-                                                            .size(14.0)
-                                                            .color(accent),
-                                                    );
-                                                },
-                                            );
-                                        });
-                                    });
-                                col.add_space(8.0);
-                            }
-                            });
-                        },
-                    );
+                    for tree in class.trees.iter() {
+                        tree_card(ui, tree, &grades, &grade_of, &textures, &mut edit);
+                        ui.add_space(20.0);
+                    }
                 });
 
                 // Save skills not matched to a tree node (e.g. the action skill).
