@@ -15,7 +15,8 @@ fn usage() -> ExitCode {
          lootsmith verify  <file.sav> [--platform <id>]\n  \
          lootsmith dump    <file.sav> [--platform <id>]\n  \
          lootsmith items   <file.sav> [--platform <id>]\n  \
-         lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n\
+         lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n  \
+         lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
@@ -39,6 +40,9 @@ struct Args {
     currency: Option<i32>,
     golden_keys: Option<i32>,
     bank_slots: Option<i32>,
+    item: Option<usize>,
+    part: Option<String>,
+    set: Option<String>,
 }
 
 fn parse_args() -> Option<Args> {
@@ -58,6 +62,9 @@ fn parse_args() -> Option<Args> {
         currency: None,
         golden_keys: None,
         bank_slots: None,
+        item: None,
+        part: None,
+        set: None,
     };
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -75,10 +82,29 @@ fn parse_args() -> Option<Args> {
             "--currency" => args.currency = Some(it.next()?.parse().ok()?),
             "--golden-keys" => args.golden_keys = Some(it.next()?.parse().ok()?),
             "--bank-slots" => args.bank_slots = Some(it.next()?.parse().ok()?),
+            "--item" => args.item = Some(it.next()?.parse().ok()?),
+            "--part" => args.part = Some(it.next()?),
+            "--set" => args.set = Some(it.next()?),
             _ => return None,
         }
     }
     Some(args)
+}
+
+fn load_manager(dumps: &Option<String>) -> Option<AssetLibraryManager> {
+    let path = dumps
+        .clone()
+        .or_else(|| std::env::var("LOOTSMITH_ASSET_LIBRARY").ok())?;
+    match AssetLibraryManager::from_path(std::path::Path::new(&path)) {
+        Ok(m) => {
+            eprintln!("loaded asset library manager from {path}");
+            Some(m)
+        }
+        Err(e) => {
+            eprintln!("warning: cannot load {path}: {e}");
+            None
+        }
+    }
 }
 
 fn main() -> ExitCode {
@@ -343,6 +369,55 @@ fn main() -> ExitCode {
             }
             if let Some(v) = args.bank_slots {
                 save_game.set_i32(56, v);
+                changes += 1;
+            }
+
+            if let (Some(index), Some(part), Some(name)) =
+                (args.item, args.part.clone(), args.set.clone())
+            {
+                let Some(manager) = load_manager(&args.dumps) else {
+                    eprintln!(
+                        "error: --item/--part/--set needs --dumps <Asset Library Manager.json>"
+                    );
+                    return ExitCode::FAILURE;
+                };
+                let entries = save_game.packed_entries();
+                if index == 0 || index > entries.len() {
+                    eprintln!(
+                        "error: item index {index} out of range (1..{})",
+                        entries.len()
+                    );
+                    return ExitCode::FAILURE;
+                }
+                let entry = &entries[index - 1];
+                let mut decoded = match items::unpack(&entry.serial, &manager.configs) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        eprintln!("error: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                };
+                let group = match decoded.set_part(&manager, &part, &name) {
+                    Ok(g) => g,
+                    Err(e) => {
+                        eprintln!("error: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                };
+                let new_serial = match items::pack(&decoded, &manager.configs) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("error: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                };
+                if let Err(e) =
+                    save_game.replace_serial(entry.field_number, entry.occurrence, &new_serial)
+                {
+                    eprintln!("error: {e}");
+                    return ExitCode::FAILURE;
+                }
+                println!("item #{index}: set {part} = {name} ({})", group.key());
                 changes += 1;
             }
 

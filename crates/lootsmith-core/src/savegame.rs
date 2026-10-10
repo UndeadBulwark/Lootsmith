@@ -557,3 +557,67 @@ fn render_field(field: &Field, kind: Option<Kind>) -> String {
         },
     }
 }
+
+/// A packed item/weapon entry: its top-level field number, its occurrence index
+/// within that field, and its `InventorySerialNumber` bytes.
+#[derive(Clone, Debug)]
+pub struct PackedEntry {
+    pub field_number: u32,
+    pub occurrence: usize,
+    pub serial: Vec<u8>,
+}
+
+impl SaveGame {
+    /// Enumerate packed items (field 53) then weapons (field 54) in order.
+    pub fn packed_entries(&self) -> Vec<PackedEntry> {
+        let mut out = Vec::new();
+        for field_number in [53u32, 54u32] {
+            for (occurrence, field) in self.message.get_all(field_number).enumerate() {
+                if let Some(bytes) = field.as_bytes() {
+                    if let Ok(sub) = Message::parse(bytes) {
+                        if let Some(serial) = sub.get(1).and_then(|f| f.as_bytes()) {
+                            out.push(PackedEntry {
+                                field_number,
+                                occurrence,
+                                serial: serial.to_vec(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// Replace the `InventorySerialNumber` (field 1) of one packed entry,
+    /// rebuilding that entry's bytes while leaving every other field untouched.
+    pub fn replace_serial(
+        &mut self,
+        field_number: u32,
+        occurrence: usize,
+        new_serial: &[u8],
+    ) -> crate::error::Result<()> {
+        let mut seen = 0usize;
+        for field in &mut self.message.fields {
+            if field.number != field_number {
+                continue;
+            }
+            if seen == occurrence {
+                let sub_bytes = field
+                    .as_bytes()
+                    .ok_or_else(|| {
+                        crate::error::Error::Proto("packed entry is not length-delimited".into())
+                    })?
+                    .to_vec();
+                let mut sub = Message::parse(&sub_bytes)?;
+                sub.set(Field::bytes(1, new_serial));
+                *field = Field::bytes(field_number, &sub.to_bytes());
+                return Ok(());
+            }
+            seen += 1;
+        }
+        Err(crate::error::Error::Proto(format!(
+            "no packed entry {occurrence} in field {field_number}"
+        )))
+    }
+}

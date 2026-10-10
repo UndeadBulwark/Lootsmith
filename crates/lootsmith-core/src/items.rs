@@ -14,7 +14,7 @@
 use crate::bitio::{BitReader, BitWriter};
 use crate::crc32::crc32;
 use crate::error::{Error, Result};
-use crate::gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs};
+use crate::gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 
 /// A packed asset reference (asset index within a sublibrary).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -284,6 +284,138 @@ pub enum PackedSlot {
 
 const MAX_BLOB: usize = 40;
 const OBFUSCATION_INDEX: usize = 5;
+
+/// Resolve a named slot to its asset group, without mutating anything.
+pub fn slot_group(slot: &PackedSlot, name: &str) -> Option<AssetGroup> {
+    match slot {
+        PackedSlot::Weapon(_) => match name {
+            "type" | "weapon_type" => Some(AssetGroup::WeaponTypes),
+            "balance" => Some(AssetGroup::BalanceDefs),
+            "manufacturer" | "mfr" => Some(AssetGroup::Manufacturers),
+            "body" | "grip" | "barrel" | "sight" | "stock" | "elemental" | "accessory1"
+            | "acc1" | "accessory2" | "acc2" | "material" | "prefix" | "title" => {
+                Some(AssetGroup::WeaponParts)
+            }
+            _ => None,
+        },
+        PackedSlot::Item(_) => match name {
+            "item" | "type" => Some(AssetGroup::ItemTypes),
+            "balance" => Some(AssetGroup::BalanceDefs),
+            "manufacturer" | "mfr" => Some(AssetGroup::Manufacturers),
+            "alpha" | "beta" | "gamma" | "delta" | "epsilon" | "zeta" | "eta" | "theta"
+            | "material" | "prefix" | "title" => Some(AssetGroup::ItemParts),
+            _ => None,
+        },
+    }
+}
+
+fn slot_target<'a>(
+    slot: &'a mut PackedSlot,
+    name: &str,
+) -> Option<(&'a mut PackedAssetReference, AssetGroup)> {
+    match slot {
+        PackedSlot::Weapon(w) => {
+            let (r, g) = match name {
+                "type" | "weapon_type" => (&mut w.weapon_type, AssetGroup::WeaponTypes),
+                "balance" => (&mut w.balance, AssetGroup::BalanceDefs),
+                "manufacturer" | "mfr" => (&mut w.manufacturer, AssetGroup::Manufacturers),
+                "body" => (&mut w.body_part, AssetGroup::WeaponParts),
+                "grip" => (&mut w.grip_part, AssetGroup::WeaponParts),
+                "barrel" => (&mut w.barrel_part, AssetGroup::WeaponParts),
+                "sight" => (&mut w.sight_part, AssetGroup::WeaponParts),
+                "stock" => (&mut w.stock_part, AssetGroup::WeaponParts),
+                "elemental" => (&mut w.elemental_part, AssetGroup::WeaponParts),
+                "accessory1" | "acc1" => (&mut w.accessory1_part, AssetGroup::WeaponParts),
+                "accessory2" | "acc2" => (&mut w.accessory2_part, AssetGroup::WeaponParts),
+                "material" => (&mut w.material_part, AssetGroup::WeaponParts),
+                "prefix" => (&mut w.prefix_part, AssetGroup::WeaponParts),
+                "title" => (&mut w.title_part, AssetGroup::WeaponParts),
+                _ => return None,
+            };
+            Some((r, g))
+        }
+        PackedSlot::Item(i) => {
+            let (r, g) = match name {
+                "item" | "type" => (&mut i.item, AssetGroup::ItemTypes),
+                "balance" => (&mut i.balance, AssetGroup::BalanceDefs),
+                "manufacturer" | "mfr" => (&mut i.manufacturer, AssetGroup::Manufacturers),
+                "alpha" => (&mut i.alpha_part, AssetGroup::ItemParts),
+                "beta" => (&mut i.beta_part, AssetGroup::ItemParts),
+                "gamma" => (&mut i.gamma_part, AssetGroup::ItemParts),
+                "delta" => (&mut i.delta_part, AssetGroup::ItemParts),
+                "epsilon" => (&mut i.epsilon_part, AssetGroup::ItemParts),
+                "zeta" => (&mut i.zeta_part, AssetGroup::ItemParts),
+                "eta" => (&mut i.eta_part, AssetGroup::ItemParts),
+                "theta" => (&mut i.theta_part, AssetGroup::ItemParts),
+                "material" => (&mut i.material_part, AssetGroup::ItemParts),
+                "prefix" => (&mut i.prefix_part, AssetGroup::ItemParts),
+                "title" => (&mut i.title_part, AssetGroup::ItemParts),
+                _ => return None,
+            };
+            Some((r, g))
+        }
+    }
+}
+
+impl PackedData {
+    /// Set a named slot from a `package.asset` name (or `"None"`). Returns the
+    /// asset group that was resolved.
+    pub fn set_part(
+        &mut self,
+        manager: &AssetLibraryManager,
+        slot: &str,
+        name: &str,
+    ) -> Result<AssetGroup> {
+        let group = slot_group(&self.slot, slot)
+            .ok_or_else(|| Error::PackedData(format!("unknown slot '{slot}'")))?;
+        let (asset_index, sublibrary_index, use_set_id) =
+            manager.find_asset(group, self.asset_library_set_id, name)?;
+        let (target, _) = slot_target(&mut self.slot, slot).expect("slot validated above");
+        *target = PackedAssetReference {
+            asset_index,
+            sublibrary_index,
+            use_set_id,
+        };
+        Ok(group)
+    }
+
+    /// Read a named slot's reference and group.
+    pub fn part(&self, slot: &str) -> Option<(PackedAssetReference, AssetGroup)> {
+        let group = slot_group(&self.slot, slot)?;
+        let r = match (&self.slot, slot) {
+            (PackedSlot::Weapon(w), "type" | "weapon_type") => w.weapon_type,
+            (PackedSlot::Weapon(w), "balance") => w.balance,
+            (PackedSlot::Weapon(w), "manufacturer" | "mfr") => w.manufacturer,
+            (PackedSlot::Weapon(w), "body") => w.body_part,
+            (PackedSlot::Weapon(w), "grip") => w.grip_part,
+            (PackedSlot::Weapon(w), "barrel") => w.barrel_part,
+            (PackedSlot::Weapon(w), "sight") => w.sight_part,
+            (PackedSlot::Weapon(w), "stock") => w.stock_part,
+            (PackedSlot::Weapon(w), "elemental") => w.elemental_part,
+            (PackedSlot::Weapon(w), "accessory1" | "acc1") => w.accessory1_part,
+            (PackedSlot::Weapon(w), "accessory2" | "acc2") => w.accessory2_part,
+            (PackedSlot::Weapon(w), "material") => w.material_part,
+            (PackedSlot::Weapon(w), "prefix") => w.prefix_part,
+            (PackedSlot::Weapon(w), "title") => w.title_part,
+            (PackedSlot::Item(i), "item" | "type") => i.item,
+            (PackedSlot::Item(i), "balance") => i.balance,
+            (PackedSlot::Item(i), "manufacturer" | "mfr") => i.manufacturer,
+            (PackedSlot::Item(i), "alpha") => i.alpha_part,
+            (PackedSlot::Item(i), "beta") => i.beta_part,
+            (PackedSlot::Item(i), "gamma") => i.gamma_part,
+            (PackedSlot::Item(i), "delta") => i.delta_part,
+            (PackedSlot::Item(i), "epsilon") => i.epsilon_part,
+            (PackedSlot::Item(i), "zeta") => i.zeta_part,
+            (PackedSlot::Item(i), "eta") => i.eta_part,
+            (PackedSlot::Item(i), "theta") => i.theta_part,
+            (PackedSlot::Item(i), "material") => i.material_part,
+            (PackedSlot::Item(i), "prefix") => i.prefix_part,
+            (PackedSlot::Item(i), "title") => i.title_part,
+            _ => return None,
+        };
+        Some((r, group))
+    }
+}
 
 fn seed_from(data: &[u8]) -> u32 {
     // BitConverter.ToUInt32(data, 1).Swap()

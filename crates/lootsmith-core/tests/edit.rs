@@ -1,6 +1,6 @@
 //! Phase 5 gate: edit in memory, serialize the whole file, and re-open it.
 
-use lootsmith_core::{container, Platform};
+use lootsmith_core::{container, items, Platform};
 
 fn fixture() -> Option<Vec<u8>> {
     let path = format!(
@@ -66,4 +66,97 @@ fn edit_currency_replaces_first_slot_only() {
     let after = edited.currency_on_hand();
     assert_eq!(after[0], 123_456_789);
     assert_eq!(&after[1..], &before[1..]);
+}
+
+fn dumps_path() -> Option<std::path::PathBuf> {
+    [
+        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
+        Some(format!(
+            "{}/../bl2-rogue/data/gibbed/Asset Library Manager.json",
+            env!("CARGO_MANIFEST_DIR")
+        )),
+    ]
+    .into_iter()
+    .flatten()
+    .map(std::path::PathBuf::from)
+    .find(|p| p.exists())
+}
+
+#[test]
+fn edit_weapon_part_by_name() {
+    let Some(data) = fixture() else {
+        return;
+    };
+    let Some(dump) = dumps_path() else {
+        eprintln!("no dumps file; skipping");
+        return;
+    };
+    let manager = lootsmith_core::AssetLibraryManager::from_path(&dump).expect("manager");
+
+    let save = container::unpack(&data, Platform::PC).expect("unpack");
+    let mut save_game = save.save_game().expect("parse");
+    let entries = save_game.packed_entries();
+
+    let entry = entries
+        .iter()
+        .find(|e| e.field_number == 54)
+        .expect("a weapon entry")
+        .clone();
+    let mut decoded = items::unpack(&entry.serial, &manager.configs).expect("decode");
+
+    // Point the title at a real, different part.
+    decoded
+        .set_part(
+            &manager,
+            "title",
+            "GD_Weap_Pistol.Name.Title_Jakobs.Title_Barrel_Jakobs_SlowDamage",
+        )
+        .expect("set title");
+    let new_serial = items::pack(&decoded, &manager.configs).expect("pack");
+
+    save_game
+        .replace_serial(entry.field_number, entry.occurrence, &new_serial)
+        .expect("replace serial");
+
+    let file = container::serialize(&save_game.to_bytes(), Platform::PC).expect("serialize");
+    let reopened = container::unpack(&file, Platform::PC).expect("reopen");
+    assert!(reopened.crc32_valid());
+    assert!(reopened.proto_stable());
+
+    let edited = reopened.save_game().expect("reparse");
+    let entries2 = edited.packed_entries();
+    assert_eq!(entries2.len(), entries.len(), "entry count changed");
+
+    let entry2 = entries2
+        .iter()
+        .find(|e| e.field_number == 54)
+        .expect("weapon entry");
+    let decoded2 = items::unpack(&entry2.serial, &manager.configs).expect("decode");
+    let title = decoded2.part("title").expect("title slot").0;
+    let name = manager
+        .lookup_asset(
+            lootsmith_core::AssetGroup::WeaponParts,
+            decoded2.asset_library_set_id,
+            title.asset_index,
+            title.sublibrary_index,
+            title.use_set_id,
+        )
+        .expect("lookup title");
+    assert_eq!(
+        name,
+        "GD_Weap_Pistol.Name.Title_Jakobs.Title_Barrel_Jakobs_SlowDamage"
+    );
+
+    // A different weapon's serial is untouched.
+    let other = entries2
+        .iter()
+        .filter(|e| e.field_number == 54)
+        .nth(1)
+        .expect("second weapon");
+    let other_original = entries
+        .iter()
+        .filter(|e| e.field_number == 54)
+        .nth(1)
+        .expect("second weapon original");
+    assert_eq!(other.serial, other_original.serial);
 }
