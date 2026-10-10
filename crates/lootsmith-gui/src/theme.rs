@@ -9,6 +9,46 @@ pub enum Theme {
     Light,
 }
 
+// ---------------------------------------------------------------------------
+// Fonts (spec §2.4). Both are OFL; their licence texts ship next to the files
+// (`assets/fonts/OFL-PixelifySans.txt`, `OFL-VT323.txt`).
+// ---------------------------------------------------------------------------
+
+/// Pixelify Sans (OFL) — UI labels, headings, buttons.
+const FONT_PIXELIFY: &[u8] = include_bytes!("../assets/fonts/PixelifySans.ttf");
+/// VT323 (OFL) — numbers and item codes.
+const FONT_VT323: &[u8] = include_bytes!("../assets/fonts/VT323.ttf");
+
+/// Family name of the UI font (Pixelify Sans).
+pub const FONT_UI: &str = "pixelify";
+/// Family name of the numeric font (VT323).
+pub const FONT_NUM: &str = "vt323";
+
+/// Build the font set: Pixelify Sans first in the proportional family, VT323
+/// first in the monospace family (numbers and codes).
+pub fn font_definitions() -> egui::FontDefinitions {
+    let mut fonts = egui::FontDefinitions::default();
+    fonts.font_data.insert(
+        FONT_UI.to_owned(),
+        std::sync::Arc::new(egui::FontData::from_static(FONT_PIXELIFY)),
+    );
+    fonts.font_data.insert(
+        FONT_NUM.to_owned(),
+        std::sync::Arc::new(egui::FontData::from_static(FONT_VT323)),
+    );
+    fonts
+        .families
+        .entry(egui::FontFamily::Proportional)
+        .or_default()
+        .insert(0, FONT_UI.to_owned());
+    fonts
+        .families
+        .entry(egui::FontFamily::Monospace)
+        .or_default()
+        .insert(0, FONT_NUM.to_owned());
+    fonts
+}
+
 /// Colour tokens (dark theme).
 pub struct Tokens;
 
@@ -280,30 +320,33 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     w.open.corner_radius = egui::CornerRadius::same(6);
 
     ctx.set_visuals(visuals);
+    ctx.set_fonts(font_definitions());
 
     ctx.all_styles_mut(|style| {
         style.spacing.item_spacing = egui::vec2(8.0, 6.0);
         style.spacing.button_padding = egui::vec2(10.0, 4.0);
         style.spacing.interact_size.y = 26.0;
+        // Spec §2.4: 15 px body, 13 px small labels, 18–24 px headings; VT323 at
+        // 19 px for numbers and item codes.
         style.text_styles.insert(
             egui::TextStyle::Heading,
-            egui::FontId::new(15.0, egui::FontFamily::Proportional),
+            egui::FontId::new(20.0, egui::FontFamily::Proportional),
         );
         style.text_styles.insert(
             egui::TextStyle::Body,
-            egui::FontId::new(13.0, egui::FontFamily::Proportional),
+            egui::FontId::new(15.0, egui::FontFamily::Proportional),
         );
         style.text_styles.insert(
             egui::TextStyle::Button,
-            egui::FontId::new(13.0, egui::FontFamily::Proportional),
+            egui::FontId::new(15.0, egui::FontFamily::Proportional),
         );
         style.text_styles.insert(
             egui::TextStyle::Small,
-            egui::FontId::new(11.0, egui::FontFamily::Proportional),
+            egui::FontId::new(13.0, egui::FontFamily::Proportional),
         );
         style.text_styles.insert(
             egui::TextStyle::Monospace,
-            egui::FontId::new(12.0, egui::FontFamily::Monospace),
+            egui::FontId::new(19.0, egui::FontFamily::Monospace),
         );
     });
 }
@@ -435,6 +478,31 @@ mod tests {
     #[test]
     fn diamond_outline_is_mandated() {
         assert_eq!(DIAMOND_OUTLINE, 2.0, "spec 2.3: 2 px fg outline");
+    }
+
+    #[test]
+    fn fonts_are_registered_first_in_their_families() {
+        let fonts = font_definitions();
+        assert_eq!(
+            fonts.families.get(&egui::FontFamily::Proportional).unwrap()[0],
+            FONT_UI,
+            "Pixelify Sans must lead the proportional family"
+        );
+        assert_eq!(
+            fonts.families.get(&egui::FontFamily::Monospace).unwrap()[0],
+            FONT_NUM,
+            "VT323 must lead the monospace family"
+        );
+        assert!(fonts.font_data.contains_key(FONT_UI));
+        assert!(fonts.font_data.contains_key(FONT_NUM));
+        for (name, bytes) in [("pixelify", FONT_PIXELIFY), ("vt323", FONT_VT323)] {
+            assert!(bytes.len() > 10_000, "{name} looks empty");
+            let tag = &bytes[..4];
+            assert!(
+                tag == [0x00, 0x01, 0x00, 0x00] || tag == *b"true" || tag == *b"OTTO",
+                "{name} is not a TrueType/OpenType font: {tag:?}"
+            );
+        }
     }
 
     #[test]

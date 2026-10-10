@@ -372,6 +372,9 @@ pub struct LootsmithApp {
     pub currency_show_unused: bool,
     pub theme: Theme,
     theme_applied: bool,
+    /// UI scale: 1.0, 1.5 or 2.0 (spec §2.1 rule 7). Applied via
+    /// `ctx.set_pixels_per_point`.
+    pub ui_scale: f32,
     /// There are edits in memory that have not been written to disk.
     pub dirty: bool,
     pub status: String,
@@ -459,6 +462,7 @@ impl LootsmithApp {
             currency_show_unused: false,
             theme: Theme::Dark,
             theme_applied: false,
+            ui_scale: 1.0,
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
@@ -525,6 +529,29 @@ impl LootsmithApp {
 
     pub fn set_tab(&mut self, tab: Tab) {
         self.tab = tab;
+    }
+
+    /// The only permitted UI scales (spec §2.1 rule 7). 150% is not an integer
+    /// multiple; painted geometry is snapped to whole physical pixels instead.
+    pub const UI_SCALES: [f32; 3] = [1.0, 1.5, 2.0];
+
+    /// Snap an arbitrary scale to the nearest permitted value (ties favour the
+    /// smaller scale).
+    pub fn clamp_ui_scale(scale: f32) -> f32 {
+        Self::UI_SCALES
+            .into_iter()
+            .min_by(|a, b| {
+                (scale - *a)
+                    .abs()
+                    .partial_cmp(&(scale - *b).abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .unwrap_or(1.0)
+    }
+
+    /// Set the UI scale, clamped to the permitted values.
+    pub fn set_ui_scale(&mut self, scale: f32) {
+        self.ui_scale = Self::clamp_ui_scale(scale);
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -1945,6 +1972,7 @@ impl LootsmithApp {
     pub fn build(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.apply_theme(&ctx);
+        ctx.set_pixels_per_point(self.ui_scale);
         self.handle_shortcuts(&ctx);
 
         if !self.loaded_once {
@@ -2064,6 +2092,25 @@ impl LootsmithApp {
                         {
                             action = Some(Action::ToggleTheme);
                         }
+                        ui.label(
+                            egui::RichText::new("Scale")
+                                .color(Tokens::TEXT_DIM)
+                                .size(11.5),
+                        );
+                        for value in Self::UI_SCALES {
+                            let text = format!("{}%", (value * 100.0).round() as i32);
+                            if ui
+                                .selectable_label(
+                                    (self.ui_scale - value).abs() < f32::EPSILON,
+                                    text,
+                                )
+                                .on_hover_text("UI scale (whole pixels)")
+                                .clicked()
+                            {
+                                self.ui_scale = value;
+                            }
+                        }
+                        ui.add_space(4.0);
                         if self.dirty {
                             ui.colored_label(Tokens::ACCENT, "● unsaved");
                         }

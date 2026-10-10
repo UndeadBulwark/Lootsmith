@@ -582,6 +582,49 @@ fn bundled_tables_resolve_names_with_no_game_data_folder() {
 }
 
 #[test]
+fn ui_scale_is_clamped_to_100_150_200() {
+    // Spec §2.1 rule 7: only 100/150/200 are offered.
+    assert_eq!(LootsmithApp::clamp_ui_scale(0.9), 1.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.1), 1.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.37), 1.5);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.75), 1.5);
+    assert_eq!(LootsmithApp::clamp_ui_scale(2.4), 2.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.0), 1.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.5), 1.5);
+    assert_eq!(LootsmithApp::clamp_ui_scale(2.0), 2.0);
+}
+
+#[test]
+fn ui_scale_control_selects_150_percent() {
+    let mut h = harness();
+    h.run();
+    assert_eq!(h.state().ui_scale, 1.0);
+    h.get_by_label("150%").click();
+    h.run();
+    assert_eq!(h.state().ui_scale, 1.5);
+}
+
+#[test]
+fn ui_scale_control_selects_200_percent() {
+    let mut h = harness();
+    h.run();
+    assert_eq!(h.state().ui_scale, 1.0);
+    h.get_by_label("200%").click();
+    h.run();
+    assert_eq!(h.state().ui_scale, 2.0);
+}
+
+#[test]
+fn ui_scale_setter_clamps() {
+    let save = synthetic_save_path();
+    let mut h = harness_isolated(&save);
+    h.state_mut().set_ui_scale(1.42);
+    assert_eq!(h.state().ui_scale, 1.5);
+    h.state_mut().set_ui_scale(9.0);
+    assert_eq!(h.state().ui_scale, 2.0);
+}
+
+#[test]
 fn require_fixtures_is_off_by_default_here() {
     // A guard so the suite notices if someone flips the flag in CI without
     // providing the data.

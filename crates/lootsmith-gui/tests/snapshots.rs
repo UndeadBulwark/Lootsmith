@@ -11,6 +11,7 @@
 mod common;
 
 use common::{harness_isolated, harness_with};
+use egui::Vec2;
 
 /// A 1280x800 render of the Backpack screen on the synthetic save.
 #[test]
@@ -42,6 +43,45 @@ fn smoke_backpack_light() {
         .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
     h.run();
     h.snapshot("smoke_backpack_light");
+}
+
+/// The Backpack screen at 200% scale (dark), to check the pixel grid.
+#[test]
+fn smoke_backpack_dark_2x() {
+    let _serial = common::snapshot_lock();
+    let path = std::env::temp_dir().join("lootsmith-snapshot.sav");
+    lootsmith_core::fixture::write_synthetic_save(&path).expect("write synthetic save");
+    let mut h = common::harness_sized(
+        &path.display().to_string(),
+        common::dumps_path().as_deref(),
+        Vec2::new(2560.0, 1600.0),
+    );
+    h.state_mut().set_ui_scale(2.0);
+    h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
+    h.state_mut()
+        .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
+    h.run();
+    h.snapshot("smoke_backpack_dark_2x");
+}
+
+/// The Backpack screen at 200% scale (light).
+#[test]
+fn smoke_backpack_light_2x() {
+    let _serial = common::snapshot_lock();
+    let path = std::env::temp_dir().join("lootsmith-snapshot.sav");
+    lootsmith_core::fixture::write_synthetic_save(&path).expect("write synthetic save");
+    let mut h = common::harness_sized(
+        &path.display().to_string(),
+        common::dumps_path().as_deref(),
+        Vec2::new(2560.0, 1600.0),
+    );
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
+    h.state_mut().set_ui_scale(2.0);
+    h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
+    h.state_mut()
+        .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
+    h.run();
+    h.snapshot("smoke_backpack_light_2x");
 }
 
 /// The item inspector with **no** game-data folder: part names must resolve

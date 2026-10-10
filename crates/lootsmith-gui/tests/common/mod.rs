@@ -92,6 +92,20 @@ pub fn harness_with(save: &str, dumps: Option<&str>) -> Harness<'static, Lootsmi
         )
 }
 
+/// A harness at an explicit size (physical pixels), for the 200% render: the
+/// logical point-space is `size / pixels_per_point`, so 2× needs a 2560×1600
+/// harness to show the full 1280×800 layout.
+pub fn harness_sized(
+    save: &str,
+    dumps: Option<&str>,
+    size: Vec2,
+) -> Harness<'static, LootsmithApp> {
+    Harness::builder().with_size(size).build_ui_state(
+        |ui, app: &mut LootsmithApp| app.build(ui),
+        LootsmithApp::new(Some(save.to_string()), dumps.map(str::to_string)),
+    )
+}
+
 /// A harness whose app is **isolated** from the host (`LootsmithApp::new_isolated`):
 /// it ignores every `LOOTSMITH_*` variable, never runs first-run discovery, and
 /// always uses the bundled tables. Use this for the "no folder" tests so a
