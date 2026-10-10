@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[lib]
+name = "lootsmith_gui"
+path = "src/lib.rs"
+
 [[bin]]
 name = "lootsmith-gui"
 path = "src/main.rs"
@@ -13,3 +17,8 @@ path = "src/main.rs"
 lootsmith-core = { workspace = true }
 eframe = "0.36"
 rfd = "0.17"
+
+[dev-dependencies]
+egui = "0.36"
+egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

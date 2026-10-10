@@ -99,15 +99,25 @@ A menu entry is installed at `~/.local/share/applications/lootsmith.desktop`
 (with an icon), so Lootsmith can be opened from the application menu; opening a
 `.sav` with it passes the file via `%f`.
 
-### Driving it for debugging
+### Headless UI tests and snapshots
 
-`scripts/gui-drive.sh` launches the GUI on X11 (Xwayland), finds its window, and
-screenshots it, so it can be driven with `xdotool`:
+The GUI is driven and inspected without a window or focus, via
+[`egui_kittest`](https://docs.rs/egui_kittest) (AccessKit): widgets are found by
+label and clicked in-process, and screens are rendered offscreen to PNG.
 
 ```sh
-scripts/gui-drive.sh --open tests/fixtures/pc_Save0001.sav --dumps "$DUMPS"
-# -> pid=… window=… shot=/tmp/opencode/lootsmith-shot.png
+# Widget-level interaction tests (click tabs/items by label, edit, save, verify)
+cargo test -p lootsmith-gui
+
+# Render the tabs/screens offscreen to PNGs for review
+cargo run -p lootsmith-gui --example snapshot -- /tmp/opencode/shots
 ```
+
+The UI body lives in `LootsmithApp::build`, shared verbatim by the native window
+and the test harness, so tests exercise exactly what the human sees.
+
+`scripts/gui-drive.sh` is an optional extra for watching the *live* window (it
+launches on X11 and screenshots the window); it is not needed for testing.
 
 A headless self-test (load → edit → save → reload → verify, no window):
 

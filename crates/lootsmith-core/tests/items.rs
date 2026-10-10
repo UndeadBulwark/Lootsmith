@@ -24,7 +24,7 @@ fn load_configs() -> AssetLibraryConfigs {
     let candidates = [
         std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
         Some(format!(
-            "{}/../bl2-rogue/data/gibbed/Asset Library Manager.json",
+            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
             env!("CARGO_MANIFEST_DIR")
         )),
     ];
@@ -119,7 +119,7 @@ fn pc_default_matches_dump_configs() {
     let Some(dump) = [
         std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
         Some(format!(
-            "{}/../bl2-rogue/data/gibbed/Asset Library Manager.json",
+            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
             env!("CARGO_MANIFEST_DIR")
         )),
     ]

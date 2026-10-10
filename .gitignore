@@ -6,3 +6,7 @@ Cargo.lock.orig
 /tests/fixtures/*.sav
 /tests/fixtures/*.bin
 /tests/fixtures/**/*.sav
+
+# kittest snapshot artifacts
+**/tests/snapshots/**/*.new.png
+**/tests/snapshots/**/*.diff.png

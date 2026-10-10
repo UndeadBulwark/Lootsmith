@@ -313,6 +313,24 @@ impl AssetLibraryManager {
         ))
     }
 
+    /// All distinct `package.asset` names available for a group across the given
+    /// set (plus set 0), sorted. Used to populate editor dropdowns.
+    pub fn choices(&self, group: AssetGroup, set_id: i32) -> Vec<String> {
+        let mut out = std::collections::BTreeSet::new();
+        for id in [0, set_id] {
+            if let Some(set) = self.sets.get(&id) {
+                if let Some(library) = set.libraries.get(&group) {
+                    for sub in &library.sublibraries {
+                        for asset in &sub.assets {
+                            out.insert(format!("{}.{}", sub.package, asset));
+                        }
+                    }
+                }
+            }
+        }
+        out.into_iter().collect()
+    }
+
     /// Find the packed indices for a `package.asset` name. Falls back to set 0.
     /// Returns `(asset_index, sublibrary_index, use_set_id)`.
     pub fn find_asset(
