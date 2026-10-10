@@ -31,6 +31,16 @@ pub(crate) use widgets::*;
 
 pub use item_editor::slots_for;
 
+/// How the UI scale is chosen (spec §2.1 rule 7).
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum ScaleMode {
+    /// Pick an integer scale from the monitor's physical size.
+    #[default]
+    Auto,
+    /// A fixed integer scale (1..=4).
+    Fixed(u32),
+}
+
 #[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum Tab {
     General,
@@ -407,6 +417,8 @@ pub struct LootsmithApp {
     pub show_settings: bool,
     /// The Ctrl+K action-search text.
     pub action_search: String,
+    /// The UI-scale mode (Auto or a fixed integer scale).
+    pub scale_mode: ScaleMode,
     /// There are edits in memory that have not been written to disk.
     pub dirty: bool,
     pub status: String,
@@ -504,6 +516,7 @@ impl LootsmithApp {
             },
             show_settings: false,
             action_search: String::new(),
+            scale_mode: ScaleMode::Auto,
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
@@ -572,9 +585,18 @@ impl LootsmithApp {
         self.tab = tab;
     }
 
-    /// The only permitted UI scales (spec §2.1 rule 7). 150% is not an integer
-    /// multiple; painted geometry is snapped to whole physical pixels instead.
-    pub const UI_SCALES: [f32; 3] = [1.0, 1.5, 2.0];
+    /// The permitted integer UI scales (spec §2.1 rule 7). Fractional scales
+    /// blur pixel art, so only whole multiples are offered.
+    pub const UI_SCALES: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
+
+    /// The auto UI scale for a monitor's **physical** pixel size (spec §2.1 rule 7):
+    /// `clamp(min(w / 1280, h / 800), 1, 4)`. Physical pixels, so OS scaling never
+    /// doubles up.
+    pub fn ui_scale_for(physical_width_px: u32, physical_height_px: u32) -> u32 {
+        (physical_width_px / 1280)
+            .min(physical_height_px / 800)
+            .clamp(1, 4)
+    }
 
     /// Snap an arbitrary scale to the nearest permitted value (ties favour the
     /// smaller scale).
@@ -590,9 +612,52 @@ impl LootsmithApp {
             .unwrap_or(1.0)
     }
 
-    /// Set the UI scale, clamped to the permitted values.
+    /// Set a fixed UI scale (switches to [`ScaleMode::Fixed`]).
     pub fn set_ui_scale(&mut self, scale: f32) {
-        self.ui_scale = Self::clamp_ui_scale(scale);
+        let v = Self::clamp_ui_scale(scale).round() as u32;
+        self.scale_mode = ScaleMode::Fixed(v.clamp(1, 4));
+        self.ui_scale = self.scale_mode_scale();
+    }
+
+    /// Select the scale mode (Auto or a fixed integer scale).
+    pub fn set_scale_mode(&mut self, mode: ScaleMode) {
+        self.scale_mode = mode;
+    }
+
+    /// The scale implied by the current [`ScaleMode`], without a context.
+    fn scale_mode_scale(&self) -> f32 {
+        match self.scale_mode {
+            ScaleMode::Fixed(n) => n.clamp(1, 4) as f32,
+            // `Auto` is resolved against the monitor in [`Self::effective_scale`].
+            ScaleMode::Auto => Self::clamp_ui_scale(self.ui_scale),
+        }
+    }
+
+    /// The effective integer scale for this frame. `Auto` derives it from the
+    /// monitor's physical size (re-evaluated every frame, so moving the window to
+    /// another monitor or changing the OS scale re-scales).
+    pub fn effective_scale(&self, ctx: &egui::Context) -> f32 {
+        match self.scale_mode {
+            ScaleMode::Fixed(n) => n.clamp(1, 4) as f32,
+            ScaleMode::Auto => {
+                let native = ctx.native_pixels_per_point().unwrap_or(1.0);
+                let physical = ctx.input(|i| {
+                    i.viewport()
+                        .monitor_size
+                        .map(|m| (m.x * native, m.y * native))
+                });
+                let (w, h) = physical.unwrap_or_else(|| {
+                    // No monitor info (e.g. the test harness): fall back to the
+                    // window's native logical size (undo our own zoom).
+                    let cur = ctx.pixels_per_point().max(1.0);
+                    let r = ctx.input(|i| i.viewport().inner_rect).unwrap_or(
+                        egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1280.0, 800.0)),
+                    );
+                    (r.width() / cur * native, r.height() / cur * native)
+                });
+                Self::ui_scale_for(w.max(0.0) as u32, h.max(0.0) as u32) as f32
+            }
+        }
     }
 
     /// The cached background dither texture for the active theme (spec §2.5).
@@ -1846,6 +1911,7 @@ impl LootsmithApp {
             data: &'a str,
             theme: &'a str,
             tab: &'a str,
+            scale: String,
         }
         let theme = match self.theme {
             Theme::Dark => "dark",
@@ -1856,6 +1922,10 @@ impl LootsmithApp {
             data: self.dumps.trim(),
             theme,
             tab: tab_key(self.tab),
+            scale: match self.scale_mode {
+                ScaleMode::Auto => "auto".to_string(),
+                ScaleMode::Fixed(n) => n.to_string(),
+            },
         })
         .unwrap_or_default()
     }
@@ -1872,6 +1942,8 @@ impl LootsmithApp {
             theme: String,
             #[serde(default)]
             tab: String,
+            #[serde(default)]
+            scale: String,
         }
         let Ok(settings) = serde_json::from_str::<Settings>(text) else {
             return;
@@ -1891,6 +1963,13 @@ impl LootsmithApp {
         if let Some(tab) = tab_from_key(&settings.tab) {
             self.tab = tab;
         }
+        self.scale_mode = match settings.scale.as_str() {
+            "1" => ScaleMode::Fixed(1),
+            "2" => ScaleMode::Fixed(2),
+            "3" => ScaleMode::Fixed(3),
+            "4" => ScaleMode::Fixed(4),
+            _ => ScaleMode::Auto,
+        };
         if !self.dumps.trim().is_empty() {
             self.load_dumps();
         }
@@ -2046,7 +2125,9 @@ impl LootsmithApp {
     pub fn build(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.apply_theme(&ctx);
-        ctx.set_pixels_per_point(self.ui_scale);
+        let scale = self.effective_scale(&ctx);
+        self.ui_scale = scale;
+        ctx.set_pixels_per_point(scale);
         let p = theme::active(&ctx);
         self.handle_shortcuts(&ctx);
 
@@ -2426,16 +2507,17 @@ impl LootsmithApp {
                     ui.separator();
                     ui.label(egui::RichText::new("Scale").color(p.gold).size(12.0));
                     ui.horizontal(|ui| {
+                        if ui
+                            .selectable_label(matches!(self.scale_mode, ScaleMode::Auto), "Auto")
+                            .clicked()
+                        {
+                            self.set_scale_mode(ScaleMode::Auto);
+                        }
                         for value in Self::UI_SCALES {
-                            let text = format!("{}%", (value * 100.0).round() as i32);
-                            if ui
-                                .selectable_label(
-                                    (self.ui_scale - value).abs() < f32::EPSILON,
-                                    text,
-                                )
-                                .clicked()
-                            {
-                                self.ui_scale = value;
+                            let text = format!("{}x", value as u32);
+                            let selected = self.scale_mode == ScaleMode::Fixed(value as u32);
+                            if ui.selectable_label(selected, text).clicked() {
+                                self.set_scale_mode(ScaleMode::Fixed(value as u32));
                             }
                         }
                     });

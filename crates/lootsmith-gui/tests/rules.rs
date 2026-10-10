@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::frame::{screen_rule_violations, SCREENS};
+use common::frame::{screen_rule_violations_at, SCREENS};
 use lootsmith_gui::theme::Theme;
 
 #[test]
@@ -11,8 +11,10 @@ fn no_gradients_or_odd_borders_on_any_screen() {
     let mut bad = Vec::new();
     for tab in SCREENS {
         for theme in [Theme::Dark, Theme::Light] {
-            for v in screen_rule_violations(tab, theme) {
-                bad.push(format!("{tab:?} {theme:?}: {v}"));
+            for scale in [1.0_f32, 2.0, 3.0] {
+                for v in screen_rule_violations_at(tab, theme, scale) {
+                    bad.push(format!("{tab:?} {theme:?} {scale}x: {v}"));
+                }
             }
         }
     }

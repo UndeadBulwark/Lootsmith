@@ -69,7 +69,7 @@ fn theme_and_scale_switches_match_fresh_renders() {
             Theme::Dark,
             1.0,
         ),
-        ("100->200", Theme::Dark, 1.0, "200%", Theme::Dark, 2.0),
+        ("100->200", Theme::Dark, 1.0, "2x", Theme::Dark, 2.0),
     ];
     let mut bad = Vec::new();
     for (name, start_theme, start_scale, click, end_theme, end_scale) in cases {

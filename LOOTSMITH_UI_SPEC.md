@@ -26,13 +26,14 @@ Name: **Homestead**. A cozy workshop-cabin look in pixel-art style, drawn from t
 4. **Texture is pattern, not shading.** Textures are flat two-color tiles (dither, plank lines). They never change brightness across a surface.
 5. **No pure white, no pure black.** Light theme uses parchment; dark theme uses warm black.
 6. **Hover and focus change borders, not fills.** Hover: border becomes `gold`. Focus: add a 2 px `acc` outline.
-7. **Whole physical pixels.** UI scale offers 100%, 150% and 200% only. 150% is
-   *not* an integer multiple (1.5x), so a value authored in points can land on a
-   half physical pixel. Every painted rect, line and stroke is therefore snapped
-   to whole physical pixels (`ui::pixel::{snap, snap_pos, snap_rect, snap_len}`),
-   and a test renders the shapes at all three scales and asserts every
-   tessellated vertex is whole (`ui::pixel::tests`).
-   Dimensions that are **odd at 150%** and how they are snapped:
+7. **Whole physical pixels.** UI scale is **Auto** (default) or a fixed whole
+   multiple **1x / 2x / 3x / 4x**. Fractional scales (e.g. 150%) are rejected:
+   they blur pixel art. Auto derives the scale from the monitor's **physical**
+   pixel size — `clamp(min(width / 1280, height / 800), 1, 4)` — so OS scaling
+   never doubles up. Every painted rect, line and stroke is snapped to whole
+   physical pixels (`ui::pixel::{snap, snap_pos, snap_rect, snap_len}`), and the
+   digit and border-width gates render every screen at 1x, 2x and 3x.
+   Dimensions that are odd at a fractional scale and how they are snapped:
    - the 3 px dotted trail divider — 4.5 px, rounded up to 5 px;
    - 13 px and 15 px text — 19.5 / 22.5 px: egui rasterises glyphs at the device
      scale, and text origins are snapped so baselines stay on whole pixels;
@@ -164,7 +165,7 @@ All widgets are custom-painted wrappers over `ui.allocate_response`, so hit-test
 17. **Toasts** (bordered, docked to the status bar, not floating) for save, copy, import and error results; errors also go to the log with a "Copy details" button.
 18. **Tooltips** on every control; a one-line description for each Raw field name.
 19. **Keyboard navigation** in lists (arrow keys, Enter to open the workbench, Home/End).
-20. **Settings dialog:** theme (System / Dark / Light, following `system_theme`), UI scale (100/150/200%), backup count, confirm-prompt toggles, default platform.
+20. **Settings dialog:** theme (System / Dark / Light, following `system_theme`), UI scale (Auto / 1x / 2x / 3x / 4x), backup count, confirm-prompt toggles, default platform.
 21. **Accessibility:** 2 px `acc` focus outline on every interactive widget, minimum 28 px hit targets, no information conveyed by color alone.
 22. **Numeric fields** with thousands separators and a `K / M / B` shorthand parser ("1.5m").
 
@@ -172,7 +173,7 @@ All widgets are custom-painted wrappers over `ui.allocate_response`, so hit-test
 
 1. Split `app.rs` into one module per tab (prerequisite; see the project brief).
 2. `theme.rs` rewrite with `Palette`; contrast test; fix the light theme.
-3. Embed fonts; add UI scale (100/150/200%).
+3. Embed fonts; add UI scale (Auto / 1x / 2x / 3x / 4x).
 4. `ui/pixel.rs` primitives and the dither texture.
 5. `ui/widgets.rs` components.
 6. Shell: plank top bar, sidebar, status bar. Migrate one tab at a time; keep UI tests passing after each.
@@ -183,6 +184,6 @@ All widgets are custom-painted wrappers over `ui.allocate_response`, so hit-test
 ## 5. Verification
 
 - `cargo test -p lootsmith-gui` must pass after each step.
-- Extend `examples/snapshot.rs` to render every screen in both themes at 100% and 200% scale. Review the PNGs for clipped text, blurry pixel edges and low contrast before merging.
+- Extend `examples/snapshot.rs` to render every screen in both themes at 1x, 2x and 3x scale. Review the PNGs for clipped text, blurry pixel edges and low contrast before merging.
 - Add tests: palette contrast for every pair, `notched_rect` geometry (12 points, corners at 4 px steps), close-with-unsaved prompt, undo/redo round trip, drag-and-drop open, backup rotation (10 kept), action-search dispatch.
 - Visual acceptance: no shadow, gradient or rounded corner appears in any snapshot; every border is a whole number of pixels.

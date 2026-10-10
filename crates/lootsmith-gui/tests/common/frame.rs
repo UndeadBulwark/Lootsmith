@@ -113,9 +113,19 @@ pub fn shape_fill(run: &Run, fills: &[Fill]) -> Option<Color32> {
 
 /// Render one tab in one theme; returns the frame analysis and the image.
 pub fn render_tab(tab: Tab, theme: Theme) -> (Vec<Run>, Vec<Fill>, Vec<Section>, RgbaImage) {
+    render_tab_at(tab, theme, 1.0)
+}
+
+/// [`render_tab`] at an explicit UI scale.
+pub fn render_tab_at(
+    tab: Tab,
+    theme: Theme,
+    scale: f32,
+) -> (Vec<Run>, Vec<Fill>, Vec<Section>, RgbaImage) {
     let save = super::synthetic_save_path();
     let mut h = super::harness_isolated(&save);
     h.state_mut().set_theme(theme);
+    h.state_mut().set_ui_scale(scale);
     h.state_mut().set_tab(tab);
     match tab {
         Tab::Backpack => {
@@ -200,9 +210,15 @@ pub fn rule_violations(output: &egui::FullOutput, ppp: f32) -> Vec<String> {
 
 /// Rule violations for one rendered screen.
 pub fn screen_rule_violations(tab: Tab, theme: Theme) -> Vec<String> {
+    screen_rule_violations_at(tab, theme, 1.0)
+}
+
+/// [`screen_rule_violations`] at an explicit UI scale.
+pub fn screen_rule_violations_at(tab: Tab, theme: Theme, scale: f32) -> Vec<String> {
     let save = super::synthetic_save_path();
     let mut h = super::harness_isolated(&save);
     h.state_mut().set_theme(theme);
+    h.state_mut().set_ui_scale(scale);
     h.state_mut().set_tab(tab);
     match tab {
         Tab::Backpack => {
@@ -214,7 +230,7 @@ pub fn screen_rule_violations(tab: Tab, theme: Theme) -> Vec<String> {
         _ => {}
     }
     h.run();
-    rule_violations(h.output(), 1.0)
+    rule_violations(h.output(), scale)
 }
 
 /// Any text section on `tab` in `theme` whose characters are not all present in

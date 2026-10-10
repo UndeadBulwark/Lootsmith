@@ -13,7 +13,7 @@ use egui::Vec2;
 use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
 use lootsmith_core::Container;
-use lootsmith_gui::app::{LootsmithApp, Tab};
+use lootsmith_gui::app::{LootsmithApp, ScaleMode, Tab};
 
 /// Unique id of the first synthetic backpack weapon.
 const TEST_WEAPON_ID: &str = "id=400";
@@ -573,39 +573,51 @@ fn bundled_tables_resolve_names_with_no_game_data_folder() {
 }
 
 #[test]
-fn ui_scale_is_clamped_to_100_150_200() {
-    // Spec §2.1 rule 7: only 100/150/200 are offered.
+fn ui_scale_is_clamped_to_whole_multiples() {
+    // Spec §2.1 rule 7: only 1x/2x/3x/4x (fractional scales blur pixel art).
     assert_eq!(LootsmithApp::clamp_ui_scale(0.9), 1.0);
-    assert_eq!(LootsmithApp::clamp_ui_scale(1.1), 1.0);
-    assert_eq!(LootsmithApp::clamp_ui_scale(1.37), 1.5);
-    assert_eq!(LootsmithApp::clamp_ui_scale(1.75), 1.5);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.4), 1.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(1.6), 2.0);
     assert_eq!(LootsmithApp::clamp_ui_scale(2.4), 2.0);
-    assert_eq!(LootsmithApp::clamp_ui_scale(1.0), 1.0);
-    assert_eq!(LootsmithApp::clamp_ui_scale(1.5), 1.5);
-    assert_eq!(LootsmithApp::clamp_ui_scale(2.0), 2.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(2.6), 3.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(3.4), 3.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(3.6), 4.0);
+    assert_eq!(LootsmithApp::clamp_ui_scale(9.0), 4.0);
 }
 
 #[test]
-fn ui_scale_control_selects_150_percent() {
-    let mut h = harness();
-    h.run();
-    assert_eq!(h.state().ui_scale, 1.0);
-    h.get_by_label("Menu").click();
-    h.run();
-    h.get_by_label("150%").click();
-    h.run();
-    assert_eq!(h.state().ui_scale, 1.5);
+fn ui_scale_auto_matches_the_monitor_size() {
+    // Spec §2.1 rule 7 table: floor(min(w/1280, h/800)), clamped to 1..=4, using
+    // physical pixels so OS scaling never doubles up.
+    assert_eq!(LootsmithApp::ui_scale_for(1280, 800), 1);
+    assert_eq!(LootsmithApp::ui_scale_for(1920, 1080), 1);
+    assert_eq!(LootsmithApp::ui_scale_for(2560, 1440), 1);
+    assert_eq!(LootsmithApp::ui_scale_for(3840, 2160), 2);
+    assert_eq!(LootsmithApp::ui_scale_for(5120, 2880), 3);
+    assert_eq!(LootsmithApp::ui_scale_for(7680, 4320), 4);
 }
 
 #[test]
-fn ui_scale_control_selects_200_percent() {
+fn ui_scale_control_selects_3x() {
     let mut h = harness();
     h.run();
-    assert_eq!(h.state().ui_scale, 1.0);
     h.get_by_label("Menu").click();
     h.run();
-    h.get_by_label("200%").click();
+    h.get_by_label("3x").click();
     h.run();
+    assert_eq!(h.state().scale_mode, ScaleMode::Fixed(3));
+    assert_eq!(h.state().ui_scale, 3.0);
+}
+
+#[test]
+fn ui_scale_control_selects_2x() {
+    let mut h = harness();
+    h.run();
+    h.get_by_label("Menu").click();
+    h.run();
+    h.get_by_label("2x").click();
+    h.run();
+    assert_eq!(h.state().scale_mode, ScaleMode::Fixed(2));
     assert_eq!(h.state().ui_scale, 2.0);
 }
 
@@ -614,9 +626,9 @@ fn ui_scale_setter_clamps() {
     let save = synthetic_save_path();
     let mut h = harness_isolated(&save);
     h.state_mut().set_ui_scale(1.42);
-    assert_eq!(h.state().ui_scale, 1.5);
+    assert_eq!(h.state().ui_scale, 1.0);
     h.state_mut().set_ui_scale(9.0);
-    assert_eq!(h.state().ui_scale, 2.0);
+    assert_eq!(h.state().ui_scale, 4.0);
 }
 
 #[test]
