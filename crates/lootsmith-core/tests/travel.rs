@@ -35,7 +35,10 @@ fn fixture_teleporters_enumerate() {
     let visited = sg.visited_teleporters();
     assert_eq!(visited.len(), 23, "the fixture has 23 visited teleporters");
     assert!(visited.iter().any(|s| s == "Sanctuary"));
-    assert_eq!(sg.last_visited_teleporter().as_deref(), Some("SouthernShelfTown"));
+    assert_eq!(
+        sg.last_visited_teleporter().as_deref(),
+        Some("SouthernShelfTown")
+    );
 }
 
 #[test]
@@ -46,8 +49,14 @@ fn add_remove_set_and_reload() {
     };
     let before = sg.visited_teleporters();
 
-    assert!(sg.add_visited_teleporter("NewStation"), "first add reports true");
-    assert!(!sg.add_visited_teleporter("NewStation"), "duplicate add is a no-op");
+    assert!(
+        sg.add_visited_teleporter("NewStation"),
+        "first add reports true"
+    );
+    assert!(
+        !sg.add_visited_teleporter("NewStation"),
+        "duplicate add is a no-op"
+    );
     assert_eq!(sg.visited_teleporters().len(), before.len() + 1);
     assert!(sg.remove_visited_teleporter("NewStation"));
     assert!(!sg.remove_visited_teleporter("NewStation"));
@@ -73,12 +82,17 @@ fn resolves_against_real_stations() {
     let stations = TravelStations::from_path(&path).expect("parse Travel Stations.json");
     assert!(stations.len() > 100, "expected a large station table");
 
-    let shelf = stations.find("SouthernShelfTown").expect("SouthernShelfTown");
+    let shelf = stations
+        .find("SouthernShelfTown")
+        .expect("SouthernShelfTown");
     assert_eq!(shelf.display_name, "Southern Shelf");
     let sanctuary = stations.find("Sanctuary").expect("Sanctuary");
     assert_eq!(sanctuary.display_name, "Sanctuary");
     assert!(sanctuary.initially_active);
-    assert_eq!(stations.label_for("SouthernShelfTown"), "Southern Shelf (SouthernShelfTown)");
+    assert_eq!(
+        stations.label_for("SouthernShelfTown"),
+        "Southern Shelf (SouthernShelfTown)"
+    );
     assert_eq!(stations.label_for("UnknownStation"), "UnknownStation");
 
     // Every teleporter in the fixture resolves to a known station.

@@ -446,8 +446,7 @@ impl SaveGame {
         }
         self.message.remove_all(number);
         for &v in values {
-            self.message
-                .push(Field::varint(number, v as u32 as u64));
+            self.message.push(Field::varint(number, v as u32 as u64));
         }
     }
 
@@ -699,7 +698,8 @@ pub struct VehicleCustomization {
 
 /// The vehicle families the game recognises, as `(usage, family_resource)`.
 /// `usage` is the key into `Customizations.json` used to offer skin choices.
-pub const VEHICLE_FAMILIES: &[(&str, &str)] = &[    (
+pub const VEHICLE_FAMILIES: &[(&str, &str)] = &[
+    (
         "Runner",
         "GD_Globals.VehicleSpawnStation.VehicleFamily_Runner",
     ),
@@ -748,10 +748,7 @@ fn random_guid() -> [u8; 16] {
 }
 
 pub fn mission_status_name(value: i32) -> &'static str {
-    MISSION_STATUSES
-        .get(value as usize)
-        .copied()
-        .unwrap_or("?")
+    MISSION_STATUSES.get(value as usize).copied().unwrap_or("?")
 }
 
 /// `PlayerMark` names, indexed by value.
@@ -759,10 +756,7 @@ pub const PLAYER_MARKS: &[&str] = &["Trash", "Standard", "Favorite"];
 
 /// The name of a `PlayerMark` value.
 pub fn player_mark_name(value: i32) -> &'static str {
-    PLAYER_MARKS
-        .get(value as usize)
-        .copied()
-        .unwrap_or("?")
+    PLAYER_MARKS.get(value as usize).copied().unwrap_or("?")
 }
 
 /// A `ChallengeData` entry (field 38).
@@ -947,9 +941,7 @@ impl SaveGame {
                 let sub_bytes = field
                     .as_bytes()
                     .ok_or_else(|| {
-                        crate::error::Error::Proto(
-                            "packed entry is not length-delimited".into(),
-                        )
+                        crate::error::Error::Proto("packed entry is not length-delimited".into())
                     })?
                     .to_vec();
                 let mut sub = Message::parse(&sub_bytes)?;
@@ -1187,8 +1179,7 @@ impl SaveGame {
 
     /// Rotate the save GUID — a fresh identity for a cloned or blank save.
     pub fn refresh_guid(&mut self) {
-        self.message
-            .set(Field::bytes(34, &random_guid()));
+        self.message.set(Field::bytes(34, &random_guid()));
     }
 
     /// Reset character-specific progress so a cloned save behaves like a new
@@ -1403,7 +1394,10 @@ mod tests {
         save.import_fields_from(&other, &[2, 16]);
 
         // Playerclass untouched by field-2 import.
-        assert_eq!(save.player_class(), Some("GD_Soldier.Character.CharClass_Soldier".into()));
+        assert_eq!(
+            save.player_class(),
+            Some("GD_Soldier.Character.CharClass_Soldier".into())
+        );
         assert_eq!(save.exp_level(), Some(5));
         let teleporters: Vec<String> = save
             .message
@@ -1429,7 +1423,10 @@ mod tests {
     #[test]
     fn blank_save_round_trips_through_container() {
         let save = SaveGame::blank("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass");
-        assert_eq!(save.player_class(), Some("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass".into()));
+        assert_eq!(
+            save.player_class(),
+            Some("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass".into())
+        );
         assert_eq!(save.exp_level(), Some(1));
         assert_eq!(save.general_skill_points(), Some(3));
         assert_eq!(save.currency_on_hand(), [0, 0, 0, 0]);
@@ -1444,7 +1441,10 @@ mod tests {
         save.set_i32(4, 100);
         save.message.push(Field::bytes(53, &[1, 2, 3, 4]));
         save.make_fresh_character("GD_Siren.Character.CharClass_Siren");
-        assert_eq!(save.player_class(), Some("GD_Siren.Character.CharClass_Siren".into()));
+        assert_eq!(
+            save.player_class(),
+            Some("GD_Siren.Character.CharClass_Siren".into())
+        );
         assert_eq!(save.exp_level(), Some(1));
         assert_eq!(save.general_skill_points(), Some(3));
         assert_eq!(save.message.count(53), 0);
@@ -1485,11 +1485,7 @@ mod raw_list_tests {
         save.message.push(Field::varint(9, 3));
         save.set_int_list(9, &[7, 8]);
         assert_eq!(save.message.count(9), 2, "stays unpacked");
-        let values: Vec<i32> = save
-            .message
-            .get_all(9)
-            .filter_map(|f| f.as_i32())
-            .collect();
+        let values: Vec<i32> = save.message.get_all(9).filter_map(|f| f.as_i32()).collect();
         assert_eq!(values, [7, 8]);
     }
 }
@@ -1510,8 +1506,7 @@ impl Resource {
     pub fn label(&self) -> String {
         let last = self.pool.rsplit('.').next().unwrap_or(&self.pool);
         let name = last.strip_suffix("_Pool").unwrap_or(last);
-        name.strip_prefix("Ammo_").unwrap_or(name)
-            .replace('_', " ")
+        name.strip_prefix("Ammo_").unwrap_or(name).replace('_', " ")
     }
 }
 
@@ -1537,10 +1532,7 @@ impl SaveGame {
                     .and_then(|f| f.as_fixed32())
                     .map(f32::from_bits)
                     .unwrap_or(0.0),
-                upgrade_level: sub
-                    .get(4)
-                    .and_then(|f| f.as_i32())
-                    .unwrap_or(0),
+                upgrade_level: sub.get(4).and_then(|f| f.as_i32()).unwrap_or(0),
             })
             .collect()
     }
@@ -1602,8 +1594,16 @@ mod resource_tests {
     fn resources_round_trip_and_edit_in_place() {
         let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
         for (pool, amount, level) in [
-            ("D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool", 273.0f32, 2),
-            ("D_Resourcepools.AmmoPools.Ammo_Grenade_Protean_Pool", 4.0, 0),
+            (
+                "D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool",
+                273.0f32,
+                2,
+            ),
+            (
+                "D_Resourcepools.AmmoPools.Ammo_Grenade_Protean_Pool",
+                4.0,
+                0,
+            ),
         ] {
             let mut sub = Message::default();
             sub.push(Field::string(1, "D_Resources.AmmoResources.Ammo_Test"));
@@ -1728,9 +1728,7 @@ impl SaveGame {
             *level = SDU_LEVEL_MAX[i];
         }
         self.set_black_market_upgrades(&levels);
-        self.set_backpack_slot_max(
-            BACKPACK_SLOT_BASE + BACKPACK_SLOTS_PER_SDU * levels[7],
-        )?;
+        self.set_backpack_slot_max(BACKPACK_SLOT_BASE + BACKPACK_SLOTS_PER_SDU * levels[7])?;
         self.set_i32(56, BANK_SLOT_BASE + BANK_SLOTS_PER_SDU * levels[8]);
         Ok(())
     }
@@ -1755,7 +1753,11 @@ mod sdu_tests {
 
         // Untouched entries stay zero; untouched sizes unchanged.
         assert_eq!(save.black_market_upgrades()[0], 0);
-        assert_eq!(save.inventory_slots().map(|i| i.1), Some(2), "weapon-ready untouched");
+        assert_eq!(
+            save.inventory_slots().map(|i| i.1),
+            Some(2),
+            "weapon-ready untouched"
+        );
     }
 
     #[test]
@@ -1836,12 +1838,8 @@ impl ChallengeStats {
             entries.push(ChallengeStat {
                 id: u16::from_le_bytes([chunk[0], chunk[1]]),
                 flags: [chunk[2], chunk[7]],
-                total_value: i32::from_le_bytes([
-                    chunk[3], chunk[4], chunk[5], chunk[6],
-                ]),
-                previous_value: i32::from_le_bytes([
-                    chunk[8], chunk[9], chunk[10], chunk[11],
-                ]),
+                total_value: i32::from_le_bytes([chunk[3], chunk[4], chunk[5], chunk[6]]),
+                previous_value: i32::from_le_bytes([chunk[8], chunk[9], chunk[10], chunk[11]]),
             });
         }
         Ok(ChallengeStats { unknown, entries })
@@ -1920,7 +1918,8 @@ mod challenge_stats_tests {
         assert_eq!(stats.entries.len(), 2);
         assert_eq!(stats.entries[0].total_value, 9845);
 
-        save.set_challenge_stat(1621, |entry| entry.total_value = 99).expect("edit");
+        save.set_challenge_stat(1621, |entry| entry.total_value = 99)
+            .expect("edit");
         let after = save.challenge_stats().expect("reparse");
         assert_eq!(after.entries[0].total_value, 99);
         // The untouched sibling keeps its exact bytes.

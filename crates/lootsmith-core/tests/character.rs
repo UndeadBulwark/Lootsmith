@@ -40,6 +40,12 @@ fn character_name_and_customizations_round_trip() {
     let sg2 = reopened.save_game().expect("reparse");
     assert_eq!(sg2.character_name().as_deref(), Some("Lootsmith Tester"));
     let customs = sg2.applied_customizations();
-    assert_eq!(customs[0], "GD_DefaultCustoms_MainGame.Soldier.Head_Default");
-    assert_eq!(customs[4], "GD_DefaultCustoms_MainGame.Soldier.Skin_Default");
+    assert_eq!(
+        customs[0],
+        "GD_DefaultCustoms_MainGame.Soldier.Head_Default"
+    );
+    assert_eq!(
+        customs[4],
+        "GD_DefaultCustoms_MainGame.Soldier.Skin_Default"
+    );
 }

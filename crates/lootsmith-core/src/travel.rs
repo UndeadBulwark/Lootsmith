@@ -136,7 +136,9 @@ impl TravelStations {
         let mut by_resource = HashMap::new();
         for (i, station) in stations.iter().enumerate() {
             // Keep the first definition for a duplicated resource name.
-            by_resource.entry(station.resource_name.clone()).or_insert(i);
+            by_resource
+                .entry(station.resource_name.clone())
+                .or_insert(i);
         }
 
         Ok(Self {

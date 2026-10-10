@@ -1,9 +1,9 @@
 //! Shared widget helpers and the skill calculator tiles (moved verbatim
 //! from the former single-file `app.rs`).
 
-use eframe::egui;
-use crate::theme::{self, Tokens};
 use super::*;
+use crate::theme::{self, Tokens};
+use eframe::egui;
 
 pub(crate) fn customization_combo(
     ui: &mut egui::Ui,
@@ -286,8 +286,11 @@ pub(crate) fn currency_name(index: usize) -> String {
 pub(crate) fn toolbar_sep(ui: &mut egui::Ui) {
     ui.add_space(4.0);
     let (rect, _) = ui.allocate_exact_size(egui::vec2(1.0, 18.0), egui::Sense::hover());
-    ui.painter()
-        .vline(rect.center().x, rect.y_range(), egui::Stroke::new(1.0, Tokens::BORDER));
+    ui.painter().vline(
+        rect.center().x,
+        rect.y_range(),
+        egui::Stroke::new(1.0, Tokens::BORDER),
+    );
     ui.add_space(4.0);
 }
 
@@ -329,8 +332,13 @@ pub(crate) fn empty_state(ui: &mut egui::Ui) {
         ui.add_space(6.0);
         theme::muted(ui, "A cross-platform Borderlands 2 save editor.");
         ui.add_space(14.0);
-        theme::faint(ui, "Open a save (or use Find saves), then pick your game-data folder");
-        theme::faint(ui, "so item parts, missions and travel stations resolve to names.");
+        theme::faint(
+            ui,
+            "Open a save (or use Find saves), then pick your game-data folder",
+        );
+        theme::faint(
+            ui,
+            "so item parts, missions and travel stations resolve to names.",
+        );
     });
 }
-

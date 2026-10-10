@@ -1,7 +1,7 @@
 //! The Ammo tab: per-pool current amount and SDU upgrade level.
 
-use eframe::egui;
 use crate::app::*;
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_ammo(&mut self, ui: &mut egui::Ui) {
@@ -27,10 +27,7 @@ impl LootsmithApp {
                 {
                     ui.label(format!("{} ({})", i + 1, name));
                     if ui
-                        .add(
-                            egui::DragValue::new(level)
-                                .range(0..=if i >= 7 { 9 } else { 127 }),
-                        )
+                        .add(egui::DragValue::new(level).range(0..=if i >= 7 { 9 } else { 127 }))
                         .changed()
                     {
                         sdu_edit = Some((i + 1, *level));
@@ -53,7 +50,11 @@ impl LootsmithApp {
             }
             ui.label("Bank slots");
             if ui
-                .add(egui::DragValue::new(&mut self.bank_size).range(6..=255).speed(1.0))
+                .add(
+                    egui::DragValue::new(&mut self.bank_size)
+                        .range(6..=255)
+                        .speed(1.0),
+                )
                 .changed()
             {
                 bank_edit = Some(self.bank_size);
@@ -95,34 +96,32 @@ impl LootsmithApp {
             sdu: i32,
         }
         let mut edits: Vec<PoolEdit> = Vec::new();
-        egui::ScrollArea::vertical()
-            .id_salt("ammo")
-            .show(ui, |ui| {
-                egui::Grid::new("ammo_grid")
-                    .num_columns(3)
-                    .striped(true)
-                    .spacing([20.0, 6.0])
-                    .show(ui, |ui| {
-                        ui.strong("#");
-                        ui.strong("Pool");
-                        ui.strong("Amount");
-                        ui.strong("SDU level");
+        egui::ScrollArea::vertical().id_salt("ammo").show(ui, |ui| {
+            egui::Grid::new("ammo_grid")
+                .num_columns(3)
+                .striped(true)
+                .spacing([20.0, 6.0])
+                .show(ui, |ui| {
+                    ui.strong("#");
+                    ui.strong("Pool");
+                    ui.strong("Amount");
+                    ui.strong("SDU level");
+                    ui.end_row();
+                    for (i, pool) in self.ammo.iter_mut().enumerate() {
+                        let row = i;
+                        ui.label(format!("{}", row + 1));
+                        ui.label(pool.label());
+                        ui.add(egui::DragValue::new(&mut pool.amount).speed(1.0));
+                        ui.add(egui::DragValue::new(&mut pool.upgrade_level).range(0..=10));
                         ui.end_row();
-                        for (i, pool) in self.ammo.iter_mut().enumerate() {
-                            let row = i;
-                            ui.label(format!("{}", row + 1));
-                            ui.label(pool.label());
-                            ui.add(egui::DragValue::new(&mut pool.amount).speed(1.0));
-                            ui.add(egui::DragValue::new(&mut pool.upgrade_level).range(0..=10));
-                            ui.end_row();
-                            edits.push(PoolEdit {
-                                pool: row,
-                                amount: pool.amount,
-                                sdu: pool.upgrade_level,
-                            });
-                        }
-                    });
-            });
+                        edits.push(PoolEdit {
+                            pool: row,
+                            amount: pool.amount,
+                            sdu: pool.upgrade_level,
+                        });
+                    }
+                });
+        });
         for edit in edits {
             if let Some(&orig) = self.ammo_orig.get(edit.pool) {
                 if orig != (edit.amount, edit.sdu) {

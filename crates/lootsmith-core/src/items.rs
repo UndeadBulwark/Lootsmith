@@ -708,7 +708,10 @@ mod tests {
         let serial: Vec<u8> = (0u8..20).collect();
         let code = encode_code(&serial);
         assert!(code.starts_with("BL2("));
-        assert_eq!(decode_codes(&format!("junk {code} trailing")), vec![serial.clone()]);
+        assert_eq!(
+            decode_codes(&format!("junk {code} trailing")),
+            vec![serial.clone()]
+        );
         assert_eq!(decode_codes(&format!("{code}\n{code}")).len(), 2);
         assert!(decode_codes("nothing here").is_empty());
         assert_ne!(random_unique_id(), 0);

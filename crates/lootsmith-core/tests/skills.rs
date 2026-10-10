@@ -43,7 +43,10 @@ fn edits_a_skill_grade_and_reloads() {
     };
     let before = sg.skills();
     // Pick a skill at rank 0 and raise it.
-    let index = before.iter().position(|s| s.grade == 0).expect("a rank-0 skill");
+    let index = before
+        .iter()
+        .position(|s| s.grade == 0)
+        .expect("a rank-0 skill");
     let target = before[index].skill.clone();
 
     sg.set_skill_grade(index, 5).expect("set grade");

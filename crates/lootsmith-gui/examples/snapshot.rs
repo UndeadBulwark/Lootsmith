@@ -33,14 +33,12 @@ fn main() {
         }
     });
     let dumps = args.get(3).cloned().or_else(|| {
-        std::env::var("LOOTSMITH_ASSET_LIBRARY")
-            .ok()
-            .or_else(|| {
-                Some(format!(
-                    "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
-                    env!("CARGO_MANIFEST_DIR")
-                ))
-            })
+        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok().or_else(|| {
+            Some(format!(
+                "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+        })
     });
     std::fs::create_dir_all(&out_dir).expect("create out dir");
 
@@ -65,7 +63,11 @@ fn main() {
         ("vehicles", Tab::Vehicles, None),
         ("missions", Tab::Missions, None),
         ("backpack", Tab::Backpack, None),
-        ("backpack-selected", Tab::Backpack, Some((Container::BackpackWeapon, 0))),
+        (
+            "backpack-selected",
+            Tab::Backpack,
+            Some((Container::BackpackWeapon, 0)),
+        ),
         ("raw", Tab::Raw, None),
     ];
 

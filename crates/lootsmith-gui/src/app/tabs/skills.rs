@@ -1,8 +1,8 @@
 //! The skills tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
-use crate::theme::{self, Tokens};
 use crate::app::*;
+use crate::theme::{self, Tokens};
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_skills(&mut self, ui: &mut egui::Ui) {
@@ -83,11 +83,7 @@ impl LootsmithApp {
             .show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     if let Some(texture) = &portrait {
-                        ui.add(
-                            egui::Image::new(texture)
-                                .max_height(430.0)
-                                .max_width(300.0),
-                        );
+                        ui.add(egui::Image::new(texture).max_height(430.0).max_width(300.0));
                         ui.add_space(16.0);
                     }
                     for tree in class.trees.iter() {
@@ -104,9 +100,8 @@ impl LootsmithApp {
                     .flat_map(|t| &t.skills)
                     .filter_map(|n| grade_of(&n.skill))
                     .collect();
-                let extras: Vec<usize> = (0..grades.len())
-                    .filter(|i| !matched.contains(i))
-                    .collect();
+                let extras: Vec<usize> =
+                    (0..grades.len()).filter(|i| !matched.contains(i)).collect();
                 if !extras.is_empty() {
                     ui.add_space(10.0);
                     theme::section(ui, "Other skills");
@@ -158,5 +153,4 @@ impl LootsmithApp {
             }
         }
     }
-
 }

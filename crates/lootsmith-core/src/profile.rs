@@ -480,8 +480,10 @@ fn stats_encode(stats: &[f64; 14]) -> String {
             num2 = 5 - num2;
         }
         while num2 < 28 {
-            out.push(STATS_ALPHABET[(num3.wrapping_shr(num2.rem_euclid(32) as u32) & 31) as usize]
-                as char);
+            out.push(
+                STATS_ALPHABET[(num3.wrapping_shr(num2.rem_euclid(32) as u32) & 31) as usize]
+                    as char,
+            );
             num2 += 5;
         }
         num1 = num3.wrapping_shr(num2.rem_euclid(32) as u32);

@@ -244,7 +244,11 @@ fn edits_fast_travel_and_saves() {
     let reopened = reopen(&out);
     assert!(reopened.crc32_valid() && reopened.proto_stable());
     let sg = reopened.save_game().expect("reparse");
-    assert_eq!(sg.visited_teleporters().len(), 23, "23 - 1 removed + 1 added");
+    assert_eq!(
+        sg.visited_teleporters().len(),
+        23,
+        "23 - 1 removed + 1 added"
+    );
     assert!(sg.visited_teleporters().iter().any(|s| s == "Xmas"));
     assert!(!sg.visited_teleporters().contains(&first));
     assert_eq!(sg.last_visited_teleporter().as_deref(), Some("Xmas"));
@@ -396,9 +400,7 @@ fn creates_duplicates_and_inserts_codes() {
     // The new weapon is selected; round-trip it through a BL2 code.
     let code = {
         let (container, occurrence) = h.state().selected.unwrap();
-        lootsmith_core::items::encode_code(
-            &h.state().item_serial(container, occurrence).unwrap(),
-        )
+        lootsmith_core::items::encode_code(&h.state().item_serial(container, occurrence).unwrap())
     };
     h.state_mut().item_code = code;
     h.run();
@@ -439,10 +441,7 @@ fn syncs_item_levels() {
     h.get_by_label("Sync equipped").click();
     h.run();
 
-    let serial = h
-        .state()
-        .item_serial(Container::BackpackWeapon, 0)
-        .unwrap();
+    let serial = h.state().item_serial(Container::BackpackWeapon, 0).unwrap();
     let configs = lootsmith_core::AssetLibraryConfigs::pc_default();
     let decoded = lootsmith_core::items::unpack(&serial, &configs).unwrap();
     match decoded.slot {
@@ -472,7 +471,11 @@ fn raw_view_lists_and_targets_fields() {
         .expect("ExpLevel is listed");
     assert_eq!(level.name, "ExpLevel");
     assert!(matches!(level.edit, RawEdit::Int(72)));
-    assert!(h.state().raw.iter().any(|f| f.number == 1 && f.name == "PlayerClass"));
+    assert!(h
+        .state()
+        .raw
+        .iter()
+        .any(|f| f.number == 1 && f.name == "PlayerClass"));
 }
 
 #[test]
@@ -687,14 +690,23 @@ fn change_class_updates_flags_and_calculator() {
     };
     let mut app = LootsmithApp::new(Some(save), Some(dumps));
     app.load();
-    assert_eq!(app.read_info.player_class, "GD_Soldier.Character.CharClass_Soldier");
+    assert_eq!(
+        app.read_info.player_class,
+        "GD_Soldier.Character.CharClass_Soldier"
+    );
 
     app.change_class("GD_Siren.Character.CharClass_Siren");
     let save = app.save_game.as_ref().expect("open save");
-    assert_eq!(save.player_class(), Some("GD_Siren.Character.CharClass_Siren".into()));
+    assert_eq!(
+        save.player_class(),
+        Some("GD_Siren.Character.CharClass_Siren".into())
+    );
     assert_eq!(save.get_bool(44), Some(false));
     assert_eq!(save.get_i32(45), Some(0));
-    assert_eq!(app.read_info.player_class, "GD_Siren.Character.CharClass_Siren");
+    assert_eq!(
+        app.read_info.player_class,
+        "GD_Siren.Character.CharClass_Siren"
+    );
 
     app.change_class("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass");
     let save = app.save_game.as_ref().expect("open save");

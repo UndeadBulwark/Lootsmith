@@ -1,8 +1,8 @@
 //! The backpack tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
-use crate::theme::{self, Tokens};
 use crate::app::*;
+use crate::theme::{self, Tokens};
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_container(&mut self, ui: &mut egui::Ui, bank: bool) {
@@ -51,7 +51,11 @@ impl LootsmithApp {
                 });
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Item code").color(Tokens::TEXT_DIM).size(11.5));
+                    ui.label(
+                        egui::RichText::new("Item code")
+                            .color(Tokens::TEXT_DIM)
+                            .size(11.5),
+                    );
                     ui.add_sized(
                         [520.0, 24.0],
                         egui::TextEdit::singleline(&mut self.item_code)
@@ -134,7 +138,12 @@ impl LootsmithApp {
                         self.name_parts.as_deref(),
                     );
                     if !name.is_empty() {
-                        ui.label(egui::RichText::new(name).strong().size(15.0).color(Tokens::ACCENT));
+                        ui.label(
+                            egui::RichText::new(name)
+                                .strong()
+                                .size(15.0)
+                                .color(Tokens::ACCENT),
+                        );
                     }
                     ui.add_space(6.0);
 
@@ -173,32 +182,20 @@ impl LootsmithApp {
                         });
                         ui.add_space(6.0);
                         let (gstage, mgrade) = match &mut edit.decoded.slot {
-                            lootsmith_core::items::PackedSlot::Weapon(weapon) => (
-                                &mut weapon.game_stage,
-                                &mut weapon.manufacturer_grade_index,
-                            ),
-                            lootsmith_core::items::PackedSlot::Item(item) => (
-                                &mut item.game_stage,
-                                &mut item.manufacturer_grade_index,
-                            ),
+                            lootsmith_core::items::PackedSlot::Weapon(weapon) => {
+                                (&mut weapon.game_stage, &mut weapon.manufacturer_grade_index)
+                            }
+                            lootsmith_core::items::PackedSlot::Item(item) => {
+                                (&mut item.game_stage, &mut item.manufacturer_grade_index)
+                            }
                         };
                         ui.horizontal(|ui| {
                             ui.label("Game stage");
-                            if ui
-                                .add(
-                                    egui::DragValue::new(gstage).range(1..=80),
-                                )
-                                .changed()
-                            {
+                            if ui.add(egui::DragValue::new(gstage).range(1..=80)).changed() {
                                 edit.dirty = true;
                             }
                             ui.label("Manufacturer grade");
-                            if ui
-                                .add(
-                                    egui::DragValue::new(mgrade).range(1..=10),
-                                )
-                                .changed()
-                            {
+                            if ui.add(egui::DragValue::new(mgrade).range(1..=10)).changed() {
                                 edit.dirty = true;
                             }
                         });
@@ -239,7 +236,14 @@ impl LootsmithApp {
                             });
                         });
 
-                    theme::section(ui, if is_weapon { "Weapon parts" } else { "Item parts" });
+                    theme::section(
+                        ui,
+                        if is_weapon {
+                            "Weapon parts"
+                        } else {
+                            "Item parts"
+                        },
+                    );
                     egui::ScrollArea::vertical()
                         .id_salt("inspector_parts")
                         .auto_shrink([false, false])
@@ -286,20 +290,19 @@ impl LootsmithApp {
                                             .width(270.0)
                                             .show_ui(ui, |ui| {
                                                 if ui.selectable_label(false, "None").clicked() {
-                                                    let _ =
-                                                        edit.decoded.set_part(manager, slot, "None");
+                                                    let _ = edit
+                                                        .decoded
+                                                        .set_part(manager, slot, "None");
                                                     edit.dirty = true;
                                                 }
                                                 for choice in &choices {
-                                                        if ui
-                                                            .selectable_label(false, choice)
-                                                            .clicked()
-                                                        {
-                                                            let _ = edit
-                                                                .decoded
-                                                                .set_part(manager, slot, choice);
-                                                            edit.dirty = true;
-                                                        }
+                                                    if ui.selectable_label(false, choice).clicked()
+                                                    {
+                                                        let _ = edit
+                                                            .decoded
+                                                            .set_part(manager, slot, choice);
+                                                        edit.dirty = true;
+                                                    }
                                                 }
                                             });
                                         ui.end_row();
@@ -316,7 +319,14 @@ impl LootsmithApp {
             .show(ui, |ui| {
                 if visible.is_empty() {
                     ui.add_space(12.0);
-                    theme::muted(ui, if bank { "(bank is empty)" } else { "(backpack is empty)" });
+                    theme::muted(
+                        ui,
+                        if bank {
+                            "(bank is empty)"
+                        } else {
+                            "(backpack is empty)"
+                        },
+                    );
                     return;
                 }
                 TableBuilder::new(ui)
@@ -332,7 +342,16 @@ impl LootsmithApp {
                     .column(Column::exact(90.0))
                     .column(Column::remainder().at_least(180.0))
                     .header(26.0, |mut header| {
-                        for name in ["#", "Type", "ID", "Qty", "Eq", "Quick", "Mark", "Balance / Name"] {
+                        for name in [
+                            "#",
+                            "Type",
+                            "ID",
+                            "Qty",
+                            "Eq",
+                            "Quick",
+                            "Mark",
+                            "Balance / Name",
+                        ] {
                             header.col(|ui| {
                                 ui.label(
                                     egui::RichText::new(name)
@@ -344,79 +363,82 @@ impl LootsmithApp {
                         }
                     })
                     .body(|mut body| {
-                    for (i, row) in visible.iter().enumerate() {
-                        let is_selected = selected == Some((row.container, row.occurrence));
-                        body.row(24.0, |mut tr| {
-                            tr.set_selected(is_selected);
-                            tr.col(|ui| {
-                                ui.label((i + 1).to_string());
-                            });
-                            tr.col(|ui| {
-                                ui.label(
-                                    egui::RichText::new(&row.kind)
-                                        .color(if row.is_weapon {
-                                            Tokens::ACCENT
-                                        } else {
-                                            Tokens::TEXT_DIM
-                                        })
-                                        .size(12.0),
-                                );
-                            });
-                            tr.col(|ui| {
-                                if ui
-                                    .selectable_label(is_selected, theme::mono(format!("id={}", row.id)))
-                                    .clicked()
-                                {
+                        for (i, row) in visible.iter().enumerate() {
+                            let is_selected = selected == Some((row.container, row.occurrence));
+                            body.row(24.0, |mut tr| {
+                                tr.set_selected(is_selected);
+                                tr.col(|ui| {
+                                    ui.label((i + 1).to_string());
+                                });
+                                tr.col(|ui| {
+                                    ui.label(
+                                        egui::RichText::new(&row.kind)
+                                            .color(if row.is_weapon {
+                                                Tokens::ACCENT
+                                            } else {
+                                                Tokens::TEXT_DIM
+                                            })
+                                            .size(12.0),
+                                    );
+                                });
+                                tr.col(|ui| {
+                                    if ui
+                                        .selectable_label(
+                                            is_selected,
+                                            theme::mono(format!("id={}", row.id)),
+                                        )
+                                        .clicked()
+                                    {
+                                        clicked = Some((row.container, row.occurrence));
+                                    }
+                                });
+                                tr.col(|ui| {
+                                    if row.is_weapon || row.container == Container::Bank {
+                                        ui.label("");
+                                    } else {
+                                        ui.label(row.quantity.to_string());
+                                    }
+                                });
+                                tr.col(|ui| {
+                                    if row.is_weapon || row.container == Container::Bank {
+                                        ui.label("");
+                                    } else {
+                                        ui.label(if row.equipped { "✓" } else { "" });
+                                    }
+                                });
+                                tr.col(|ui| {
+                                    if row.is_weapon {
+                                        ui.label(row.quick_slot.to_string());
+                                    } else {
+                                        ui.label("");
+                                    }
+                                });
+                                tr.col(|ui| {
+                                    ui.label(player_mark_name(row.mark));
+                                });
+                                tr.col(|ui| {
+                                    let label = if row.empty {
+                                        egui::RichText::new(&row.balance)
+                                            .color(Tokens::TEXT_FAINT)
+                                            .italics()
+                                    } else if !row.name.is_empty() {
+                                        egui::RichText::new(&row.name).color(Tokens::TEXT)
+                                    } else {
+                                        egui::RichText::new(&row.balance).color(Tokens::TEXT_DIM)
+                                    };
+                                    let tip = if row.name.is_empty() {
+                                        row.balance.clone()
+                                    } else {
+                                        format!("{} — {}", row.name, row.balance)
+                                    };
+                                    ui.label(label).on_hover_text(tip);
+                                });
+                                if tr.response().clicked() {
                                     clicked = Some((row.container, row.occurrence));
                                 }
                             });
-                            tr.col(|ui| {
-                                if row.is_weapon || row.container == Container::Bank {
-                                    ui.label("");
-                                } else {
-                                    ui.label(row.quantity.to_string());
-                                }
-                            });
-                            tr.col(|ui| {
-                                if row.is_weapon || row.container == Container::Bank {
-                                    ui.label("");
-                                } else {
-                                    ui.label(if row.equipped { "✓" } else { "" });
-                                }
-                            });
-                            tr.col(|ui| {
-                                if row.is_weapon {
-                                    ui.label(row.quick_slot.to_string());
-                                } else {
-                                    ui.label("");
-                                }
-                            });
-                            tr.col(|ui| {
-                                ui.label(player_mark_name(row.mark));
-                            });
-                            tr.col(|ui| {
-                                let label = if row.empty {
-                                    egui::RichText::new(&row.balance)
-                                        .color(Tokens::TEXT_FAINT)
-                                        .italics()
-                                } else if !row.name.is_empty() {
-                                    egui::RichText::new(&row.name).color(Tokens::TEXT)
-                                } else {
-                                    egui::RichText::new(&row.balance).color(Tokens::TEXT_DIM)
-                                };
-                                let tip = if row.name.is_empty() {
-                                    row.balance.clone()
-                                } else {
-                                    format!("{} — {}", row.name, row.balance)
-                                };
-                                ui.label(label).on_hover_text(tip);
-                            });
-                            if tr.response().clicked() {
-                                clicked = Some((row.container, row.occurrence));
-                            }
-                        });
-                    }
-                });
+                        }
+                    });
             });
 
         if let Some((container, occurrence)) = clicked {
@@ -434,4 +456,3 @@ impl LootsmithApp {
         }
     }
 }
-

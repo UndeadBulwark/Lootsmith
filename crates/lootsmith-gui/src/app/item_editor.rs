@@ -1,8 +1,8 @@
 //! The backpack/bank item model & editor helpers (moved verbatim from the
 //! former single-file `app.rs`).
 
-use eframe::egui;
 use super::*;
+use eframe::egui;
 
 use crate::app::LootsmithApp;
 
@@ -145,7 +145,11 @@ pub(crate) fn row_for(
                 Container::BackpackWeapon => format!(" quick={}", entry.quick_slot),
                 Container::Bank => String::new(),
             };
-            let mark = if decoded.unique_id == 0 { " (empty)" } else { "" };
+            let mark = if decoded.unique_id == 0 {
+                " (empty)"
+            } else {
+                ""
+            };
             let balance = resolve_balance(manager, &decoded);
             let name = item_name(&decoded, manager, name_parts);
             Row {
@@ -184,7 +188,6 @@ pub(crate) fn row_for(
         },
     }
 }
-
 
 impl LootsmithApp {
     pub fn select_entry(&mut self, container: Container, occurrence: usize) {
@@ -248,10 +251,7 @@ impl LootsmithApp {
 
     /// Mutate the currently selected item's editor (tests/tools); `None`
     /// when nothing is selected or game data is not loaded.
-    pub fn selected_item_editor(
-        &mut self,
-        change: impl FnOnce(&mut ItemEdit),
-    ) {
+    pub fn selected_item_editor(&mut self, change: impl FnOnce(&mut ItemEdit)) {
         if let Some(edit) = self.item_edit.as_mut() {
             change(edit);
         }
@@ -312,21 +312,25 @@ impl LootsmithApp {
         let Some(save_game) = self.save_game.as_mut() else {
             return;
         };
-        if let Err(e) = save_game.replace_serial(edit.container.field_number(), edit.occurrence, &serial)
+        if let Err(e) =
+            save_game.replace_serial(edit.container.field_number(), edit.occurrence, &serial)
         {
             self.status = format!("update error: {e}");
             return;
         }
         if edit.container == Container::BackpackItem {
             if edit.quantity != edit.orig_quantity {
-                let _ = save_game.set_entry_quantity(edit.container, edit.occurrence, edit.quantity);
+                let _ =
+                    save_game.set_entry_quantity(edit.container, edit.occurrence, edit.quantity);
             }
             if edit.equipped != edit.orig_equipped {
-                let _ = save_game.set_entry_equipped(edit.container, edit.occurrence, edit.equipped);
+                let _ =
+                    save_game.set_entry_equipped(edit.container, edit.occurrence, edit.equipped);
             }
         }
         if edit.container == Container::BackpackWeapon && edit.quick_slot != edit.orig_quick_slot {
-            let _ = save_game.set_entry_quick_slot(edit.container, edit.occurrence, edit.quick_slot);
+            let _ =
+                save_game.set_entry_quick_slot(edit.container, edit.occurrence, edit.quick_slot);
         }
         if matches!(
             edit.container,

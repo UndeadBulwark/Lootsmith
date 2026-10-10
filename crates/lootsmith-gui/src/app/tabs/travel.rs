@@ -1,8 +1,8 @@
 //! The travel tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
-use crate::theme::{self, Tokens};
 use crate::app::*;
+use crate::theme::{self, Tokens};
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_travel(&mut self, ui: &mut egui::Ui) {
@@ -17,17 +17,12 @@ impl LootsmithApp {
         let titles = self.dlc_titles.clone();
 
         // Group every known station: Base Game first, DLC chapters after.
-        let mut groups: Vec<(String, Vec<(String, String)>)> = vec![(
-            "Base Game".to_string(),
-            Vec::new(),
-        )];
+        let mut groups: Vec<(String, Vec<(String, String)>)> =
+            vec![("Base Game".to_string(), Vec::new())];
         for station in stations.all() {
             let display = stations.label_for(&station.resource_name);
             match station.dlc_expansion.as_deref() {
-                None | Some("") => groups[0].1.push((
-                    station.resource_name.clone(),
-                    display,
-                )),
+                None | Some("") => groups[0].1.push((station.resource_name.clone(), display)),
                 Some(expansion) => {
                     let title = titles
                         .as_ref()
@@ -45,9 +40,7 @@ impl LootsmithApp {
             }
         }
         let visited = format!("visited: {} / {}", self.travel.len(), stations.len());
-        ui.label(
-            egui::RichText::new(visited).color(Tokens::TEXT_DIM),
-        );
+        ui.label(egui::RichText::new(visited).color(Tokens::TEXT_DIM));
         ui.add_space(4.0);
 
         // Apply deferred checkbox / group edits after rendering.
@@ -88,18 +81,16 @@ impl LootsmithApp {
                         };
                         ui.horizontal(|ui| {
                             if ui
-                                .checkbox(
-                                    &mut checked,
-                                    format!("{marker}{display}"),
-                                )
+                                .checkbox(&mut checked, format!("{marker}{display}"))
                                 .changed()
                             {
                                 toggles.push((resource.clone(), checked));
                             }
-                            if checked && ui
-                                .button("☆ last")
-                                .on_hover_text("Make this the current station")
-                                .clicked()
+                            if checked
+                                && ui
+                                    .button("☆ last")
+                                    .on_hover_text("Make this the current station")
+                                    .clicked()
                             {
                                 set_last = Some(resource.clone());
                             }
@@ -132,5 +123,4 @@ impl LootsmithApp {
             self.set_last_teleporter(&name);
         }
     }
-
 }

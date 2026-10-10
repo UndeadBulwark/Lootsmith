@@ -1,7 +1,7 @@
 //! The missions tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
 use crate::app::*;
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_missions(&mut self, ui: &mut egui::Ui) {
@@ -74,7 +74,10 @@ impl LootsmithApp {
         });
         ui.separator();
 
-        ui.label(format!("Challenge resource entries: {}", self.challenges.len()));
+        ui.label(format!(
+            "Challenge resource entries: {}",
+            self.challenges.len()
+        ));
         egui::CollapsingHeader::new("Challenge entries")
             .default_open(false)
             .show(ui, |ui| {
@@ -103,8 +106,7 @@ impl LootsmithApp {
             }
             ui.add_sized(
                 [220.0, 22.0],
-                egui::TextEdit::singleline(&mut self.challenge_filter)
-                    .hint_text("find by id…"),
+                egui::TextEdit::singleline(&mut self.challenge_filter).hint_text("find by id…"),
             );
         });
         if self.challenge_stats.is_empty() {
@@ -126,12 +128,18 @@ impl LootsmithApp {
                             ui.strong("Previous");
                             ui.end_row();
                             for entry in self.challenge_stats.iter_mut() {
-                                if !needle.is_empty()
-                                    && !entry.id.to_string().contains(&needle)
-                                {
+                                if !needle.is_empty() && !entry.id.to_string().contains(&needle) {
                                     continue;
                                 }
-                                ui.label(format!("{}{}", entry.id, if entry.previous_value > 0 { " (reset)" } else { "" }));
+                                ui.label(format!(
+                                    "{}{}",
+                                    entry.id,
+                                    if entry.previous_value > 0 {
+                                        " (reset)"
+                                    } else {
+                                        ""
+                                    }
+                                ));
                                 if ui
                                     .add(egui::DragValue::new(&mut entry.total_value).speed(0.5))
                                     .changed()
@@ -157,5 +165,4 @@ impl LootsmithApp {
             }
         }
     }
-
 }

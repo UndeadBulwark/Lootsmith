@@ -7,9 +7,10 @@ pub(crate) use eframe::egui;
 pub(crate) use lootsmith_core::savegame::Kind;
 pub(crate) use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, ChallengeStats, Container, Customizations, Missions, NameParts, Resource, PackedEntry, PartLists, Platform,
-    ChallengeStat, Profile, SaveCandidate, SaveGame, TravelStations, DlcTitles, VehicleCustomization, MISSION_STATUSES,
-    PLAYER_MARKS, STAT_NAMES, VEHICLE_FAMILIES,
+    AssetLibraryManager, ChallengeStat, ChallengeStats, Container, Customizations, DlcTitles,
+    Missions, NameParts, PackedEntry, PartLists, Platform, Profile, Resource, SaveCandidate,
+    SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS, STAT_NAMES,
+    VEHICLE_FAMILIES,
 };
 pub(crate) use std::collections::HashMap;
 pub(crate) use std::path::PathBuf;
@@ -21,8 +22,8 @@ pub(crate) use egui_extras::{Column, TableBuilder};
 pub use crate::theme::Theme;
 
 mod item_editor;
-mod widgets;
 pub mod tabs;
+mod widgets;
 
 pub(crate) use item_editor::*;
 pub(crate) use widgets::*;
@@ -715,10 +716,22 @@ impl LootsmithApp {
         let mut bank = Vec::new();
         if let Some(save_game) = &self.save_game {
             for (i, entry) in save_game.packed_entries().iter().enumerate() {
-                backpack.push(row_for(entry, i + 1, &manager, &configs, name_parts.as_deref()));
+                backpack.push(row_for(
+                    entry,
+                    i + 1,
+                    &manager,
+                    &configs,
+                    name_parts.as_deref(),
+                ));
             }
             for (i, entry) in save_game.bank_entries().iter().enumerate() {
-                bank.push(row_for(entry, i + 1, &manager, &configs, name_parts.as_deref()));
+                bank.push(row_for(
+                    entry,
+                    i + 1,
+                    &manager,
+                    &configs,
+                    name_parts.as_deref(),
+                ));
             }
         }
         self.backpack = backpack;
@@ -826,7 +839,10 @@ impl LootsmithApp {
             .save_game
             .as_ref()
             .and_then(|save| save.challenge_stats().ok())
-            .unwrap_or(ChallengeStats { unknown: 4, entries: Vec::new() });
+            .unwrap_or(ChallengeStats {
+                unknown: 4,
+                entries: Vec::new(),
+            });
         self.challenge_stat_orig = stats
             .entries
             .iter()
@@ -1226,10 +1242,9 @@ impl LootsmithApp {
                 };
                 let preview = match &edit {
                     RawEdit::None => match field.wire {
-                        lootsmith_core::proto::WireType::LengthDelimited => format!(
-                            "{} bytes",
-                            field.as_bytes().map(|b| b.len()).unwrap_or(0)
-                        ),
+                        lootsmith_core::proto::WireType::LengthDelimited => {
+                            format!("{} bytes", field.as_bytes().map(|b| b.len()).unwrap_or(0))
+                        }
                         _ => field.as_varint().map(|v| v.to_string()).unwrap_or_default(),
                     },
                     _ => String::new(),
@@ -1259,10 +1274,7 @@ impl LootsmithApp {
         };
         self.plot_mission != save_game.plot_mission_number().unwrap_or(0)
             || self.active_mission != save_game.active_mission_number().unwrap_or(0)
-            || self
-                .mission_rows
-                .iter()
-                .any(|r| r.status != r.orig_status)
+            || self.mission_rows.iter().any(|r| r.status != r.orig_status)
     }
 
     /// Write plot/active mission numbers and changed mission statuses.
@@ -1419,9 +1431,7 @@ impl LootsmithApp {
                 return;
             }
         };
-        let other = match container::unpack(&data, Platform::PC)
-            .and_then(|file| file.save_game())
-        {
+        let other = match container::unpack(&data, Platform::PC).and_then(|file| file.save_game()) {
             Ok(save) => save,
             Err(e) => {
                 self.status = format!("import parse error: {e}");
@@ -1565,7 +1575,10 @@ impl LootsmithApp {
         let bytes = profile.to_bytes();
         match std::fs::write(&path, &bytes) {
             Ok(()) => {
-                self.status = format!("saved profile {path} ({} bytes, backup {backup})", bytes.len());
+                self.status = format!(
+                    "saved profile {path} ({} bytes, backup {backup})",
+                    bytes.len()
+                );
             }
             Err(e) => self.status = format!("profile write error: {e}"),
         }
@@ -1743,7 +1756,11 @@ impl LootsmithApp {
     }
 
     /// Decode and cache a bundled skill icon as a texture.
-    pub(crate) fn skill_texture(&mut self, ctx: &egui::Context, filename: &str) -> Option<egui::TextureHandle> {
+    pub(crate) fn skill_texture(
+        &mut self,
+        ctx: &egui::Context,
+        filename: &str,
+    ) -> Option<egui::TextureHandle> {
         if let Some(handle) = self.skill_icons.get(filename) {
             return Some(handle.clone());
         }
@@ -1755,7 +1772,8 @@ impl LootsmithApp {
             &data.rgba,
         );
         let handle = ctx.load_texture(filename.to_string(), image, egui::TextureOptions::LINEAR);
-        self.skill_icons.insert(filename.to_string(), handle.clone());
+        self.skill_icons
+            .insert(filename.to_string(), handle.clone());
         Some(handle)
     }
 
@@ -1823,7 +1841,9 @@ impl LootsmithApp {
                     }
                     if ui
                         .button("Profile…")
-                        .on_hover_text("Edit profile.bin: golden keys, badass bonuses, customizations")
+                        .on_hover_text(
+                            "Edit profile.bin: golden keys, badass bonuses, customizations",
+                        )
                         .clicked()
                     {
                         action = Some(Action::Profile);
@@ -1852,8 +1872,16 @@ impl LootsmithApp {
                         action = Some(Action::PickData);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let label = if self.theme == Theme::Dark { "☀" } else { "☾" };
-                        if ui.button(label).on_hover_text("Toggle light/dark").clicked() {
+                        let label = if self.theme == Theme::Dark {
+                            "☀"
+                        } else {
+                            "☾"
+                        };
+                        if ui
+                            .button(label)
+                            .on_hover_text("Toggle light/dark")
+                            .clicked()
+                        {
                             action = Some(Action::ToggleTheme);
                         }
                         if self.dirty {
@@ -1871,7 +1899,11 @@ impl LootsmithApp {
                             Tokens::TEXT_FAINT
                         },
                     );
-                    ui.label(egui::RichText::new("Save file").color(Tokens::TEXT_DIM).size(11.5));
+                    ui.label(
+                        egui::RichText::new("Save file")
+                            .color(Tokens::TEXT_DIM)
+                            .size(11.5),
+                    );
                     ui.add_sized(
                         [430.0, 24.0],
                         egui::TextEdit::singleline(&mut self.path)
@@ -1886,7 +1918,11 @@ impl LootsmithApp {
                             Tokens::WARN
                         },
                     );
-                    ui.label(egui::RichText::new("Game data").color(Tokens::TEXT_DIM).size(11.5));
+                    ui.label(
+                        egui::RichText::new("Game data")
+                            .color(Tokens::TEXT_DIM)
+                            .size(11.5),
+                    );
                     ui.add_sized(
                         [300.0, 24.0],
                         egui::TextEdit::singleline(&mut self.dumps)
@@ -2045,7 +2081,11 @@ impl LootsmithApp {
                     });
                     ui.add_space(6.0);
                     ui.radio_value(&mut new_blank, false, "Clone the open save, reset progress");
-                    ui.radio_value(&mut new_blank, true, "Blank save (spec-driven, experimental)");
+                    ui.radio_value(
+                        &mut new_blank,
+                        true,
+                        "Blank save (spec-driven, experimental)",
+                    );
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         if ui.button("Create").clicked() {
@@ -2101,20 +2141,14 @@ impl LootsmithApp {
                     });
                     ui.add_space(6.0);
                     if !form.loaded {
-                        theme::muted(
-                            ui,
-                            "Profile not loaded yet — set the path and click Load.",
-                        );
+                        theme::muted(ui, "Profile not loaded yet — set the path and click Load.");
                     }
                     egui::Grid::new("profile_grid")
                         .num_columns(2)
                         .spacing([16.0, 6.0])
                         .show(ui, |ui| {
                             ui.label("Golden keys");
-                            ui.add(
-                                egui::DragValue::new(&mut form.golden_keys)
-                                    .range(0..=100_000),
-                            );
+                            ui.add(egui::DragValue::new(&mut form.golden_keys).range(0..=100_000));
                             ui.end_row();
                             ui.label("Badass rank");
                             ui.add(
@@ -2123,10 +2157,7 @@ impl LootsmithApp {
                             );
                             ui.end_row();
                             ui.label("Badass tokens");
-                            ui.add(
-                                egui::DragValue::new(&mut form.badass_tokens)
-                                    .range(0..=500),
-                            );
+                            ui.add(egui::DragValue::new(&mut form.badass_tokens).range(0..=500));
                             ui.end_row();
                             ui.label("Unlock all customizations");
                             ui.checkbox(&mut form.unlocked, "");
@@ -2248,8 +2279,6 @@ impl LootsmithApp {
             }
         }
     }
-
-
 }
 
 impl eframe::App for LootsmithApp {

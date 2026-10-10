@@ -6,10 +6,10 @@
 //! one backpack item, one bank item), a few skills, some visited travel
 //! stations and DLC challenges. Never load this save into a real game.
 
-use crate::container::SaveFile;
 use crate::container;
+use crate::container::SaveFile;
 use crate::error::Result;
-use crate::items::{self, PackedData, PackedAssetReference, PackedItem, PackedWeapon};
+use crate::items::{self, PackedAssetReference, PackedData, PackedItem, PackedWeapon};
 use crate::platform::Platform;
 use crate::proto::{Field, Message};
 use crate::savegame::{Container, SaveGame};
@@ -79,7 +79,12 @@ pub fn synthetic_save() -> SaveGame {
     let quantity = 3;
     let packed_entries: Vec<(Container, Vec<u8>)> = blobs
         .iter()
-        .map(|(container, data)| (*container, items::pack(data, &configs).expect("pack test blob")))
+        .map(|(container, data)| {
+            (
+                *container,
+                items::pack(data, &configs).expect("pack test blob"),
+            )
+        })
         .collect();
 
     for (container, serial) in &packed_entries {
@@ -120,9 +125,17 @@ pub fn synthetic_save() -> SaveGame {
 
     // Ammo pools (field 11).
     for (pool, amount, level) in [
-        ("D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool", 273.0f32, 2),
+        (
+            "D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool",
+            273.0f32,
+            2,
+        ),
         ("D_Resourcepools.AmmoPools.Ammo_Pistol_Pool", 150.0, 1),
-        ("D_Resourcepools.AmmoPools.Ammo_Grenade_Protean_Pool", 4.0, 0),
+        (
+            "D_Resourcepools.AmmoPools.Ammo_Grenade_Protean_Pool",
+            4.0,
+            0,
+        ),
     ] {
         let mut sub = Message::default();
         sub.push(Field::string(1, "D_Resources.AmmoResources.Ammo_Test"));
@@ -192,15 +205,21 @@ mod tests {
             save.visited_teleporters(),
             ["SouthernShelfBay", "Sanctuary", "ThreeHornsValley"]
         );
-        assert_eq!(save.last_visited_teleporter(), Some("Sanctuary".to_string()));
+        assert_eq!(
+            save.last_visited_teleporter(),
+            Some("Sanctuary".to_string())
+        );
         let _ = std::fs::remove_file(&path);
     }
 
     #[test]
     fn weapon_blobs_decode_back() {
         let configs = crate::gameinfo::AssetLibraryConfigs::pc_default();
-        let decoded = items::unpack(&items::pack(&test_weapon(55, 9), &configs).unwrap(), &configs)
-            .expect("round trip");
+        let decoded = items::unpack(
+            &items::pack(&test_weapon(55, 9), &configs).unwrap(),
+            &configs,
+        )
+        .expect("round trip");
         assert_eq!(decoded.unique_id, 55);
         assert_eq!(decoded.game_stage(), 9);
         assert_eq!(decoded.manufacturer_grade(), 2);

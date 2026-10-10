@@ -147,7 +147,11 @@ pub fn tab(ui: &mut egui::Ui, selected: bool, label: &str) -> bool {
     } else {
         text.color(Tokens::TEXT_DIM)
     };
-    let response = ui.add(egui::Button::new(text).frame(false).min_size(egui::vec2(0.0, 28.0)));
+    let response = ui.add(
+        egui::Button::new(text)
+            .frame(false)
+            .min_size(egui::vec2(0.0, 28.0)),
+    );
     let rect = response.rect;
     let underline = if selected {
         Some(Tokens::ACCENT)

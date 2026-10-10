@@ -1,7 +1,7 @@
 //! The currency tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
 use crate::app::*;
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_currency(&mut self, ui: &mut egui::Ui) {
@@ -28,7 +28,11 @@ impl LootsmithApp {
                             if i >= 4 && !self.currency_show_unused {
                                 continue;
                             }
-                            ui.label(if i >= 4 { "Reserved / unused".to_string() } else { currency_name(i) });
+                            ui.label(if i >= 4 {
+                                "Reserved / unused".to_string()
+                            } else {
+                                currency_name(i)
+                            });
                             changed |= ui.add(egui::DragValue::new(value)).changed();
                             ui.end_row();
                         }
@@ -38,5 +42,4 @@ impl LootsmithApp {
             self.dirty = true;
         }
     }
-
 }

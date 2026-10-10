@@ -38,7 +38,11 @@ impl NameParts {
             let Some(name) = record.get("name").and_then(serde_json::Value::as_str) else {
                 continue;
             };
-            if record.get("type").and_then(serde_json::Value::as_str).is_some() {
+            if record
+                .get("type")
+                .and_then(serde_json::Value::as_str)
+                .is_some()
+            {
                 self.item_names.insert(key, name.to_string());
             } else {
                 self.names.insert(key, name.to_string());
@@ -52,9 +56,7 @@ impl NameParts {
         if path.is_dir() {
             return Self::from_dir(path);
         }
-        Self::from_json_str(
-            &std::fs::read_to_string(path).map_err(|e| Error::Io(e.to_string()))?,
-        )
+        Self::from_json_str(&std::fs::read_to_string(path).map_err(|e| Error::Io(e.to_string()))?)
     }
 
     /// Load both name-part files (and the item flavour list) from a dumps dir.
@@ -107,8 +109,14 @@ mod tests {
     #[test]
     fn parses_part_words_and_type_names() {
         let parts = NameParts::from_json_str(EXAMPLE).expect("parse");
-        assert_eq!(parts.part_name("GD_Anemone_Weap_SniperRifles.Name.Prefix_Dahl.Prefix_Bayonet1"), Some("Mama"));
-        assert_eq!(parts.type_name("GD_Ammodrops.Pickups.AmmoDrop_Assault_Rifle_Bullets"), Some("Combat Rifle Ammo"));
+        assert_eq!(
+            parts.part_name("GD_Anemone_Weap_SniperRifles.Name.Prefix_Dahl.Prefix_Bayonet1"),
+            Some("Mama")
+        );
+        assert_eq!(
+            parts.type_name("GD_Ammodrops.Pickups.AmmoDrop_Assault_Rifle_Bullets"),
+            Some("Combat Rifle Ammo")
+        );
         assert_eq!(parts.part_name("GD_Unknown.Name.Title"), None);
         assert_eq!(parts.len(), 3);
     }
@@ -119,8 +127,7 @@ mod tests {
         let Some(home) = std::env::var_os("HOME") else {
             return;
         };
-        let dir = Path::new(&home)
-            .join("Projects/bl2-rogue/data/gibbed");
+        let dir = Path::new(&home).join("Projects/bl2-rogue/data/gibbed");
         if !dir.is_dir() {
             return;
         }

@@ -20,7 +20,12 @@ pub struct SaveCandidate {
 impl SaveCandidate {
     /// The `<steamid64>` folder the save lives in, when it is numeric.
     pub fn steam_id(&self) -> Option<String> {
-        let parent = self.path.parent()?.file_name()?.to_string_lossy().to_string();
+        let parent = self
+            .path
+            .parent()?
+            .file_name()?
+            .to_string_lossy()
+            .to_string();
         if parent.chars().all(|c| c.is_ascii_digit()) && !parent.is_empty() {
             Some(parent)
         } else {
@@ -43,7 +48,7 @@ fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-fn eq_ci(name: &std::ffi::OsStr, target: &str, ) -> bool {
+fn eq_ci(name: &std::ffi::OsStr, target: &str) -> bool {
     name.to_string_lossy().eq_ignore_ascii_case(target)
 }
 
@@ -56,9 +61,7 @@ fn default_starts() -> Vec<PathBuf> {
     };
 
     // Native Aspyr Linux port.
-    starts.push(
-        home.join(".local/share/aspyr-media/borderlands 2/willowgame/savedata"),
-    );
+    starts.push(home.join(".local/share/aspyr-media/borderlands 2/willowgame/savedata"));
 
     // Steam / Proton (appid 49520) across the common Steam roots.
     let steam_roots = [
@@ -320,11 +323,7 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let mp = (5 * doy + 2) / 153;
     let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
     let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
-    (
-        if month <= 2 { year + 1 } else { year },
-        month,
-        day,
-    )
+    (if month <= 2 { year + 1 } else { year }, month, day)
 }
 
 #[cfg(test)]
@@ -348,9 +347,8 @@ mod tests {
         std::fs::create_dir_all(&docs).unwrap();
         std::fs::write(docs.join("Save0001.sav"), b"sav").unwrap();
         // Wine's backup copy — must be dropped in favour of the real one.
-        let backup = prefix.join(
-            "My Documents BACKUP/My games/Borderlands 2/WillowGame/SaveData/123",
-        );
+        let backup =
+            prefix.join("My Documents BACKUP/My games/Borderlands 2/WillowGame/SaveData/123");
         std::fs::create_dir_all(&backup).unwrap();
         std::fs::write(backup.join("Save0001.sav"), b"sav").unwrap();
         // A second, older save.
@@ -362,7 +360,9 @@ mod tests {
 
         let found = find_saves_in(&root);
         assert_eq!(found.len(), 2, "one per file, backup dropped: {found:?}");
-        assert!(found.iter().all(|c| !c.path.to_string_lossy().contains("BACKUP")));
+        assert!(found
+            .iter()
+            .all(|c| !c.path.to_string_lossy().contains("BACKUP")));
         assert_eq!(found[0].steam_id().as_deref(), Some("123"));
 
         let _ = std::fs::remove_dir_all(&root);

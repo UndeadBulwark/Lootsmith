@@ -1,7 +1,7 @@
 //! The vehicles tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
 use crate::app::*;
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_vehicles(&mut self, ui: &mut egui::Ui) {
@@ -58,5 +58,4 @@ impl LootsmithApp {
             }
         });
     }
-
 }

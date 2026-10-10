@@ -308,9 +308,7 @@ fn resolve_class(name: &str) -> String {
             "GD_Mercenary.Character.CharClass_Mercenary"
         }
         "assassin" | "zer0" | "zero" => "GD_Assassin.Character.CharClass_Assassin",
-        "lilac" | "krieg" | "psycho" => {
-            "GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass"
-        }
+        "lilac" | "krieg" | "psycho" => "GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass",
         "tulip" | "gaige" | "mechromancer" => {
             "GD_Tulip_Mechromancer.Character.CharClass_Mechromancer"
         }
@@ -525,7 +523,9 @@ fn main() -> ExitCode {
         if changed {
             let bytes = profile.to_bytes();
             let target = args.out.clone().unwrap_or_else(|| args.file.clone());
-            if args.out.is_none() && args.backup && !std::path::Path::new(&format!("{target}.bak")).exists()
+            if args.out.is_none()
+                && args.backup
+                && !std::path::Path::new(&format!("{target}.bak")).exists()
             {
                 let _ = std::fs::copy(&target, format!("{target}.bak"));
             }
@@ -749,7 +749,9 @@ fn main() -> ExitCode {
                                     w.manufacturer_grade_index,
                                     w.game_stage,
                                 );
-                                if let Some(name) = item_display_name(&name_parts, &[&prefix, &title]) {
+                                if let Some(name) =
+                                    item_display_name(&name_parts, &[&prefix, &title])
+                                {
                                     println!("        name={name}");
                                 }
                                 println!(
@@ -836,7 +838,11 @@ fn main() -> ExitCode {
                         println!(
                             "challenge {}{}: total={} previous={}",
                             entry.id,
-                            if entry.previous_value > 0 { " (reset)" } else { "" },
+                            if entry.previous_value > 0 {
+                                " (reset)"
+                            } else {
+                                ""
+                            },
                             entry.total_value,
                             entry.previous_value
                         );
@@ -864,7 +870,10 @@ fn main() -> ExitCode {
                 println!("#{} {:16} level={}", i + 1, name, level);
             }
             if let Some(slots) = save_game.inventory_slots() {
-                println!("backpack max = {} slots; weapon-ready = {}; quick = {}", slots.0, slots.1, slots.2);
+                println!(
+                    "backpack max = {} slots; weapon-ready = {}; quick = {}",
+                    slots.0, slots.1, slots.2
+                );
             }
             println!("MaxBankSlots = {:?}", save_game.max_bank_slots());
             ExitCode::SUCCESS
@@ -903,7 +912,12 @@ fn main() -> ExitCode {
                 .stations
                 .clone()
                 .or_else(|| std::env::var("LOOTSMITH_TRAVEL_STATIONS").ok())
-                .map(|path| (path.clone(), TravelStations::from_path(std::path::Path::new(&path))));
+                .map(|path| {
+                    (
+                        path.clone(),
+                        TravelStations::from_path(std::path::Path::new(&path)),
+                    )
+                });
             let stations = match stations {
                 Some((path, Ok(s))) => {
                     eprintln!("loaded travel stations from {path}");
@@ -1215,8 +1229,8 @@ fn main() -> ExitCode {
                 };
                 let keys = lootsmith_core::savegame::BLACK_MARKET_KEYS;
                 let position = keys.iter().position(|k| k.eq_ignore_ascii_case(&name));
-                let index = position
-                    .or_else(|| name.parse::<usize>().ok().map(|one| one.max(1) - 1));
+                let index =
+                    position.or_else(|| name.parse::<usize>().ok().map(|one| one.max(1) - 1));
                 match index {
                     Some(index) if index < keys.len() => {
                         save_game.set_sdu(index, level).expect("sdu");

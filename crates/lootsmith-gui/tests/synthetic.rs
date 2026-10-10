@@ -7,8 +7,7 @@ use lootsmith_core::fixture;
 use lootsmith_gui::app::LootsmithApp;
 
 fn harness_with_synthetic() -> Harness<'static, LootsmithApp> {
-    static COUNTER: std::sync::atomic::AtomicUsize =
-        std::sync::atomic::AtomicUsize::new(0);
+    static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let unique = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let path = std::env::temp_dir().join(format!("lootsmith-synthetic-{unique}.sav"));
     let file = fixture::write_synthetic_save(&path).expect("synthetic save");
@@ -22,7 +21,8 @@ fn harness_with_synthetic() -> Harness<'static, LootsmithApp> {
         )
 }
 
-#[allow(clippy::unwrap_used)] #[test]
+#[allow(clippy::unwrap_used)]
+#[test]
 fn synthetic_save_loads_and_switches_tabs() {
     let mut h = harness_with_synthetic();
     h.run();
@@ -32,14 +32,26 @@ fn synthetic_save_loads_and_switches_tabs() {
     assert_eq!(h.state().bank.len(), 1);
     assert_eq!(h.state().travel.len(), 3);
 
-    for label in ["Character", "Currency", "Skills", "Fast Travel", "Vehicles",
-                  "Missions", "Backpack (3)", "Bank (1)", "Raw", "About", "General"] {
+    for label in [
+        "Character",
+        "Currency",
+        "Skills",
+        "Fast Travel",
+        "Vehicles",
+        "Missions",
+        "Backpack (3)",
+        "Bank (1)",
+        "Raw",
+        "About",
+        "General",
+    ] {
         h.get_by_label(label).click();
         h.run();
     }
 }
 
-#[allow(clippy::unwrap_used)] #[test]
+#[allow(clippy::unwrap_used)]
+#[test]
 fn synthetic_save_skills_click_and_save_round_trip() {
     let mut h = harness_with_synthetic();
     h.run();
@@ -101,7 +113,11 @@ fn sdu_edits_and_max_all_stay_consistent() {
     h.run();
     h.get_by_label("Ammo").click();
     h.run();
-    assert_eq!(h.state().sdus, [0; 9], "the synthetic save starts un-upgraded");
+    assert_eq!(
+        h.state().sdus,
+        [0; 9],
+        "the synthetic save starts un-upgraded"
+    );
 
     // Consistent per-SDU edit: the backpack grows to 12 + 3·2 = 18.
     h.state_mut().set_sdu(8, 2);

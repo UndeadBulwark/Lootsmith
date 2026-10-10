@@ -1,8 +1,8 @@
 //! The character tab (moved verbatim from the former single-file app.rs).
 
-use eframe::egui;
-use crate::theme::self;
 use crate::app::*;
+use crate::theme;
+use eframe::egui;
 
 impl LootsmithApp {
     pub fn change_class(&mut self, player_class: &str) {
@@ -55,106 +55,111 @@ impl LootsmithApp {
         let mut change_class: Option<String> = None;
         let mut reset_op = false;
         card(ui, 620.0, |ui| {
-        theme::section(ui, "Character");
-        egui::Grid::new("character")
-            .num_columns(2)
-            .spacing([16.0, 6.0])
-            .show(ui, |ui| {
-                ui.label("Name");
-                changed |= ui
-                    .add_sized(
-                        [240.0, 22.0],
-                        egui::TextEdit::singleline(&mut self.form.character_name),
-                    )
-                    .changed();
-                ui.end_row();
-                ui.label("Class");
-                let classes = crate::skills::class_ids();
-                let current = crate::skills::class_display_name(&self.read_info.player_class);
-                ui.horizontal(|ui| {
-                    egui::ComboBox::from_id_salt("class_choice")
-                        .selected_text(&current)
-                        .width(220.0)
-                        .show_ui(ui, |ui| {
-                            for id in &classes {
-                                let label = crate::skills::class_display_name(id);
-                                let selected = *id == self.read_info.player_class;
-                                if ui.selectable_label(selected, label).clicked() {
-                                    change_class = Some((*id).to_string());
+            theme::section(ui, "Character");
+            egui::Grid::new("character")
+                .num_columns(2)
+                .spacing([16.0, 6.0])
+                .show(ui, |ui| {
+                    ui.label("Name");
+                    changed |= ui
+                        .add_sized(
+                            [240.0, 22.0],
+                            egui::TextEdit::singleline(&mut self.form.character_name),
+                        )
+                        .changed();
+                    ui.end_row();
+                    ui.label("Class");
+                    let classes = crate::skills::class_ids();
+                    let current = crate::skills::class_display_name(&self.read_info.player_class);
+                    ui.horizontal(|ui| {
+                        egui::ComboBox::from_id_salt("class_choice")
+                            .selected_text(&current)
+                            .width(220.0)
+                            .show_ui(ui, |ui| {
+                                for id in &classes {
+                                    let label = crate::skills::class_display_name(id);
+                                    let selected = *id == self.read_info.player_class;
+                                    if ui.selectable_label(selected, label).clicked() {
+                                        change_class = Some((*id).to_string());
+                                    }
                                 }
-                            }
-                        });
-                    if self.overpower_level() > 0
-                        && ui
-                            .button("Reset OP")
-                            .on_hover_text("Clear all Digistruct Peak overpower completions")
-                            .clicked()
-                    {
-                        reset_op = true;
-                    }
+                            });
+                        if self.overpower_level() > 0
+                            && ui
+                                .button("Reset OP")
+                                .on_hover_text("Clear all Digistruct Peak overpower completions")
+                                .clicked()
+                        {
+                            reset_op = true;
+                        }
+                    });
+                    ui.end_row();
+                    ui.label("Overpower level");
+                    let op = self.overpower_level();
+                    ui.label(if op > 0 {
+                        op.to_string()
+                    } else {
+                        "—".to_string()
+                    });
+                    ui.end_row();
+                    ui.label("Level");
+                    changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
+                    ui.end_row();
+                    ui.label("Experience");
+                    changed |= ui
+                        .add(egui::DragValue::new(&mut self.form.exp_points))
+                        .changed();
+                    ui.end_row();
+                    ui.label("General skill points");
+                    changed |= ui
+                        .add(egui::DragValue::new(&mut self.form.general_skill_points))
+                        .changed();
+                    ui.end_row();
+                    ui.label("Specialist skill points");
+                    changed |= ui
+                        .add(egui::DragValue::new(&mut self.form.specialist_skill_points))
+                        .changed();
+                    ui.end_row();
+                    ui.label("Head");
+                    customization_combo(
+                        ui,
+                        &customizations,
+                        usage,
+                        "Head",
+                        &mut self.form.head,
+                        "char_head",
+                    );
+                    ui.end_row();
+                    ui.label("Skin");
+                    customization_combo(
+                        ui,
+                        &customizations,
+                        usage,
+                        "Skin",
+                        &mut self.form.skin,
+                        "char_skin",
+                    );
+                    ui.end_row();
+                    ui.label("Save id");
+                    ui.label(self.read_info.save_id.to_string());
+                    ui.end_row();
+                    ui.label("GUID");
+                    ui.label(&self.read_info.guid);
+                    ui.end_row();
+                    ui.label("Last saved");
+                    ui.label(&self.read_info.last_saved);
+                    ui.end_row();
                 });
-                ui.end_row();
-                ui.label("Overpower level");
-                let op = self.overpower_level();
-                ui.label(if op > 0 {
-                    op.to_string()
-                } else {
-                    "—".to_string()
-                });
-                ui.end_row();
-                ui.label("Level");
-                changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
-                ui.end_row();
-                ui.label("Experience");
-                changed |= ui.add(egui::DragValue::new(&mut self.form.exp_points)).changed();
-                ui.end_row();
-                ui.label("General skill points");
-                changed |= ui
-                    .add(egui::DragValue::new(&mut self.form.general_skill_points))
-                    .changed();
-                ui.end_row();
-                ui.label("Specialist skill points");
-                changed |= ui
-                    .add(egui::DragValue::new(&mut self.form.specialist_skill_points))
-                    .changed();
-                ui.end_row();
-                ui.label("Head");
-                customization_combo(
-                    ui,
-                    &customizations,
-                    usage,
-                    "Head",
-                    &mut self.form.head,
-                    "char_head",
-                );
-                ui.end_row();
-                ui.label("Skin");
-                customization_combo(
-                    ui,
-                    &customizations,
-                    usage,
-                    "Skin",
-                    &mut self.form.skin,
-                    "char_skin",
-                );
-                ui.end_row();
-                ui.label("Save id");
-                ui.label(self.read_info.save_id.to_string());
-                ui.end_row();
-                ui.label("GUID");
-                ui.label(&self.read_info.guid);
-                ui.end_row();
-                ui.label("Last saved");
-                ui.label(&self.read_info.last_saved);
-                ui.end_row();
-            });
         });
         if changed {
             self.dirty = true;
         }
         if customizations.is_none() {
             ui.add_space(6.0);
-            theme::muted(ui, "Load the game-data folder to pick heads and skins by name.");
+            theme::muted(
+                ui,
+                "Load the game-data folder to pick heads and skins by name.",
+            );
         }
         if let Some(class) = change_class {
             self.change_class(&class);
@@ -163,5 +168,4 @@ impl LootsmithApp {
             self.reset_overpower();
         }
     }
-
 }

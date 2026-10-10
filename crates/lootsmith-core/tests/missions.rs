@@ -71,7 +71,11 @@ fn edits_mission_status_and_numbers_and_reloads() {
     assert_eq!(sg2.plot_mission_number(), Some(19));
     assert_eq!(sg2.active_mission_number(), Some(19));
     let playthroughs = sg2.mission_playthroughs();
-    assert_eq!(playthroughs[0].missions.len(), 19, "no missions added/removed");
+    assert_eq!(
+        playthroughs[0].missions.len(),
+        19,
+        "no missions added/removed"
+    );
     assert_eq!(playthroughs[0].missions[18].status, 4, "now Complete");
 
     // Out-of-range targets error rather than corrupt.
@@ -92,8 +96,13 @@ fn resolves_mission_names() {
     if let Some(sg) = fixture_save() {
         // The fixture's plot mission number resolves to a named mission.
         let number = sg.plot_mission_number().expect("plot number");
-        let label = missions.label_for_number(number).expect("resolved plot mission");
-        assert!(label.contains('/'), "label includes the key and number: {label}");
+        let label = missions
+            .label_for_number(number)
+            .expect("resolved plot mission");
+        assert!(
+            label.contains('/'),
+            "label includes the key and number: {label}"
+        );
         // Every mission key in the save resolves too.
         for pt in sg.mission_playthroughs() {
             for mission in pt.missions {

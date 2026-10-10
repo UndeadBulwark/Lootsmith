@@ -86,7 +86,11 @@ fn bank_move_round_trips_and_survives_reload() {
         sg.entries_in(Container::BackpackWeapon).len(),
         weapons_before - 1
     );
-    assert_eq!(sg.bank_entries()[0].serial, moved, "blob bytes must be kept");
+    assert_eq!(
+        sg.bank_entries()[0].serial,
+        moved,
+        "blob bytes must be kept"
+    );
 
     let bytes = container::serialize(&sg.to_bytes(), Platform::PC).expect("serialize");
     let reopened = container::unpack(&bytes, Platform::PC).expect("reopen");
@@ -104,7 +108,10 @@ fn bank_move_round_trips_and_survives_reload() {
     sg2.move_entry(Container::Bank, 0, Container::BackpackWeapon)
         .expect("move back");
     assert_eq!(sg2.bank_entries().len(), 0);
-    assert_eq!(sg2.entries_in(Container::BackpackWeapon).len(), weapons_before);
+    assert_eq!(
+        sg2.entries_in(Container::BackpackWeapon).len(),
+        weapons_before
+    );
 }
 
 #[test]
@@ -176,7 +183,10 @@ fn edits_a_bank_entry_serial() {
     let round_tripped = items::unpack(&bank[0].serial, &configs).expect("re-decode");
     match round_tripped.slot {
         items::PackedSlot::Weapon(w) => {
-            assert!(w.elemental_part.is_none(), "elemental part should be cleared")
+            assert!(
+                w.elemental_part.is_none(),
+                "elemental part should be cleared"
+            )
         }
         items::PackedSlot::Item(_) => panic!("expected a weapon"),
     }
@@ -188,10 +198,18 @@ fn moving_does_not_touch_other_blobs() {
         eprintln!("fixture not present; skipping");
         return;
     };
-    let before: Vec<Vec<u8>> = sg.packed_entries().iter().map(|e| e.serial.clone()).collect();
+    let before: Vec<Vec<u8>> = sg
+        .packed_entries()
+        .iter()
+        .map(|e| e.serial.clone())
+        .collect();
     sg.move_entry(Container::BackpackWeapon, 3, Container::Bank)
         .expect("move");
-    let after: Vec<Vec<u8>> = sg.packed_entries().iter().map(|e| e.serial.clone()).collect();
+    let after: Vec<Vec<u8>> = sg
+        .packed_entries()
+        .iter()
+        .map(|e| e.serial.clone())
+        .collect();
     // One weapon was removed; the rest keep their exact bytes and order.
     let mut expected = before.clone();
     expected.remove(5 + 3); // 5 backpack items precede the weapons

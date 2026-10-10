@@ -32,8 +32,8 @@ pub fn save_to_json(save: &crate::savegame::SaveGame) -> String {
 
 /// Parse JSON text produced by [`save_to_json`] back into a [`SaveGame`].
 pub fn save_from_json(text: &str) -> Result<crate::savegame::SaveGame> {
-    let value: Value = serde_json::from_str(text)
-        .map_err(|e| Error::Proto(format!("invalid save JSON: {e}")))?;
+    let value: Value =
+        serde_json::from_str(text).map_err(|e| Error::Proto(format!("invalid save JSON: {e}")))?;
     if value.get(MAGIC).and_then(Value::as_i64) != Some(1) {
         return Err(Error::Proto(
             "not a lootsmith save JSON (missing \"lootsmith-protobuf\": 1)".into(),
@@ -140,10 +140,8 @@ mod tests {
     fn json_round_trip_is_byte_identical() {
         let message = sample();
         let text = message_to_json(&message).to_string();
-        let rebuilt = message_from_json(
-            &serde_json::from_str(&text).expect("json"),
-        )
-        .expect("parse back");
+        let rebuilt =
+            message_from_json(&serde_json::from_str(&text).expect("json")).expect("parse back");
         assert_eq!(message.to_bytes(), rebuilt.to_bytes());
     }
 
@@ -155,6 +153,6 @@ mod tests {
         assert_eq!(save.to_bytes(), rebuilt.to_bytes());
     }
 
-    use crate::savegame::SaveGame;
     use super::{save_from_json, save_to_json};
+    use crate::savegame::SaveGame;
 }
