@@ -58,6 +58,7 @@ on the whole file.
 cargo run -p lootsmith-cli -- inspect /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- verify  /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- dump    /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- saves
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --dumps "/path/Asset Library Manager.json"
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --container bank
 cargo run -p lootsmith-cli -- skills  /path/to/Save0001.sav
@@ -65,6 +66,9 @@ cargo run -p lootsmith-cli -- travel  /path/to/Save0001.sav --stations "/path/Tr
 cargo run -p lootsmith-cli -- vehicles /path/to/Save0001.sav --customizations "/path/Customizations.json"
 cargo run -p lootsmith-cli -- missions /path/to/Save0001.sav --missions-json "/path/Missions.json"
 ```
+
+`saves` lists the Borderlands 2 saves found on this machine (native Linux port,
+Steam/Proton prefixes, and Wine/Lutris/custom prefixes).
 
 `items` lists the backpack (fields 53/54) and the bank (field 41); pass
 `--container bag|bank` to filter (default `all`). `skills` lists the skill tree
@@ -140,11 +144,15 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
     --dumps "/path/to/gibbed-dumps"
 ```
 
-A native window with a toolbar (**Open / Save / Save As / Reload / Game data**,
-with `Ctrl+O/S/Shift+S/R`), a light/dark theme toggle, and a status bar. Pick the
-**game-data folder** once (the directory holding `Asset Library Manager.json`) and
-the Asset Library, Travel Stations, Customizations and Missions tables are all
-loaded from it, so names resolve everywhere.
+A native window with a toolbar (**Open / Find saves / Save / Save As / Reload /
+Game data**, with `Ctrl+O/S/Shift+S/R`), a light/dark theme toggle, and a status
+bar. Lootsmith **finds your saves automatically** — native Aspyr, Steam/Proton
+(appid 49520, all Steam roots incl. Flatpak), and generic Wine/Lutris/custom
+prefixes like a ZLuda prefix under `$HOME` — and on first run opens the newest one.
+**Find saves** lets you pick from what it found. Pick the **game-data folder**
+once (the directory holding `Asset Library Manager.json`) and the Asset Library,
+Travel Stations, Customizations and Missions tables are all loaded from it, so
+names resolve everywhere.
 
 Tabs: **General**, **Character** (name, level, head & skin), **Currency**,
 **Skills**, **Fast Travel**, **Vehicles**, **Missions**, **Backpack**, **Bank**, and
