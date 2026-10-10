@@ -1266,6 +1266,11 @@ impl SaveGame {
             .collect()
     }
 
+    /// `LevelChallengeUnlocks` (field 39), in order.
+    pub fn level_challenge_unlocks(&self) -> Vec<i32> {
+        self.get_int_list(39)
+    }
+
     pub fn num_challenge_prestiges(&self) -> Option<i32> {
         self.get_i32(42)
     }
@@ -1774,5 +1779,177 @@ mod sdu_tests {
         let bytes = save.to_bytes();
         let parsed = SaveGame::parse(&bytes).expect("reparse");
         assert_eq!(parsed.black_market_upgrades(), save.black_market_upgrades());
+    }
+}
+
+/// The challenge-progress blob (`StatsData`, field 15): a header plus 12
+/// bytes per challenge id — `(id u16 LE, flag byte, total i32 LE, flag byte,
+/// previous-reset value i32 LE)`. The flag bytes are not understood, so they
+/// are preserved exactly. (Layout from apocalyptech's `challenges.py`.)
+///
+/// The header is `u32 unknown` (observed 4), `u32 byte size`
+/// (entries·12 + 2), `u16 count`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChallengeStat {
+    pub id: u16,
+    /// The two per-entry flag bytes; preserved verbatim.
+    pub flags: [u8; 2],
+    pub total_value: i32,
+    pub previous_value: i32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChallengeStats {
+    /// The header's first u32 (observed as 4) — preserved verbatim.
+    pub unknown: u32,
+    pub entries: Vec<ChallengeStat>,
+}
+
+impl ChallengeStats {
+    /// Parse the blob (little-endian, PC layout).
+    pub fn parse(data: &[u8]) -> Result<ChallengeStats> {
+        if data.len() < 10 {
+            return Err(Error::TooShort("challenge stats header"));
+        }
+        let u32le = |pos: usize| {
+            u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
+        };
+        let unknown = u32le(0);
+        let size = u32le(4) as usize;
+        let count = u16::from_le_bytes([data[8], data[9]]) as usize;
+        if size + 8 != data.len() {
+            return Err(Error::Proto(format!(
+                "challenge stats report {size} bytes but {} found",
+                data.len() - 8
+            )));
+        }
+        if count * 12 != size - 2 {
+            return Err(Error::Proto(format!(
+                "{count} challenges but {} data bytes",
+                size - 2
+            )));
+        }
+        let mut entries = Vec::with_capacity(count);
+        for i in 0..count {
+            let at = 10 + i * 12;
+            let chunk = &data[at..at + 12];
+            entries.push(ChallengeStat {
+                id: u16::from_le_bytes([chunk[0], chunk[1]]),
+                flags: [chunk[2], chunk[7]],
+                total_value: i32::from_le_bytes([
+                    chunk[3], chunk[4], chunk[5], chunk[6],
+                ]),
+                previous_value: i32::from_le_bytes([
+                    chunk[8], chunk[9], chunk[10], chunk[11],
+                ]),
+            });
+        }
+        Ok(ChallengeStats { unknown, entries })
+    }
+
+    /// Re-emit the blob.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(10 + self.entries.len() * 12);
+        out.extend_from_slice(&self.unknown.to_le_bytes());
+        out.extend_from_slice(&((self.entries.len() * 12 + 2) as u32).to_le_bytes());
+        out.extend_from_slice(&(self.entries.len() as u16).to_le_bytes());
+        for entry in &self.entries {
+            out.extend_from_slice(&entry.id.to_le_bytes());
+            out.push(entry.flags[0]);
+            out.extend_from_slice(&entry.total_value.to_le_bytes());
+            out.push(entry.flags[1]);
+            out.extend_from_slice(&entry.previous_value.to_le_bytes());
+        }
+        out
+    }
+}
+
+impl SaveGame {
+    /// The challenge-progress blob (field 15), parsed.
+    pub fn challenge_stats(&self) -> Result<ChallengeStats> {
+        let Some(data) = self.get_bytes(15) else {
+            return Err(Error::Proto("no StatsData (field 15)".into()));
+        };
+        ChallengeStats::parse(data)
+    }
+
+    /// Change one challenge's values in the blob (the other entries keep
+    /// their exact bytes).
+    pub fn set_challenge_stat(
+        &mut self,
+        id: u16,
+        change: impl FnOnce(&mut ChallengeStat),
+    ) -> Result<()> {
+        let mut stats = self.challenge_stats()?;
+        let Some(entry) = stats.entries.iter_mut().find(|entry| entry.id == id) else {
+            return Err(Error::Proto(format!("no challenge with id {id}")));
+        };
+        change(entry);
+        let data = stats.to_bytes();
+        self.set_bytes(15, &data);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod challenge_stats_tests {
+    use super::*;
+
+    fn blob(id_a: u16, total_a: i32) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&4u32.to_le_bytes());
+        out.extend_from_slice(&((2 * 12 + 2) as u32).to_le_bytes());
+        out.extend_from_slice(&2u16.to_le_bytes());
+        for (id, total) in [(id_a, total_a), (1622u16, 9_767i32)] {
+            out.extend_from_slice(&id.to_le_bytes());
+            out.push(6); // flag byte 1
+            out.extend_from_slice(&total.to_le_bytes());
+            out.push(1); // flag byte 2
+            out.extend_from_slice(&0i32.to_le_bytes());
+        }
+        out
+    }
+
+    #[test]
+    fn challenge_stats_parse_edit_rewrap() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_bytes(15, &blob(1621, 9845));
+
+        let stats = save.challenge_stats().expect("parse");
+        assert_eq!(stats.unknown, 4);
+        assert_eq!(stats.entries.len(), 2);
+        assert_eq!(stats.entries[0].total_value, 9845);
+
+        save.set_challenge_stat(1621, |entry| entry.total_value = 99).expect("edit");
+        let after = save.challenge_stats().expect("reparse");
+        assert_eq!(after.entries[0].total_value, 99);
+        // The untouched sibling keeps its exact bytes.
+        assert_eq!(after.entries[1].total_value, 9_767);
+        assert_eq!(after.entries[1].flags, [6, 1]);
+    }
+
+    #[test]
+    fn unknown_ids_are_rejected_not_created() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_bytes(15, &blob(1621, 5));
+        let err = save.set_challenge_stat(9999, |e| e.total_value = 1);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn prestige_round() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        assert_eq!(save.num_challenge_prestiges(), None, "absent when unset");
+        save.set_i32(42, 3);
+        assert_eq!(save.num_challenge_prestiges(), Some(3));
+    }
+
+    #[test]
+    fn level_challenge_unlocks_edit() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_int_list_packed(39, &[1, 2, 5]);
+        assert_eq!(save.level_challenge_unlocks(), [1, 2, 5]);
+        save.set_int_list_packed(39, &[2]);
+        assert_eq!(save.level_challenge_unlocks(), [2]);
     }
 }

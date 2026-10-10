@@ -7,8 +7,8 @@ pub(crate) use eframe::egui;
 pub(crate) use lootsmith_core::savegame::Kind;
 pub(crate) use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, Container, Customizations, Missions, NameParts, Resource, PackedEntry, PartLists, Platform,
-    Profile, SaveCandidate, SaveGame, TravelStations, DlcTitles, VehicleCustomization, MISSION_STATUSES,
+    AssetLibraryManager, ChallengeStats, Container, Customizations, Missions, NameParts, Resource, PackedEntry, PartLists, Platform,
+    ChallengeStat, Profile, SaveCandidate, SaveGame, TravelStations, DlcTitles, VehicleCustomization, MISSION_STATUSES,
     PLAYER_MARKS, STAT_NAMES, VEHICLE_FAMILIES,
 };
 pub(crate) use std::collections::HashMap;
@@ -334,6 +334,13 @@ pub struct LootsmithApp {
     /// Desired backpack/bank slot sizes (consistent with `sdus`)
     pub backpack_slots: i32,
     pub bank_size: i32,
+    /// Challenge-progress stats (field 15) mirrored for editing.
+    pub challenge_stats: Vec<ChallengeStat>,
+    challenge_stat_orig: Vec<(u16, i32)>,
+    /// Search text for the challenge stats.
+    pub challenge_filter: String,
+    /// `NumChallengePrestiges` (field 42).
+    pub prestiges: i32,
     /// Missions (field 18) and challenge list (field 38).
     pub mission_rows: Vec<MissionRow>,
     pub plot_mission: i32,
@@ -411,6 +418,10 @@ impl LootsmithApp {
             sdu_orig: [0; 9],
             backpack_slots: 12,
             bank_size: 6,
+            challenge_stats: Vec::new(),
+            challenge_stat_orig: Vec::new(),
+            challenge_filter: String::new(),
+            prestiges: 0,
             mission_rows: Vec::new(),
             plot_mission: 0,
             active_mission: 0,
@@ -561,6 +572,7 @@ impl LootsmithApp {
         self.refresh_vehicles();
         self.refresh_ammo();
         self.refresh_sdus();
+        self.refresh_challenge_stats();
         self.refresh_missions();
         self.refresh_raw();
         self.dirty = false;
@@ -800,6 +812,64 @@ impl LootsmithApp {
     }
 
     /// Snapshot the ammo pools (field 11).
+    /// Set `NumChallengePrestiges` (field 42).
+    pub fn set_prestige(&mut self, level: i32) {
+        if let Some(save_game) = self.save_game.as_mut() {
+            save_game.set_i32(42, level.max(0));
+        }
+        self.prestiges = level.max(0);
+        self.dirty = true;
+    }
+
+    pub(crate) fn refresh_challenge_stats(&mut self) {
+        let stats = self
+            .save_game
+            .as_ref()
+            .and_then(|save| save.challenge_stats().ok())
+            .unwrap_or(ChallengeStats { unknown: 4, entries: Vec::new() });
+        self.challenge_stat_orig = stats
+            .entries
+            .iter()
+            .map(|entry| (entry.id, entry.total_value))
+            .collect();
+        self.challenge_stats = stats.entries;
+        self.prestiges = self
+            .save_game
+            .as_ref()
+            .and_then(|save| save.num_challenge_prestiges())
+            .unwrap_or(0);
+    }
+
+    /// Set one challenge's total value by id.
+    pub fn set_challenge_value(&mut self, id: u16, total: i32) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        if let Err(e) = save_game.set_challenge_stat(id, |entry| entry.total_value = total) {
+            self.status = format!("challenge error: {e}");
+            return;
+        }
+        self.challenge_stat_orig = self
+            .save_game
+            .as_ref()
+            .and_then(|s| s.challenge_stats().ok())
+            .map(|stats| {
+                stats
+                    .entries
+                    .iter()
+                    .map(|entry| (entry.id, entry.total_value))
+                    .collect()
+            })
+            .unwrap_or_default();
+        self.challenge_stats = self
+            .save_game
+            .as_ref()
+            .and_then(|s| s.challenge_stats().ok())
+            .map(|stats| stats.entries)
+            .unwrap_or_default();
+        self.dirty = true;
+    }
+
     pub(crate) fn refresh_sdus(&mut self) {
         let levels = self
             .save_game

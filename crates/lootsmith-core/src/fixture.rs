@@ -132,6 +132,21 @@ pub fn synthetic_save() -> SaveGame {
         save.message.push(Field::bytes(11, &sub.to_bytes()));
     }
 
+    // Challenge-progress blob (field 15) with two entries.
+    let mut blob = Vec::new();
+    blob.extend_from_slice(&4u32.to_le_bytes());
+    blob.extend_from_slice(&((2 * 12 + 2) as u32).to_le_bytes());
+    blob.extend_from_slice(&2u16.to_le_bytes());
+    for (id, total) in [(1621u16, 9_845i32), (1622, 9_767)] {
+        blob.extend_from_slice(&id.to_le_bytes());
+        blob.push(6); // flag
+        blob.extend_from_slice(&total.to_le_bytes());
+        blob.push(1); // flag
+        blob.extend_from_slice(&0i32.to_le_bytes());
+    }
+    save.set_bytes(15, &blob);
+    save.set_int_list_packed(39, &[1, 2, 5]);
+
     // Travel: a few visited stations + the last one.
     save.set_visited_teleporters(&[
         "SouthernShelfBay".to_string(),
@@ -171,6 +186,8 @@ mod tests {
         assert_eq!(save.bank_entries().len(), 1);
         assert_eq!(save.skills().len(), 3);
         assert_eq!(save.resources().len(), 3);
+        assert_eq!(save.challenge_stats().expect("blob").entries.len(), 2);
+        assert_eq!(save.level_challenge_unlocks(), [1, 2, 5]);
         assert_eq!(
             save.visited_teleporters(),
             ["SouthernShelfBay", "Sanctuary", "ThreeHornsValley"]

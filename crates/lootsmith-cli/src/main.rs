@@ -24,6 +24,7 @@ fn usage() -> ExitCode {
                           [--unlock-customizations] [--out OUT]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith ammo    <file.sav> [--platform <id>]\n  \
+         lootsmith challenges <file.sav> [--platform <id>]\n  \
          lootsmith sdus    <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
          lootsmith vehicles <file.sav> [--customizations FILE]\n  \
@@ -35,6 +36,7 @@ fn usage() -> ExitCode {
          lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --ammo N [--amount F] [--sdu N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --market NAME --sdu-level L [--max-sdus] --out OUT\n  \
+         lootsmith edit    <file.sav> --challenge-stat ID --value V [--prestige N] --out OUT\n  \
          lootsmith edit    <file.sav> [--backpack-slots S] [--bank-size S] --out OUT\n  \
          lootsmith edit    <file.sav> [--plot-mission N] [--active-mission N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --mission-playthrough P --mission-index I --mission-status NAME [--out OUT]\n\
@@ -91,6 +93,9 @@ struct Args {
     sdu: Option<i32>,
     sdu_level: Option<i32>,
     market: Option<String>,
+    challenge_stat: Option<String>,
+    value: Option<f32>,
+    prestige: Option<i32>,
     backpack_slots: Option<i32>,
     bank_slots_flag: Option<i32>,
     max_sdus: bool,
@@ -166,6 +171,9 @@ fn parse_args() -> Option<Args> {
         sdu: None,
         sdu_level: None,
         market: None,
+        challenge_stat: None,
+        value: None,
+        prestige: None,
         backpack_slots: None,
         bank_slots_flag: None,
         max_sdus: false,
@@ -215,6 +223,9 @@ fn parse_args() -> Option<Args> {
             "--sdu" => args.sdu = Some(it.next()?.parse().ok()?),
             "--sdu-level" => args.sdu_level = Some(it.next()?.parse().ok()?),
             "--market" => args.market = Some(it.next()?),
+            "--challenge-stat" => args.challenge_stat = Some(it.next()?),
+            "--value" => args.value = Some(it.next()?.parse().ok()?),
+            "--prestige" => args.prestige = Some(it.next()?.parse().ok()?),
             "--backpack-slots" => args.backpack_slots = Some(it.next()?.parse().ok()?),
             "--bank-size" => args.bank_slots_flag = Some(it.next()?.parse().ok()?),
             "--max-sdus" => args.max_sdus = true,
@@ -809,6 +820,33 @@ fn main() -> ExitCode {
             println!("total: {} pools", resources.len());
             ExitCode::SUCCESS
         }
+        "challenges" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            println!("prestiges = {:?}", save_game.num_challenge_prestiges());
+            println!("level unlocks = {:?}", save_game.level_challenge_unlocks());
+            match save_game.challenge_stats() {
+                Ok(stats) => {
+                    for entry in &stats.entries {
+                        println!(
+                            "challenge {}{}: total={} previous={}",
+                            entry.id,
+                            if entry.previous_value > 0 { " (reset)" } else { "" },
+                            entry.total_value,
+                            entry.previous_value
+                        );
+                    }
+                    println!("total: {} challenge stat entries", stats.entries.len());
+                }
+                Err(e) => eprintln!("challenge stats: {e}"),
+            }
+            ExitCode::SUCCESS
+        }
         "sdus" => {
             let save_game = match save.save_game() {
                 Ok(s) => s,
@@ -1187,6 +1225,28 @@ fn main() -> ExitCode {
                     }
                     Some(_) => eprintln!("error: SDU index out of range (use 1..9)"),
                     None => eprintln!("error: unknown SDU '{name}' (use one of {keys:?} or 1..9)"),
+                }
+            }
+            if let Some(level) = args.prestige {
+                save_game.set_i32(42, level.max(0));
+                println!("challenge prestiges = {level}");
+                changes += 1;
+            }
+            if let Some(id_text) = args.challenge_stat.clone() {
+                let Some(value) = args.value else {
+                    eprintln!("error: --challenge-stat ID needs --value V");
+                    return ExitCode::FAILURE;
+                };
+                let Ok(id) = id_text.parse::<u16>() else {
+                    eprintln!("error: '{id_text}' is not a numeric challenge id");
+                    return ExitCode::FAILURE;
+                };
+                match save_game.set_challenge_stat(id, |entry| entry.total_value = value as i32) {
+                    Ok(()) => {
+                        println!("challenge {id} total value = {value}");
+                        changes += 1;
+                    }
+                    Err(e) => eprintln!("error: {e}"),
                 }
             }
             if let Some(pool) = args.ammo {

@@ -134,3 +134,43 @@ fn sdu_edits_and_max_all_stay_consistent() {
     assert_eq!(save.max_bank_slots(), Some(24));
     let _ = std::fs::remove_file(&out);
 }
+
+#[test]
+fn challenge_stats_edit_through_the_missions_tab() {
+    let mut h = harness_with_synthetic();
+    h.run();
+    h.get_by_label("Missions").click();
+    h.run();
+    assert_eq!(h.state().challenge_stats.len(), 2);
+    assert_eq!(h.state().prestiges, 0);
+
+    // Edit challenge 1621's total value (same mutator the drag values use).
+    h.state_mut().set_challenge_value(1621, 500);
+    h.run();
+    let out = std::env::temp_dir().join("lootsmith-synthetic-chal.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = lootsmith_core::container::unpack(
+        &std::fs::read(&out).expect("read edited save"),
+        lootsmith_core::Platform::PC,
+    )
+    .expect("reparse");
+    let save = reopened.save_game().expect("save game");
+    let stats = save.challenge_stats().expect("blob");
+    let edited = stats
+        .entries
+        .iter()
+        .find(|entry| entry.id == 1621)
+        .expect("edited entry");
+    assert_eq!(edited.total_value, 500);
+    assert_eq!(
+        stats
+            .entries
+            .iter()
+            .find(|entry| entry.id == 1622)
+            .expect("untouched entry")
+            .total_value,
+        9_767,
+        "siblings keep their values"
+    );
+    let _ = std::fs::remove_file(&out);
+}
