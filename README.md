@@ -275,6 +275,13 @@ cargo test -p lootsmith-core
 validates SHA1, CRC32, LZO decompression, and that the Huffman re-encode
 reproduces the original inner buffer byte-for-byte.
 
+## Fan project
+
+Lootsmith is an unofficial fan project. It is **not affiliated with, endorsed
+by, or associated with Gearbox Software or 2K Games**. "Borderlands" is a
+trademark of its owners and is used descriptively only. No game art, binaries
+or audio are bundled.
+
 ## Licensing
 
 Project code is zlib, inherited from upstream. Game data is **not** bundled and
@@ -285,3 +292,16 @@ Exception: the skill-tree names, descriptions and icons under
 from the community calculator at bl2skills.com) are Gearbox-owned game content
 included so the skill calculator works offline. Remove that directory and the
 `skills` module if you need a build with no bundled game data.
+
+### Bundled game-data tables
+
+`crates/lootsmith-core/assets/data/` ships the community dump tables the editor
+needs to resolve names (asset library, balances, part lists, name parts, travel
+stations, missions, customizations, downloadable contents) plus the derived
+`rarity.json`. They are data tables (names, ids, numbers) re-serialised to
+compact JSON, not art or code; they originate from the community dumps
+(Gibbed's Borderlands2Dumps and the OpenBLCMM datapack) and the curated
+`thekeogh/borderlens` item list, which carries no license — only the *derived*
+balance→rarity mapping is bundled, with its provenance recorded in
+`rarity.json`. A game-data folder chosen in **Game data…** always overrides the
+bundled copies.

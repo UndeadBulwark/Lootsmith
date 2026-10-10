@@ -35,17 +35,18 @@ Name: **Homestead**. A cozy workshop-cabin look in pixel-art style, drawn from t
 | `bg` | `#14100C` | `#CDBB92` | window background (textured) |
 | `pan` | `#1E1812` | `#E8DDBF` | panel fill |
 | `fg` | `#FFC98A` | `#3A2616` | body text |
-| `dim` | `#C29862` | `#6B5236` | secondary text |
+| `dim` | `#C29862` | `#523D25` | secondary text (light darkened for 5.42:1 on `bg`) |
 | `acc` | `#FFB866` | `#A8470F` | selected fill, primary button |
 | `on` | `#14100C` | `#F6EBCF` | text on `acc` |
-| `gold` | `#E3B04B` | `#7A520A` | trim, section labels, hover border |
+| `gold` | `#E3B04B` | `#5E3E06` | trim, section labels, hover border (light darkened for 5.13:1 on `bg`) |
 | `wd` | `#5A3A20` | `#8A5A32` | wood: panel border, bars |
 | `wd2` | `#4A2F1A` | `#7A4E2B` | plank line |
 | `onw` | `#FFD9A8` | `#F6EBCF` | text on wood |
 | `rib` | `#D9A25A` | `#A8470F` | ribbon fill |
 | `onr` | `#14100C` | `#F6EBCF` | text on ribbon |
-| `brd` | `#7A5A38` | `#8A6A44` | stitching, dotted dividers |
+| `brd` | `#8C6A40` | `#8A6A44` | stitching, dotted dividers (>=3:1 on `pan`) |
 | `tex` | `#1A150F` | `#C4B186` | background dither tile |
+| `wdb` | `#96714A` | `#8A5A32` | wood *border* on `pan` (>=3:1); `wd` stays the wood fill |
 | `dng` | `#FF8A70` | `#9E2B14` | destructive text |
 
 The light `gold` value is darker than in the mockup (`#8C5F0E`) because that value is estimated at about 4.1:1 on `pan`, below the 4.5:1 target for small label text.

@@ -22,7 +22,11 @@ lootsmith-gui    egui front end over core. No format logic here.
    `LOOTSMITH_UI_WORKFLOW.md` (target design + the autonomous testing loop).
 2. Untouched fields must re-serialize byte-identically (the `proto.rs` raw-bytes design). Never rewrite a message you did not edit.
 3. Every setter has a round-trip test: load fixture -> edit -> `to_bytes` -> `parse` -> assert value -> assert all other fields unchanged.
-4. Game data (asset library, parts, names) is user-supplied JSON. Do not bundle Gearbox data beyond what the README already documents.
+4. Game data (asset library, parts, names) is user-supplied JSON; the community
+   dump tables are additionally bundled under `crates/lootsmith-core/assets/data/`
+   (data only, no art or binaries) so a fresh run resolves names with no setup.
+   A folder the user picks always overrides the bundled copy. Do not add new
+   Gearbox art.
 5. `app.rs` was split in `0ad078a`: the app now lives in `app/mod.rs` (state, build,
    toolbar, dispatch, model), `app/widgets.rs`, `app/item_editor.rs` and one module per tab
    under `app/tabs/`. Keep it that way — new screens go in their own tab module.

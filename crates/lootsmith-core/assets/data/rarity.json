@@ -1,0 +1,765 @@
+{
+  "version": 2,
+  "provenance": {
+    "generated": "2026-10-10",
+    "generator": "scripts/gen-rarity.py",
+    "primary": {
+      "source": "thekeogh/borderlens curated per-item rarities",
+      "url": "https://github.com/thekeogh/borderlens",
+      "commit": "0b53eabc21492468ceac5f31fc023bd403b3a79d",
+      "method": "exact, unique display-name join (final balance leaf token equality, plus the reviewed alias file)",
+      "license": "no license stated; only the derived balance->rarity mapping is bundled"
+    },
+    "fallback": {
+      "source": "balance-name tier patterns for generated gear (_2_Uncommon, _3_Rare, ...)",
+      "method": "pattern table in this file; game naming encodes the tier"
+    },
+    "rules": {
+      "legendary_pool_only": "never classified from pools alone; Unknown unless Borderlens confirms exactly",
+      "marker_less": "a single non-Legendary pool tier classifies marker-less gear (origin pool)"
+    },
+    "pattern_vs_pool": {
+      "overlap": 345,
+      "agreement": 0.9884,
+      "note": "name-tier patterns vs rarity-marked pool tiers, per-tier 100%",
+      "pool_derived": 38,
+      "mixed_left_unknown": 7
+    },
+    "validation": {
+      "wiki_sample_total": 25,
+      "wiki_sample_agreement": 1.0,
+      "wiki_sample_minimum": 0.95,
+      "wiki_sample_date": "2026-10-10",
+      "note": "22/25 strict (88%), 25/25 after tier normalization: the wiki's 'Unique' is this mapping's Rare/E-tech for blue uniques"
+    }
+  },
+  "patterns": [
+    {
+      "rarity": "Legendary",
+      "contains": [
+        "A_Weapons_Legendary",
+        "A_Item_Legendary",
+        "_Legendary"
+      ]
+    },
+    {
+      "rarity": "Seraph",
+      "contains": [
+        "Seraph",
+        "Seraphim"
+      ]
+    },
+    {
+      "rarity": "Pearlescent",
+      "contains": [
+        "Pearlescent",
+        "_Cyan",
+        "CyanA",
+        "Cyan"
+      ]
+    },
+    {
+      "rarity": "Etech",
+      "contains": [
+        "Alien",
+        "Etech"
+      ]
+    },
+    {
+      "rarity": "VeryRare",
+      "contains": [
+        "VeryRare"
+      ]
+    },
+    {
+      "rarity": "Uncommon",
+      "contains": [
+        "Uncommon"
+      ]
+    },
+    {
+      "rarity": "Rare",
+      "contains": [
+        "Rare"
+      ]
+    },
+    {
+      "rarity": "Common",
+      "contains": [
+        "Common"
+      ]
+    }
+  ],
+  "balances": {
+    "GD_Orchid_BossWeapons.Launcher.RL_Torgue_3_12Pounder": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Anemone_GrenadeMods.A_Item_Legendary.GM_Antifection": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.SMG.SMG_Tediore_6_Avenger": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Legendary.SMG_Tediore_5_BabyMaker": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Legendary.RL_Bandit_5_BadaBoom": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Maliwan_3_BadTouch": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Hyperion_3_Bane": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.AssaultRifle.AR_Dahl_6_Bearcat": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Lobelia_Weapons.AssaultRifles.AR_Jakobs_6_Bekah": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Legendary.SMG_Hyperion_5_Bitch": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Tediore_3_Blockhead": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Bandit_3_BoneShredder": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_BonusPackage": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Iris_Weapons.AssaultRifles.AR_Torgue_3_BoomPuppy": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_BouncingBonny": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Unique.Sniper_Jakobs_3_Buffalo": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Legendary.RL_Tediore_5_Bunny": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.Shotgun.SG_Hyperion_6_Butcher": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Lobelia_Weapons.Shotguns.SG_Torgue_6_Carnage": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Aster_GrenadeMods.A_Item.GM_ChainLightning": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Unique.Sniper_Maliwan_3_ChereAmie": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.AssaultRifle.AR_Bandit_3_Chopper": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Maliwan_3_Chulainn": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Iris_Weapons.SniperRifles.Sniper_Jakobs_3_Cobra": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Hyperion_3_Commerce": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Legendary.SG_Hyperion_5_ConferenceCall": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Standard_CrackedSash": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Unique.RL_Torgue_3_Creamer": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Aster_Weapons.SMGs.SMG_Maliwan_3_Crit": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Dahl_3_Dahlminator": {
+      "rarity": "Etech",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.AssaultRifle.AR_Jakobs_3_DamnedCowboy": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Nova_Explosive_DeadlyBloom": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Legendary.SG_Tediore_5_Deliverance": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Bandit_3_Dog": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.SniperRifles.Sniper_Jakobs_3_ElephantGun": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Legendary.SMG_Dahl_5_Emperor": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Unique.AR_Torgue_3_EvilSmasher": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_Fastball": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Hyperion_3_Fibber": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Aster_GrenadeMods.A_Item.GM_Fireball": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_FireBee": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Aster_GrenadeMods.A_Item.GM_FireStorm": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Legendary.SG_Torgue_5_Flakker": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Unique.Sniper_Hyperion_3_FremingtonsEdge": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Custom.GM_FusterCluck": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Lobelia_Weapons.sniper.Sniper_Jakobs_6_Godfinger": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Maliwan_3_GoodTouch": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_Flax_Items.Item.BalDef_Candy_Green": {
+      "rarity": "Common",
+      "origin": "borderlens"
+    },
+    "GD_Aster_Weapons.Pistols.Pistol_Maliwan_3_GrogNozzle": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Bandit_5_Gub": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Tediore_5_Gunerang": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Unique.AR_Vladof_3_Hail": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Legendary.AR_Jakobs_5_HammerBuster": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Hyperion_3_HeartBreaker": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Unique.RL_Maliwan_3_TheHive": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.Shotgun.SG_Jakobs_3_Hydra": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Vladof_5_Infinity": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Legendary.Sniper_Hyperion_5_Invader": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.Shotgun.SG_Bandit_3_JollyRoger": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Jakobs_3_Judge": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Legendary.AR_Torgue_5_KerBlaster": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Custom.GM_KissOfDeath": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Iris_Weapons.AssaultRifles.AR_Vladof_3_Kitten": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Hyperion_3_LadyFist": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Torgue_3_Landscaper": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Unique.SMG_Dahl_3_Lascaux": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Jakobs_3_Law": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_Leech": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Aster_GrenadeMods.A_Item.GM_LightningBolt": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.Pistol.Pistol_Maliwan_3_LittleEvie": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Hyperion_5_LogansGun": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Unique.Sniper_Hyperion_3_Longbow": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Roid_04_LoveThumper": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Legendary.Sniper_Vladof_5_Lyudmila": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Jakobs_5_Maggie": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item.GM_Mirv": {
+      "rarity": "Common",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Legendary.RL_Vladof_5_Mongol": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Unique.Sniper_Hyperion_3_Morningstar": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_NastySurprise": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Unique.RL_Maliwan_Alien_Norfleet": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Legendary.RL_Torgue_5_Nukem": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Tediore_3_Octo": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Aster_Weapons.AssaultRifles.AR_Bandit_3_Ogre": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Aster_Weapons.SMGs.SMG_Bandit_3_Orc": {
+      "rarity": "VeryRare",
+      "origin": "borderlens"
+    },
+    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Roid_Order": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.Shotgun.SG_Jakobs_3_OrphanMaker": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Anemone_Weapons.Shotgun.Overcompensator.SG_Hyperion_6_Overcompensator": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_Pandemic": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.SniperRifles.Sniper_Maliwan_3_Pimpernel": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Legendary.Sniper_Dahl_5_Pitchfork": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Iris_Weapons.Pistols.Pistol_Torgue_3_PocketRocket": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Booster_PotOGold": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_Quasar": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.AssaultRifle.AR_Vladof_3_Rapier": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.Pistols.Pistol_Jakobs_3_Rex": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Launchers.A_Weapons_Unique.RL_Bandit_3_Roaster": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Bandit_3_RokSalt": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item_Legendary.GM_RollingThunder": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Maliwan_3_Rubi": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.SMG.SMG_Dahl_3_SandHawk": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.AssaultRifle.AR_Bandit_6_Sawbar": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Unique.AR_Dahl_3_Scorpio": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Hyperion_3_Shotgun1340": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Legendary.Sniper_Jakobs_5_Skullmasher": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SMG.A_Weapons_Legendary.SMG_Bandit_5_Slagga": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Legendary.SG_Bandit_5_SledgesShotgun": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Unique.Sniper_Dahl_3_Sloth": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Iris_Weapons.Shotguns.SG_Hyperion_3_SlowHand": {
+      "rarity": "Etech",
+      "origin": "borderlens"
+    },
+    "GD_Orchid_BossWeapons.AssaultRifle.AR_Jakobs_3_Stinkpot": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Unique.AR_Jakobs_3_Stomper": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.sniper.Sniper_Maliwan_6_Storm": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Legendary.SG_Jakobs_5_Striker": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Aster_Weapons.Shotguns.SG_Torgue_3_SwordSplosion": {
+      "rarity": "Etech",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Dahl_3_Teapot": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Maliwan_5_ThunderballFists": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Jakobs_3_TidalWave": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Anemone_Weapons.AssaultRifle.AR_Dahl_6_Toothpick": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Shotgun.A_Weapons_Unique.SG_Jakobs_3_Triquetra": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.Launchers.RL_Torgue_6_Tunguska": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.Shotgun.SG_Jakobs_3_Twister": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Gladiolus_Weapons.Pistol.Pistol_Jakobs_6_Unforgiven": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Weap_Pistol.A_Weapons_Unique.Pistol_Vladof_3_Veritas": {
+      "rarity": "Rare",
+      "origin": "borderlens"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons_Legendary.AR_Dahl_5_Veruc": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Weap_SniperRifles.A_Weapons_Legendary.Sniper_Maliwan_5_Volcano": {
+      "rarity": "Legendary",
+      "origin": "borderlens"
+    },
+    "GD_Lobelia_Weapons.Pistol.Pistol_Maliwan_6_Wanderlust": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Anemone_Weapons.Rocket_Launcher.WorldBurn.RL_Torgue_5_WorldBurn": {
+      "rarity": "Pearlescent",
+      "origin": "borderlens"
+    },
+    "GD_Sage_Weapons.SMG.SMG_Hyperion_3_YellowJacket": {
+      "rarity": "Etech",
+      "origin": "borderlens"
+    },
+    "GD_GrenadeMods.A_Item.GM_AreaEffect": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_BouncingBetty": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_Singularity": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_Standard": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_Transfusion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    }
+  },
+  "_origins": {
+    "borderlens": "curated per-item rarity from thekeogh/borderlens (exact name join)",
+    "pattern": "generated-gear tier encoded in the balance name"
+  },
+  "_notes": [
+    "balances: balance asset name -> {rarity, origin}; pools win, borderlens fills gaps.",
+    "patterns are the name-tier fallback for generated gear (game naming encodes the tier).",
+    "Anything absent from balances and patterns is Unknown: never guessed.",
+    "Ambiguous name joins are deliberately excluded and reported by the generator."
+  ]
+}

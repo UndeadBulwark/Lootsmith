@@ -551,15 +551,36 @@ fn profile_editor_round_trips_values() {
 }
 
 #[test]
-fn game_data_banner_never_blocks_the_ui() {
-    // Without dumps the app shows a non-modal banner; the tab strip stays
-    // clickable (regression for the modal that swallowed clicks).
+fn bundled_tables_resolve_names_with_no_game_data_folder() {
+    // No user folder: the bundled tables must still resolve part names, so a
+    // fresh install needs no setup and shows no picker.
     let save = synthetic_save_path();
     let mut h = harness_with(&save, None);
     h.run();
+    let state = h.state();
+    assert!(state.manager.is_some(), "bundled asset library is loaded");
+    assert!(state.dumps_bundled, "and it is flagged as bundled");
+    eprintln!(
+        "DEBUG dumps={:?} bundled={} manager={} names={:?} status={}",
+        state.dumps,
+        state.dumps_bundled,
+        state.manager.is_some(),
+        state.name_parts.as_ref().map(|p| p.len()),
+        state.status
+    );
+    assert!(state.name_parts.is_some(), "bundled name parts");
+    assert!(state.part_lists.is_some(), "bundled balance part lists");
+    assert!(state.stations.is_some(), "bundled travel stations");
+    assert!(state.customizations.is_some(), "bundled customizations");
+    assert!(state.missions_data.is_some(), "bundled missions");
+
+    // The parts editor resolves a slot to a name (not "#i/j").
     h.get_by_label("Backpack (3)").click();
     h.run();
-    assert_eq!(h.state().tab, Tab::Backpack);
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    let inspector = h.state().selected_item_editor_is_ready();
+    assert!(inspector, "the inspector has a decoded item");
 }
 
 #[test]

@@ -40,3 +40,17 @@ fn smoke_backpack_light() {
     h.run();
     h.snapshot("smoke_backpack_light");
 }
+
+/// The item inspector with **no** game-data folder: part names must resolve
+/// from the bundled tables (review PNG).
+#[test]
+fn smoke_inspector_bundled() {
+    let path = std::env::temp_dir().join("lootsmith-snapshot.sav");
+    lootsmith_core::fixture::write_synthetic_save(&path).expect("write synthetic save");
+    let mut h = harness_with(&path.display().to_string(), None);
+    h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
+    h.state_mut()
+        .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
+    h.run();
+    h.snapshot("smoke_inspector_bundled");
+}

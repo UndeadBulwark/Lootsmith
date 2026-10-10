@@ -584,3 +584,10 @@ impl LootsmithApp {
         self.status = format!("synced {updated} item level(s) to {level}");
     }
 }
+
+impl LootsmithApp {
+    /// Whether the item inspector has a decoded item to show (tests).
+    pub fn selected_item_editor_is_ready(&self) -> bool {
+        self.item_edit.is_some()
+    }
+}

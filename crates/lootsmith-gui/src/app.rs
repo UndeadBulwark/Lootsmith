@@ -349,10 +349,10 @@ pub struct LootsmithApp {
     /// Challenge-progress stats (field 15) mirrored for editing.
     pub challenge_stats: Vec<ChallengeStat>,
     challenge_stat_orig: Vec<(u16, i32)>,
+    /// True when the bundled tables are in use (no user folder).
+    pub dumps_bundled: bool,
     /// Game-data folder candidates for first-run onboarding.
     pub dump_candidates: Vec<PathBuf>,
-    /// The onboarding window open flag.
-    show_onboarding: bool,
     /// Search text for the challenge stats.
     pub challenge_filter: String,
     /// Debug: active tab key (tests).
@@ -442,8 +442,8 @@ impl LootsmithApp {
             mementos: (0, 0),
             challenge_stats: Vec::new(),
             challenge_stat_orig: Vec::new(),
+            dumps_bundled: true,
             dump_candidates: Vec::new(),
-            show_onboarding: false,
             challenge_filter: String::new(),
             prestiges: 0,
             mission_rows: Vec::new(),
@@ -632,20 +632,31 @@ impl LootsmithApp {
         } else {
             self.dumps.clone()
         };
-        if raw.trim().is_empty() {
-            self.manager = None;
-            return;
-        }
         let path = PathBuf::from(raw.trim());
         let library = if path.is_dir() {
             path.join("Asset Library Manager.json")
         } else {
-            path
+            path.clone()
         };
-        match AssetLibraryManager::from_path(&library) {
+
+        // A user folder always wins; otherwise use the bundled tables, so a
+        // fresh install shows part names with no setup at all.
+        let from_user = !raw.trim().is_empty() && library.is_file();
+        let loaded = if from_user {
+            lootsmith_core::gameinfo::AssetLibraryManager::from_path(&library)
+                .map_err(|e| e.to_string())
+        } else {
+            lootsmith_core::bundled::asset_library().map_err(|e| e.to_string())
+        };
+        match loaded {
             Ok(m) => {
                 self.manager = Some(Arc::new(m));
-                self.status = format!("loaded asset library from {}", library.display());
+                self.dumps_bundled = !from_user;
+                self.status = if from_user {
+                    format!("game data: {}", library.display())
+                } else {
+                    "game data: bundled tables (point Game data at a folder to override)".into()
+                };
             }
             Err(e) => {
                 self.manager = None;
@@ -695,11 +706,14 @@ impl LootsmithApp {
 
     /// Load DLC chapter titles for the travel-tab grouping.
     fn load_dlc_titles(&self) -> Option<Arc<DlcTitles>> {
-        let dir = self.dumps_dir()?;
-        DlcTitles::from_path(&dir.join("Downloadable Contents.json"))
-            .ok()
-            .filter(|t| !t.is_empty())
-            .map(Arc::new)
+        if let Some(dir) = self.dumps_dir() {
+            if let Ok(titles) = DlcTitles::from_path(&dir.join("Downloadable Contents.json")) {
+                if !titles.is_empty() {
+                    return Some(Arc::new(titles));
+                }
+            }
+        }
+        lootsmith_core::bundled::dlc_titles().ok().map(Arc::new)
     }
 
     /// Load the name parts (from the game-data folder or
@@ -712,12 +726,15 @@ impl LootsmithApp {
         }
         if let Ok(path) = std::env::var("LOOTSMITH_NAME_PARTS") {
             if !path.trim().is_empty() {
-                if let Ok(parts) = NameParts::from_dir(std::path::Path::new(&path)) {
-                    return Some(Arc::new(parts));
+                if let Ok(parts) = NameParts::from_path(std::path::Path::new(&path)) {
+                    if !parts.is_empty() {
+                        return Some(Arc::new(parts));
+                    }
                 }
             }
         }
-        None
+        // Bundled tables: a fresh run resolves item names with no setup.
+        lootsmith_core::bundled::name_parts().ok().map(Arc::new)
     }
 
     /// Load the balance part lists (from the game-data folder or
@@ -732,10 +749,12 @@ impl LootsmithApp {
         }
         if let Some(dir) = self.dumps_dir() {
             if let Ok(lists) = PartLists::from_dir(&dir) {
-                return Some(Arc::new(lists));
+                if !lists.is_empty() {
+                    return Some(Arc::new(lists));
+                }
             }
         }
-        None
+        lootsmith_core::bundled::part_lists().ok().map(Arc::new)
     }
 
     pub(crate) fn refresh_rows(&mut self) {
@@ -851,7 +870,10 @@ impl LootsmithApp {
                 }
             }
         }
-        self.stations = None;
+        // Fall back to the bundled table (a user folder always overrides).
+        self.stations = lootsmith_core::bundled::travel_stations()
+            .ok()
+            .map(Arc::new);
     }
 
     /// Snapshot the ammo pools (field 11).
@@ -1194,7 +1216,7 @@ impl LootsmithApp {
                 }
             }
         }
-        self.customizations = None;
+        self.customizations = lootsmith_core::bundled::customizations().ok().map(Arc::new);
     }
 
     pub(crate) fn refresh_vehicles(&mut self) {
@@ -1281,7 +1303,7 @@ impl LootsmithApp {
                 }
             }
         }
-        self.missions_data = None;
+        self.missions_data = lootsmith_core::bundled::missions().ok().map(Arc::new);
     }
 
     pub(crate) fn refresh_missions(&mut self) {
@@ -1906,13 +1928,12 @@ impl LootsmithApp {
                 }
             }
             if self.dumps.trim().is_empty() {
-                // First run: adopt a game-data folder when one is obvious.
+                // First run: adopt a game-data folder when one is obvious, else
+                // the bundled tables are used (no picker).
                 if let Some(dir) = lootsmith_core::find_dump_dirs().first() {
                     self.dumps = dir.display().to_string();
-                    self.load_dumps();
-                } else {
-                    self.show_onboarding = true;
                 }
+                self.load_dumps();
             }
             if !self.path.trim().is_empty() {
                 self.load();
@@ -2051,7 +2072,12 @@ impl LootsmithApp {
                             .hint_text("folder with Asset Library Manager.json"),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if self.manager.is_some() {
+                        if self.manager.is_some() && self.dumps_bundled {
+                            ui.colored_label(
+                                Tokens::TEXT_FAINT,
+                                "names resolved (bundled tables — Game data… overrides)",
+                            );
+                        } else if self.manager.is_some() {
                             ui.colored_label(Tokens::TEXT_FAINT, "names resolved");
                         } else {
                             ui.colored_label(Tokens::WARN, "no game data — parts show raw ids");
@@ -2061,56 +2087,6 @@ impl LootsmithApp {
             });
         if let Some(action) = action {
             self.dispatch(action);
-        }
-
-        if self.show_onboarding {
-            // A non-blocking banner: no modal stealing clicks.
-            if self.dump_candidates.is_empty() {
-                self.dump_candidates = lootsmith_core::locate::find_dump_dirs();
-            }
-            let candidates = self.dump_candidates.clone();
-            let mut picked = None;
-            let mut browse = false;
-            egui::Panel::top("onboarding")
-                .frame(
-                    egui::Frame::default()
-                        .fill(tint(Tokens::SURFACE, Tokens::WARN, 0.10))
-                        .stroke(egui::Stroke::new(1.0, Tokens::WARN))
-                        .corner_radius(egui::CornerRadius::same(6))
-                        .inner_margin(egui::Margin::symmetric(12, 6)),
-                )
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.colored_label(Tokens::WARN, "Game data missing");
-                        theme::muted(
-                            ui,
-                            "\u{2014} pick the folder containing Asset Library Manager.json so items, missions and travel resolve.",
-                        );
-                        for candidate in &candidates {
-                            if ui
-                                .button("Use this")
-                                .on_hover_text(candidate.display().to_string())
-                                .clicked()
-                            {
-                                picked = Some(candidate.display().to_string());
-                            }
-                        }
-                        if ui.button("Browse\u{2026}").clicked() {
-                            browse = true;
-                        }
-                    });
-                });
-            if let Some(candidate) = picked {
-                self.dumps = candidate;
-                self.load_dumps();
-                self.show_onboarding = false;
-                self.dump_candidates.clear();
-            }
-            if browse {
-                self.show_onboarding = false;
-                self.dump_candidates.clear();
-                self.browse_dumps_dir();
-            }
         }
 
         egui::Panel::bottom("status")

@@ -4,6 +4,7 @@
 //! (zlib license).
 
 pub mod bitio;
+pub mod bundled;
 pub mod container;
 pub mod crc32;
 pub mod customizations;
