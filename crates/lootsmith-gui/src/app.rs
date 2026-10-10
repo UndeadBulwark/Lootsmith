@@ -148,6 +148,31 @@ pub struct RawField {
     pub count: usize,
     pub preview: String,
     pub edit: RawEdit,
+    /// Elements of an int/string list field, editable individually.
+    pub elements: Vec<RawElem>,
+    /// A pending list-level change (element added/removed).
+    apply: bool,
+}
+
+/// One element of a list field (int or string).
+#[derive(Clone, Debug)]
+pub struct RawElem {
+    pub edit: RawEdit,
+    /// Edited since the last apply.
+    pub changed: bool,
+}
+
+/// A pending add/remove of one list element in the raw view.
+enum RawListOp {
+    Add,
+    Remove(usize),
+}
+
+impl RawField {
+    /// An edited element or a pending list-level change.
+    fn list_needs_apply(&self) -> bool {
+        self.apply || self.elements.iter().any(|e| e.changed)
+    }
 }
 
 fn customization_combo(
@@ -1686,6 +1711,26 @@ impl LootsmithApp {
                 let number = field.number;
                 let spec = SaveGame::spec(number);
                 let count = sg.message.count(number);
+                let mut elements = Vec::new();
+                match spec.map(|s| s.kind) {
+                    Some(Kind::IntList) => {
+                        for value in sg.get_int_list(number) {
+                            elements.push(RawElem {
+                                edit: RawEdit::Int(value),
+                                changed: false,
+                            });
+                        }
+                    }
+                    Some(Kind::StrList) => {
+                        for value in sg.get_str_list(number) {
+                            elements.push(RawElem {
+                                edit: RawEdit::Str(value),
+                                changed: false,
+                            });
+                        }
+                    }
+                    _ => {}
+                }
                 let edit = match spec.map(|s| s.kind) {
                     Some(Kind::Int) => field.as_i32().map(RawEdit::Int).unwrap_or(RawEdit::None),
                     Some(Kind::Bool) => field.as_bool().map(RawEdit::Bool).unwrap_or(RawEdit::None),
@@ -1712,8 +1757,10 @@ impl LootsmithApp {
                         .map(|s| format!("{:?}", s.kind))
                         .unwrap_or_else(|| "?".into()),
                     count,
-                    preview,
-                    edit,
+                    preview: preview.clone(),
+                    edit: edit.clone(),
+                    elements,
+                    apply: false,
                 });
                 i += count.max(1);
             }
@@ -3069,9 +3116,13 @@ impl LootsmithApp {
         ui.add_space(4.0);
         ui.heading("Raw fields");
         ui.add_space(2.0);
-        ui.label("Edit scalar top-level fields directly. Lists, messages and byte blobs are read-only here.");
+        ui.label(
+            "Edit scalar fields and int/string list elements directly. Nested \
+             messages and byte blobs are read-only here (use the CLI json dump).",
+        );
         ui.add_space(4.0);
         let mut changed = false;
+        let mut list_ops: Vec<(u32, RawListOp)> = Vec::new();
         egui::ScrollArea::vertical()
             .id_salt("raw")
             .show(ui, |ui| {
@@ -3103,6 +3154,52 @@ impl LootsmithApp {
                                         .add_sized([300.0, 20.0], egui::TextEdit::singleline(v))
                                         .changed();
                                 }
+                                RawEdit::None if !field.elements.is_empty() => {
+                                    let number = field.number;
+                                    let ops = &mut list_ops;
+                                    ui.vertical(|ui| {
+                                        for i in 0..field.elements.len() {
+                                            ui.horizontal(|ui| {
+                                                match &mut field.elements[i].edit {
+                                                    RawEdit::Int(v) => {
+                                                        if ui
+                                                            .add(egui::DragValue::new(v))
+                                                            .changed()
+                                                        {
+                                                            field.elements[i].changed = true;
+                                                        }
+                                                    }
+                                                    RawEdit::Str(v) => {
+                                                        if ui
+                                                            .add(
+                                                                egui::TextEdit::singleline(v)
+                                                                    .desired_width(260.0),
+                                                            )
+                                                            .changed()
+                                                        {
+                                                            field.elements[i].changed = true;
+                                                        }
+                                                    }
+                                                    _ => {}
+                                                }
+                                                if ui
+                                                    .small_button("×")
+                                                    .on_hover_text("Remove this element")
+                                                    .clicked()
+                                                {
+                                                    ops.push((number, RawListOp::Remove(i)));
+                                                }
+                                            });
+                                        }
+                                        if ui
+                                            .small_button("+")
+                                            .on_hover_text("Add an element")
+                                            .clicked()
+                                        {
+                                            ops.push((number, RawListOp::Add));
+                                        }
+                                    });
+                                }
                                 RawEdit::None => {
                                     ui.label(&field.preview);
                                 }
@@ -3111,17 +3208,82 @@ impl LootsmithApp {
                         }
                     });
             });
-        if changed {
-            let updates: Vec<(u32, RawEdit)> =
-                self.raw.iter().map(|f| (f.number, f.edit.clone())).collect();
+        for (number, op) in list_ops {
+            if let Some(field) = self.raw.iter_mut().find(|f| f.number == number) {
+                field.apply = true;
+                match op {
+                    RawListOp::Add => {
+                        let blank = match field.elements.first().map(|e| &e.edit) {
+                            Some(RawEdit::Str(_)) => RawEdit::Str(String::new()),
+                            _ => RawEdit::Int(0),
+                        };
+                        field.elements.push(RawElem {
+                            edit: blank,
+                            changed: true,
+                        });
+                    }
+                    RawListOp::Remove(i) => {
+                        if i < field.elements.len() {
+                            field.elements.remove(i);
+                        }
+                    }
+                }
+            }
+        }
+        let lists_dirty = self.raw.iter().any(RawField::list_needs_apply);
+        if changed || lists_dirty {
+            let scalar: Vec<(u32, RawEdit)> = self
+                .raw
+                .iter()
+                .map(|f| (f.number, f.edit.clone()))
+                .filter(|(_, e)| !matches!(e, RawEdit::None))
+                .collect();
+            let int_lists: Vec<(u32, Vec<i32>)> = self
+                .raw
+                .iter()
+                .filter(|f| f.list_needs_apply())
+                .filter_map(|f| {
+                    let values: Vec<i32> = f
+                        .elements
+                        .iter()
+                        .map(|e| match e.edit {
+                            RawEdit::Int(v) => v,
+                            _ => 0,
+                        })
+                        .collect();
+                    (!values.is_empty()).then_some((f.number, values))
+                })
+                .collect();
+            let str_lists: Vec<(u32, Vec<String>)> = self
+                .raw
+                .iter()
+                .filter(|f| f.list_needs_apply())
+                .filter_map(|f| {
+                    let strings: Vec<String> = f
+                        .elements
+                        .iter()
+                        .filter_map(|e| match &e.edit {
+                            RawEdit::Str(s) => Some(s.clone()),
+                            _ => None,
+                        })
+                        .collect();
+                    (!strings.is_empty()).then_some((f.number, strings))
+                })
+                .collect();
             if let Some(save_game) = self.save_game.as_mut() {
-                for (number, edit) in updates {
+                for (number, edit) in scalar {
                     match edit {
                         RawEdit::Int(v) => save_game.set_i32(number, v),
                         RawEdit::Bool(v) => save_game.set_bool(number, v),
                         RawEdit::Str(v) => save_game.set_str(number, &v),
                         RawEdit::None => {}
                     }
+                }
+                for (number, values) in int_lists {
+                    save_game.set_int_list(number, &values);
+                }
+                for (number, values) in str_lists {
+                    save_game.set_str_list(number, &values);
                 }
             }
             self.dirty = true;

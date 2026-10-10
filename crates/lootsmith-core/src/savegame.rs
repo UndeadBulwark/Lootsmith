@@ -6,7 +6,7 @@
 //! replace a single field with a canonical encoding.
 
 use crate::error::{Error, Result};
-use crate::proto::{Field, Message};
+use crate::proto::{Field, Message, WireType};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
@@ -430,6 +430,25 @@ impl SaveGame {
         }
         self.message.remove_all(number);
         self.message.push(Field::bytes(number, &payload));
+    }
+
+    /// Replace a repeated int list, keeping the original packed/unpacked
+    /// shape: one packed field when the save had one, one varint field per
+    /// value when the save had unpacked elements.
+    pub fn set_int_list(&mut self, number: u32, values: &[i32]) {
+        let packed = match self.message.get(number) {
+            Some(field) => field.wire == WireType::LengthDelimited,
+            None => true,
+        };
+        if packed {
+            self.set_int_list_packed(number, values);
+            return;
+        }
+        self.message.remove_all(number);
+        for &v in values {
+            self.message
+                .push(Field::varint(number, v as u32 as u64));
+        }
     }
 
     /// Replace all occurrences of a repeated string field with `values`.
@@ -1430,5 +1449,37 @@ mod tests {
         let after = save.get_bytes(34).map(|b| b.to_vec()).unwrap();
         assert_eq!(after.len(), 16);
         assert_ne!(before, after);
+    }
+}
+
+#[cfg(test)]
+mod raw_list_tests {
+    use super::*;
+    use crate::proto::Field;
+
+    #[test]
+    fn set_int_list_keeps_packed_shape() {
+        // blank() writes CurrencyOnHand (6) packed as one LEN field.
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_int_list(6, &[1000, 50, 10]);
+        assert_eq!(save.message.count(6), 1, "stays packed");
+        assert_eq!(save.currency_on_hand(), [1000, 50, 10]);
+    }
+
+    #[test]
+    fn set_int_list_keeps_unpacked_shape() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.message.remove_all(9);
+        save.message.push(Field::varint(9, 1));
+        save.message.push(Field::varint(9, 2));
+        save.message.push(Field::varint(9, 3));
+        save.set_int_list(9, &[7, 8]);
+        assert_eq!(save.message.count(9), 2, "stays unpacked");
+        let values: Vec<i32> = save
+            .message
+            .get_all(9)
+            .filter_map(|f| f.as_i32())
+            .collect();
+        assert_eq!(values, [7, 8]);
     }
 }
