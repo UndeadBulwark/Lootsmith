@@ -98,10 +98,21 @@ impl Customizations {
     /// The **Skin** customization keys for a vehicle `usage`, as `(key, name)`
     /// pairs sorted by display name.
     pub fn skin_options(&self, usage: &str) -> Vec<(String, String)> {
+        self.type_options(usage, "Skin")
+    }
+
+    /// The **Head** customization keys for a player-class `usage`.
+    pub fn head_options(&self, usage: &str) -> Vec<(String, String)> {
+        self.type_options(usage, "Head")
+    }
+
+    /// Customization keys of `kind` (`Head`/`Skin`) for `usage`, as `(key, name)`
+    /// pairs sorted by display name.
+    pub fn type_options(&self, usage: &str, kind: &str) -> Vec<(String, String)> {
         let mut out: Vec<(&str, &str)> = self
             .items
             .iter()
-            .filter(|c| c.is_skin() && c.usage.iter().any(|u| u == usage))
+            .filter(|c| c.kind == kind && c.usage.iter().any(|u| u == usage))
             .map(|c| (c.name.as_str(), c.key.as_str()))
             .collect();
         out.sort();
@@ -109,6 +120,20 @@ impl Customizations {
         out.into_iter()
             .map(|(name, key)| (key.to_string(), name.to_string()))
             .collect()
+    }
+}
+
+/// The customization usage a player-class resource maps to (for head/skin
+/// filtering). Mirrors Gibbed's `CharacterViewModel.GetCustomizationUsage`.
+pub fn usage_for_player_class(player_class: &str) -> Option<&'static str> {
+    match player_class {
+        "GD_Soldier.Character.CharClass_Soldier" => Some("Soldier"),
+        "GD_Assassin.Character.CharClass_Assassin" => Some("Assassin"),
+        "GD_Siren.Character.CharClass_Siren" => Some("Siren"),
+        "GD_Mercenary.Character.CharClass_Mercenary" => Some("Mercenary"),
+        "GD_Tulip_Mechromancer.Character.CharClass_Mechromancer" => Some("Mechromancer"),
+        "GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass" => Some("Psycho"),
+        _ => None,
     }
 }
 

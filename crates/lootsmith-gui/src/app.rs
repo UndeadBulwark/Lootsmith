@@ -4,6 +4,7 @@
 //! that both the `eframe` app and the `egui_kittest` harness run identical code.
 
 use eframe::egui;
+use lootsmith_core::savegame::Kind;
 use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
     AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, SaveGame,
@@ -34,10 +35,14 @@ pub enum Tab {
     Missions,
     Backpack,
     Bank,
+    Raw,
 }
 
 #[derive(Clone)]
 pub struct Form {
+    pub character_name: String,
+    pub head: String,
+    pub skin: String,
     pub level: i32,
     pub exp_points: i32,
     pub general_skill_points: i32,
@@ -53,6 +58,9 @@ pub struct Form {
 impl Default for Form {
     fn default() -> Self {
         Self {
+            character_name: String::new(),
+            head: "None".to_string(),
+            skin: "None".to_string(),
             level: 1,
             exp_points: 0,
             general_skill_points: 0,
@@ -123,6 +131,55 @@ pub struct MissionRow {
     pub orig_status: i32,
 }
 
+/// A scalar edit target for the raw field view.
+#[derive(Clone, Debug)]
+pub enum RawEdit {
+    None,
+    Int(i32),
+    Str(String),
+    Bool(bool),
+}
+
+/// One top-level field, for the raw view.
+#[derive(Clone, Debug)]
+pub struct RawField {
+    pub number: u32,
+    pub name: String,
+    pub kind: String,
+    pub count: usize,
+    pub preview: String,
+    pub edit: RawEdit,
+}
+
+fn customization_combo(
+    ui: &mut egui::Ui,
+    customizations: &Option<Arc<Customizations>>,
+    usage: Option<&str>,
+    kind: &str,
+    value: &mut String,
+    id: &str,
+) {
+    let current = match customizations {
+        Some(c) if value.as_str() != "None" => c.label_for(value.as_str()),
+        _ => value.clone(),
+    };
+    egui::ComboBox::from_id_salt(id)
+        .selected_text(current)
+        .width(340.0)
+        .show_ui(ui, |ui| {
+            if ui.selectable_label(*value == "None", "None").clicked() {
+                *value = "None".to_string();
+            }
+            if let (Some(c), Some(usage)) = (customizations, usage) {
+                for (key, name) in c.type_options(usage, kind) {
+                    if ui.selectable_label(*value == key, &name).clicked() {
+                        *value = key;
+                    }
+                }
+            }
+        });
+}
+
 /// A readable `Tree.Leaf` label from a full skill resource path.
 fn short_skill(name: &str) -> String {
     match name.rsplit_once('.') {
@@ -145,6 +202,7 @@ fn tab_key(tab: Tab) -> &'static str {
         Tab::Missions => "missions",
         Tab::Backpack => "backpack",
         Tab::Bank => "bank",
+        Tab::Raw => "raw",
     }
 }
 
@@ -159,6 +217,7 @@ fn tab_from_key(key: &str) -> Option<Tab> {
         "missions" => Some(Tab::Missions),
         "backpack" => Some(Tab::Backpack),
         "bank" => Some(Tab::Bank),
+        "raw" => Some(Tab::Raw),
         _ => None,
     }
 }
@@ -228,6 +287,8 @@ pub struct LootsmithApp {
     pub active_mission: i32,
     pub challenges: Vec<String>,
     pub missions_data: Option<Arc<Missions>>,
+    /// Every top-level field, for the raw view.
+    pub raw: Vec<RawField>,
     pub theme: Theme,
     theme_applied: bool,
     /// There are edits in memory that have not been written to disk.
@@ -388,6 +449,7 @@ impl LootsmithApp {
             active_mission: 0,
             challenges: Vec::new(),
             missions_data: None,
+            raw: Vec::new(),
             theme: Theme::Dark,
             theme_applied: false,
             dirty: false,
@@ -465,6 +527,17 @@ impl LootsmithApp {
             }
         };
         self.form = Form {
+            character_name: save_game.character_name().unwrap_or_default(),
+            head: save_game
+                .applied_customizations()
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "None".to_string()),
+            skin: save_game
+                .applied_customizations()
+                .get(4)
+                .cloned()
+                .unwrap_or_else(|| "None".to_string()),
             level: save_game.exp_level().unwrap_or(1),
             exp_points: save_game.exp_points().unwrap_or(0),
             general_skill_points: save_game.general_skill_points().unwrap_or(0),
@@ -499,6 +572,7 @@ impl LootsmithApp {
         self.refresh_travel();
         self.refresh_vehicles();
         self.refresh_missions();
+        self.refresh_raw();
         self.dirty = false;
     }
 
@@ -1238,6 +1312,51 @@ impl LootsmithApp {
         }
     }
 
+    /// Rebuild the raw field list from the current savegame.
+    fn refresh_raw(&mut self) {
+        let mut out = Vec::new();
+        if let Some(sg) = &self.save_game {
+            let mut i = 0;
+            while i < sg.message.fields.len() {
+                let field = &sg.message.fields[i];
+                let number = field.number;
+                let spec = SaveGame::spec(number);
+                let count = sg.message.count(number);
+                let edit = match spec.map(|s| s.kind) {
+                    Some(Kind::Int) => field.as_i32().map(RawEdit::Int).unwrap_or(RawEdit::None),
+                    Some(Kind::Bool) => field.as_bool().map(RawEdit::Bool).unwrap_or(RawEdit::None),
+                    Some(Kind::Str) => field
+                        .as_str()
+                        .map(|s| RawEdit::Str(s.into_owned()))
+                        .unwrap_or(RawEdit::None),
+                    _ => RawEdit::None,
+                };
+                let preview = match &edit {
+                    RawEdit::None => match field.wire {
+                        lootsmith_core::proto::WireType::LengthDelimited => format!(
+                            "{} bytes",
+                            field.as_bytes().map(|b| b.len()).unwrap_or(0)
+                        ),
+                        _ => field.as_varint().map(|v| v.to_string()).unwrap_or_default(),
+                    },
+                    _ => String::new(),
+                };
+                out.push(RawField {
+                    number,
+                    name: spec.map(|s| s.name).unwrap_or("(unknown)").to_string(),
+                    kind: spec
+                        .map(|s| format!("{:?}", s.kind))
+                        .unwrap_or_else(|| "?".into()),
+                    count,
+                    preview,
+                    edit,
+                });
+                i += count.max(1);
+            }
+        }
+        self.raw = out;
+    }
+
     /// Whether any mission edit differs from what is stored in the save.
     pub fn missions_dirty(&self) -> bool {
         let Some(save_game) = &self.save_game else {
@@ -1275,6 +1394,8 @@ impl LootsmithApp {
 
     fn apply_form(&mut self) -> Option<Vec<u8>> {
         let mut save_game = self.save_game.clone()?;
+        let _ = save_game.set_character_name(&self.form.character_name);
+        save_game.set_applied_head_skin(&self.form.head, &self.form.skin);
         save_game.set_i32(2, self.form.level);
         save_game.set_i32(3, self.form.exp_points);
         save_game.set_i32(4, self.form.general_skill_points);
@@ -1637,6 +1758,7 @@ impl LootsmithApp {
                     (Tab::Missions, "Missions"),
                     (Tab::Backpack, "Backpack"),
                     (Tab::Bank, "Bank"),
+                    (Tab::Raw, "Raw"),
                 ] {
                     ui.selectable_value(&mut self.tab, tab, label);
                 }
@@ -1653,6 +1775,7 @@ impl LootsmithApp {
                 Tab::Missions => self.ui_missions(ui),
                 Tab::Backpack => self.ui_container(ui, false),
                 Tab::Bank => self.ui_container(ui, true),
+                Tab::Raw => self.ui_raw(ui),
             }
         });
     }
@@ -1714,20 +1837,82 @@ impl LootsmithApp {
     }
 
     fn ui_character(&mut self, ui: &mut egui::Ui) {
-        egui::Grid::new("character").num_columns(2).show(ui, |ui| {
-            ui.label("Player class");
-            ui.label(&self.read_info.player_class);
-            ui.end_row();
-            ui.label("Save id");
-            ui.label(self.read_info.save_id.to_string());
-            ui.end_row();
-            ui.label("GUID");
-            ui.label(&self.read_info.guid);
-            ui.end_row();
-            ui.label("Last saved");
-            ui.label(&self.read_info.last_saved);
-            ui.end_row();
-        });
+        ui.add_space(4.0);
+        ui.heading("Character");
+        ui.add_space(4.0);
+        let customizations = self.customizations.clone();
+        let usage = lootsmith_core::usage_for_player_class(&self.read_info.player_class);
+        let mut changed = false;
+        egui::Grid::new("character")
+            .num_columns(2)
+            .spacing([16.0, 6.0])
+            .show(ui, |ui| {
+                ui.label("Name");
+                changed |= ui
+                    .add_sized(
+                        [240.0, 22.0],
+                        egui::TextEdit::singleline(&mut self.form.character_name),
+                    )
+                    .changed();
+                ui.end_row();
+                ui.label("Class");
+                ui.label(&self.read_info.player_class);
+                ui.end_row();
+                ui.label("Level");
+                changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
+                ui.end_row();
+                ui.label("Experience");
+                changed |= ui.add(egui::DragValue::new(&mut self.form.exp_points)).changed();
+                ui.end_row();
+                ui.label("General skill points");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.general_skill_points))
+                    .changed();
+                ui.end_row();
+                ui.label("Specialist skill points");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.specialist_skill_points))
+                    .changed();
+                ui.end_row();
+                ui.label("Head");
+                customization_combo(
+                    ui,
+                    &customizations,
+                    usage,
+                    "Head",
+                    &mut self.form.head,
+                    "char_head",
+                );
+                ui.end_row();
+                ui.label("Skin");
+                customization_combo(
+                    ui,
+                    &customizations,
+                    usage,
+                    "Skin",
+                    &mut self.form.skin,
+                    "char_skin",
+                );
+                ui.end_row();
+                ui.label("Save id");
+                ui.label(self.read_info.save_id.to_string());
+                ui.end_row();
+                ui.label("GUID");
+                ui.label(&self.read_info.guid);
+                ui.end_row();
+                ui.label("Last saved");
+                ui.label(&self.read_info.last_saved);
+                ui.end_row();
+            });
+        if changed {
+            self.dirty = true;
+        }
+        if customizations.is_none() {
+            ui.add_space(4.0);
+            ui.label("Load the game-data folder to pick heads and skins by name.");
+        }
+        ui.add_space(8.0);
+        self.ui_save_buttons(ui);
     }
 
     fn ui_currency(&mut self, ui: &mut egui::Ui) {
@@ -2026,6 +2211,71 @@ impl LootsmithApp {
                 }
             });
         ui.separator();
+        self.ui_save_buttons(ui);
+    }
+
+    fn ui_raw(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(4.0);
+        ui.heading("Raw fields");
+        ui.add_space(2.0);
+        ui.label("Edit scalar top-level fields directly. Lists, messages and byte blobs are read-only here.");
+        ui.add_space(4.0);
+        let mut changed = false;
+        egui::ScrollArea::vertical()
+            .id_salt("raw")
+            .show(ui, |ui| {
+                egui::Grid::new("raw_grid")
+                    .num_columns(5)
+                    .striped(true)
+                    .spacing([12.0, 6.0])
+                    .show(ui, |ui| {
+                        ui.strong("#");
+                        ui.strong("Field");
+                        ui.strong("Kind");
+                        ui.strong("x");
+                        ui.strong("Value");
+                        ui.end_row();
+                        for field in self.raw.iter_mut() {
+                            ui.label(field.number.to_string());
+                            ui.label(&field.name);
+                            ui.label(&field.kind);
+                            ui.label(field.count.to_string());
+                            match &mut field.edit {
+                                RawEdit::Int(v) => {
+                                    changed |= ui.add(egui::DragValue::new(v)).changed();
+                                }
+                                RawEdit::Bool(v) => {
+                                    changed |= ui.checkbox(v, "").changed();
+                                }
+                                RawEdit::Str(v) => {
+                                    changed |= ui
+                                        .add_sized([300.0, 20.0], egui::TextEdit::singleline(v))
+                                        .changed();
+                                }
+                                RawEdit::None => {
+                                    ui.label(&field.preview);
+                                }
+                            }
+                            ui.end_row();
+                        }
+                    });
+            });
+        if changed {
+            let updates: Vec<(u32, RawEdit)> =
+                self.raw.iter().map(|f| (f.number, f.edit.clone())).collect();
+            if let Some(save_game) = self.save_game.as_mut() {
+                for (number, edit) in updates {
+                    match edit {
+                        RawEdit::Int(v) => save_game.set_i32(number, v),
+                        RawEdit::Bool(v) => save_game.set_bool(number, v),
+                        RawEdit::Str(v) => save_game.set_str(number, &v),
+                        RawEdit::None => {}
+                    }
+                }
+            }
+            self.dirty = true;
+        }
+        ui.add_space(8.0);
         self.ui_save_buttons(ui);
     }
 

@@ -8,7 +8,7 @@
 use crate::error::{Error, Result};
 use crate::proto::{Field, Message};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
     Str,
     Int,
@@ -477,6 +477,51 @@ impl SaveGame {
     }
     pub fn max_bank_slots(&self) -> Option<i32> {
         self.get_i32(56)
+    }
+
+    // ---- character ----
+
+    /// The character name (`UIPreferencesData.CharacterName`, field 19.1).
+    pub fn character_name(&self) -> Option<String> {
+        let prefs = self.message.get(19)?.as_message().ok().flatten()?;
+        let bytes = prefs.get(1)?.as_bytes()?;
+        Some(String::from_utf8_lossy(bytes).into_owned())
+    }
+
+    pub fn set_character_name(&mut self, name: &str) -> Result<()> {
+        match self
+            .message
+            .get(19)
+            .and_then(|f| f.as_bytes().map(|b| b.to_vec()))
+        {
+            Some(bytes) => {
+                let mut prefs = Message::parse(&bytes)?;
+                prefs.set(Field::bytes(1, name.as_bytes()));
+                self.message.set(Field::bytes(19, &prefs.to_bytes()));
+            }
+            None => {
+                let mut prefs = Message::default();
+                prefs.push(Field::bytes(1, name.as_bytes()));
+                self.message.push(Field::bytes(19, &prefs.to_bytes()));
+            }
+        }
+        Ok(())
+    }
+
+    /// Applied customizations (field 35): index 0 is the head, index 4 the skin.
+    pub fn applied_customizations(&self) -> Vec<String> {
+        self.get_str_list(35)
+    }
+
+    /// Set the head (index 0) and skin (index 4) customization paths.
+    pub fn set_applied_head_skin(&mut self, head: &str, skin: &str) {
+        let mut list = self.get_str_list(35);
+        while list.len() < 5 {
+            list.push(String::new());
+        }
+        list[0] = head.to_string();
+        list[4] = skin.to_string();
+        self.set_str_list(35, &list);
     }
 
     // ---- fast travel ----

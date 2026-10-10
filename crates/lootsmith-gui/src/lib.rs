@@ -3,4 +3,7 @@
 
 pub mod app;
 
-pub use app::{slots_for, Form, LootsmithApp, MissionRow, ReadInfo, Row, SkillRow, Tab, VehicleRow};
+pub use app::{
+    slots_for, Form, LootsmithApp, MissionRow, RawEdit, RawField, ReadInfo, Row, SkillRow, Tab,
+    Theme, VehicleRow,
+};

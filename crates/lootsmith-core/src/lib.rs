@@ -18,7 +18,7 @@ pub mod savegame;
 pub mod travel;
 
 pub use container::{pack_inner, serialize, unpack, wrap, SaveFile, BLOCK_SIZE};
-pub use customizations::{Customization, Customizations};
+pub use customizations::{usage_for_player_class, Customization, Customizations};
 pub use error::{Error, Result};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};

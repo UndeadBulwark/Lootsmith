@@ -7,7 +7,7 @@ use egui::Vec2;
 use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
 use lootsmith_core::Container;
-use lootsmith_gui::app::{LootsmithApp, Tab, Theme};
+use lootsmith_gui::app::{LootsmithApp, RawEdit, Tab, Theme};
 
 /// Unique id of the first backpack weapon (Dahl pistol) in the fixture.
 const DAHL_PISTOL_ID: &str = "id=1572495195";
@@ -446,6 +446,27 @@ fn syncs_item_levels() {
         }
         _ => panic!("expected a weapon"),
     }
+}
+
+#[test]
+fn raw_view_lists_and_targets_fields() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    h.get_by_label("Raw").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Raw);
+    let level = h
+        .state()
+        .raw
+        .iter()
+        .find(|f| f.number == 2)
+        .expect("ExpLevel is listed");
+    assert_eq!(level.name, "ExpLevel");
+    assert!(matches!(level.edit, RawEdit::Int(72)));
+    assert!(h.state().raw.iter().any(|f| f.number == 1 && f.name == "PlayerClass"));
 }
 
 #[test]
