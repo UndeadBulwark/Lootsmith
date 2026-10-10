@@ -42,6 +42,8 @@ pub struct Palette {
     pub on: egui::Color32,
     pub gold: egui::Color32,
     pub wd: egui::Color32,
+    /// Wood used for borders on `pan` (3:1); `wd` stays the wood fill.
+    pub wdb: egui::Color32,
     pub wd2: egui::Color32,
     pub onw: egui::Color32,
     pub rib: egui::Color32,
@@ -69,27 +71,41 @@ pub const DARK: Palette = Palette {
     on: rgb(0x14100C),
     gold: rgb(0xE3B04B),
     wd: rgb(0x5A3A20),
+    wdb: rgb(0x96714A),
     wd2: rgb(0x4A2F1A),
     onw: rgb(0xFFD9A8),
     rib: rgb(0xD9A25A),
     onr: rgb(0x14100C),
-    brd: rgb(0x7A5A38),
+    brd: rgb(0x8C6A40),
     tex: rgb(0x1A150F),
     dng: rgb(0xFF8A70),
 };
+
+// Item rarity diamonds (spec §2.3). Drawn flat, each with a 2 px `fg` outline so
+// the white tier stays visible on parchment.
+pub const RARITY_WHITE: egui::Color32 = rgb(0xD8DAE0);
+pub const RARITY_GREEN: egui::Color32 = rgb(0x5ED08A);
+pub const RARITY_BLUE: egui::Color32 = rgb(0x4C9BFF);
+pub const RARITY_PURPLE: egui::Color32 = rgb(0xB06CFF);
+pub const RARITY_ETECH: egui::Color32 = rgb(0xFF4FA3);
+pub const RARITY_LEGENDARY: egui::Color32 = rgb(0xFF8A1F);
+pub const RARITY_PEARLESCENT: egui::Color32 = rgb(0x3DE0D0);
+/// The mandatory outline width for rarity diamonds (spec §2.3).
+pub const DIAMOND_OUTLINE: f32 = 2.0;
 
 pub const LIGHT: Palette = Palette {
     name: "Light",
     bg: rgb(0xCDBB92),
     pan: rgb(0xE8DDBF),
     fg: rgb(0x3A2616),
-    dim: rgb(0x6B5236),
+    dim: rgb(0x523D25),
     acc: rgb(0xA8470F),
     on: rgb(0xF6EBCF),
     // Deliberately darker than the mockup's #8C5F0E, which measures ~4.1:1 on
     // `pan` (below the 4.5:1 target for small label text).
-    gold: rgb(0x7A520A),
+    gold: rgb(0x5E3E06),
     wd: rgb(0x8A5A32),
+    wdb: rgb(0x8A5A32),
     wd2: rgb(0x7A4E2B),
     onw: rgb(0xF6EBCF),
     rib: rgb(0xA8470F),
@@ -107,17 +123,58 @@ impl Palette {
         }
     }
 
-    /// The text/surface pairs the spec requires to clear 4.5:1.
-    pub fn contrast_pairs(&self) -> [(&'static str, egui::Color32, egui::Color32); 7] {
+    /// Text pairs: WCAG 4.5:1.
+    pub fn text_pairs(&self) -> [(&'static str, egui::Color32, egui::Color32); 10] {
         [
             ("fg/pan", self.fg, self.pan),
+            ("fg/bg", self.fg, self.bg),
             ("dim/pan", self.dim, self.pan),
+            ("dim/bg", self.dim, self.bg),
             ("gold/pan", self.gold, self.pan),
+            ("gold/bg", self.gold, self.bg),
             ("on/acc", self.on, self.acc),
             ("onw/wd", self.onw, self.wd),
             ("onr/rib", self.onr, self.rib),
             ("dng/pan", self.dng, self.pan),
         ]
+    }
+
+    /// Non-text pairs: WCAG 3:1 (borders, focus outlines, stitching).
+    pub fn non_text_pairs(&self) -> [(&'static str, egui::Color32, egui::Color32); 5] {
+        [
+            ("brd/pan", self.brd, self.pan),
+            ("gold/pan", self.gold, self.pan),
+            ("wdb/pan", self.wdb, self.pan),
+            ("acc/pan", self.acc, self.pan),
+            ("acc/bg", self.acc, self.bg),
+        ]
+    }
+
+    /// Rarity diamonds against the panel. The light theme darkens six of them
+    /// so each clears 3:1 on parchment; the white tier relies on the mandatory
+    /// 2 px `fg` outline (spec §2.3).
+    pub fn diamond_pairs(&self) -> [(&'static str, egui::Color32); 7] {
+        if self.name == "Light" {
+            [
+                ("white", RARITY_WHITE),
+                ("green", rgb(0x2F7D4C)),
+                ("blue", rgb(0x1E5FA8)),
+                ("purple", rgb(0x6B3FB0)),
+                ("e-tech", rgb(0xB02060)),
+                ("legendary", rgb(0xA8500A)),
+                ("pearlescent", rgb(0x17776D)),
+            ]
+        } else {
+            [
+                ("white", RARITY_WHITE),
+                ("green", RARITY_GREEN),
+                ("blue", RARITY_BLUE),
+                ("purple", RARITY_PURPLE),
+                ("e-tech", RARITY_ETECH),
+                ("legendary", RARITY_LEGENDARY),
+                ("pearlescent", RARITY_PEARLESCENT),
+            ]
+        }
     }
 }
 
@@ -321,31 +378,63 @@ pub fn tab(ui: &mut egui::Ui, selected: bool, label: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// The spec's hard gate: every text/surface pair clears WCAG 4.5:1 in both
-    /// palettes. The test prints the full table for the report.
+    /// The spec's hard gate: text pairs 4.5:1, non-text 3:1, diamonds 3:1 (the
+    /// white tier is expected to rely on the mandated `fg` outline). Prints the
+    /// full table for the report.
     #[test]
     fn contrast_meets_wcag_in_both_themes() {
         let mut failures = Vec::new();
         for palette in [&DARK, &LIGHT] {
             println!("== {}", palette.name);
-            for (pair, fg, bg) in palette.contrast_pairs() {
+            for (pair, fg, bg) in palette.text_pairs() {
                 let ratio = contrast(fg, bg);
                 println!(
-                    "  {pair:9} #{:02X}{:02X}{:02X} on #{:02X}{:02X}{:02X}  {ratio:5.2}:1  {}",
-                    fg.r(),
-                    fg.g(),
-                    fg.b(),
-                    bg.r(),
-                    bg.g(),
-                    bg.b(),
+                    "  text     {pair:10} #{:02X}{:02X}{:02X} on #{:02X}{:02X}{:02X}  {ratio:5.2}:1  {}",
+                    fg.r(), fg.g(), fg.b(), bg.r(), bg.g(), bg.b(),
                     if ratio >= 4.5 { "PASS" } else { "FAIL" }
                 );
                 if ratio < 4.5 {
-                    failures.push(format!("{}: {pair} {ratio:.2}:1", palette.name));
+                    failures.push(format!("{} text {pair} {ratio:.2}:1", palette.name));
+                }
+            }
+            for (pair, fg, bg) in palette.non_text_pairs() {
+                let ratio = contrast(fg, bg);
+                println!(
+                    "  non-text {pair:10} #{:02X}{:02X}{:02X} on #{:02X}{:02X}{:02X}  {ratio:5.2}:1  {}",
+                    fg.r(), fg.g(), fg.b(), bg.r(), bg.g(), bg.b(),
+                    if ratio >= 3.0 { "PASS" } else { "FAIL" }
+                );
+                if ratio < 3.0 {
+                    failures.push(format!("{} non-text {pair} {ratio:.2}:1", palette.name));
+                }
+            }
+            for (name, fill) in palette.diamond_pairs() {
+                let ratio = contrast(fill, palette.pan);
+                let ok = ratio >= 3.0 || name == "white";
+                println!(
+                    "  diamond  {name:10} #{:02X}{:02X}{:02X} on pan            {ratio:5.2}:1  {}",
+                    fill.r(),
+                    fill.g(),
+                    fill.b(),
+                    if ratio >= 3.0 {
+                        "PASS"
+                    } else if ok {
+                        "OUTLINED (spec 2.3)"
+                    } else {
+                        "FAIL"
+                    }
+                );
+                if !ok {
+                    failures.push(format!("{} diamond {name} {ratio:.2}:1", palette.name));
                 }
             }
         }
         assert!(failures.is_empty(), "contrast failures: {failures:?}");
+    }
+
+    #[test]
+    fn diamond_outline_is_mandated() {
+        assert_eq!(DIAMOND_OUTLINE, 2.0, "spec 2.3: 2 px fg outline");
     }
 
     #[test]

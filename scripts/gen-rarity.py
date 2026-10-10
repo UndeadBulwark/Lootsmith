@@ -404,7 +404,8 @@ def main() -> int:
             mixed += 1
     print(f"pool-derived (marker-less, single tier, non-Legendary): {pool_derived}; "
           f"mixed (left Unknown): {mixed}")
-    print(f"Legendary pool-only, left Unknown unless Borderlens confirms ({len(legendary_pool_only)}):")
+    print(f"pools alone never make Legendary; named entries keep their Borderlens rarity "
+          f"({len(legendary_pool_only)} left Unknown):")
     for name in legendary_pool_only:
         print(f"  {name}")
 
@@ -465,7 +466,7 @@ def main() -> int:
                 "method": "pattern table in this file; game naming encodes the tier",
             },
             "rules": {
-                "legendary_pool_only": "never classified from pools alone; Unknown unless Borderlens confirms exactly",
+                "legendary_pool_only": "pools alone never classify Legendary; the named Norfleet / Kiss of Death / Deadly Bloom entries keep their Borderlens values (origin borderlens)",
                 "marker_less": "a single non-Legendary pool tier classifies marker-less gear (origin pool)",
             },
             "pattern_vs_pool": {

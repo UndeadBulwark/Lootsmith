@@ -484,6 +484,12 @@ impl LootsmithApp {
         app
     }
 
+    /// Switch theme and force it to be applied on the next frame.
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.theme = theme;
+        self.theme_applied = false;
+    }
+
     pub fn set_tab(&mut self, tab: Tab) {
         self.tab = tab;
     }

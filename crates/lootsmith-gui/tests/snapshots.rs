@@ -26,3 +26,17 @@ fn smoke_backpack() {
     h.run();
     h.snapshot("smoke_backpack");
 }
+
+/// The same screen in the light palette, for side-by-side review.
+#[test]
+fn smoke_backpack_light() {
+    let path = std::env::temp_dir().join("lootsmith-snapshot.sav");
+    lootsmith_core::fixture::write_synthetic_save(&path).expect("write synthetic save");
+    let mut h = harness_with(&path.display().to_string(), common::dumps_path().as_deref());
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
+    h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
+    h.state_mut()
+        .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
+    h.run();
+    h.snapshot("smoke_backpack_light");
+}
