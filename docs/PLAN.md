@@ -2,7 +2,7 @@
 
 A cross-platform Borderlands 2 save editor written in Rust.
 
-**Repo:** `~/Projects/lootsmith` · **HEAD:** `6a9733c` (working tree clean)
+**Repo:** `~/Projects/lootsmith` · **HEAD:** `b4f3696` (working tree clean)
 **Updated:** 2026-10-10 · **Reference:** Gibbed's Borderlands 2 Save Editor (C#, zlib)
 · upstream `github.com/gibbed/Gibbed.Borderlands2` · agent brief at repo root: **`AGENTS.md`**
 
@@ -53,7 +53,6 @@ A cross-platform Borderlands 2 save editor written in Rust.
 - [x] `tests/synthetic.rs`; snapshot example falls back to the synthetic save
 
 ### Remaining
-- [ ] Gap 3 Challenges (38/39/40/42) — state, unlocks, prestige
 - [ ] Gap 4 World progress (29/30/43/46), Gap 5 DLC state (27), Gap 6 Mementos (32/33)
 - [ ] Gap 7 Bulk ops (complete/reset missions, max everything)
 - [ ] Gap 8 UI prefs/stats (19/15) — low
@@ -92,7 +91,7 @@ Do not: touch unrelated fields, rewrite proto.rs, or change container.rs.
 |---|---|---|---|
 | 1 | Ammo pools | 11 `ResourceData` | ✅ `8be3ca9` |
 | 2 | SDUs | 36/56/13 | ✅ `6a9733c` |
-| 3 | Challenges | 38/39/40/42 | next |
+| 3 | Challenges | 15/38/39/42 | ✅ `b4f3696` (StatsData blob editing, prestige, unlocks) |
 | 4 | World progress | 29/30/43/46 | schema only |
 | 5 | DLC state | 27 (+44/45) | import-only |
 | 6 | Mementos | 32/33 | schema only |
@@ -121,7 +120,7 @@ Do not: touch unrelated fields, rewrite proto.rs, or change container.rs.
 cd ~/Projects/lootsmith
 cargo build --release
 cargo clippy --workspace --all-targets -- -D warnings   # must stay clean
-cargo test --workspace                                  # 97 tests
+cargo test --workspace                                  # 102 tests
 cargo run -p lootsmith-cli -- ammo|sdus|items|skills|travel|vehicles|missions <save>
 cargo run -p lootsmith-cli -- new/json/unjson/profile/…
 cargo run -p lootsmith-cli -- edit <save> --ammo 5 --amount 999 --sdu 3
@@ -151,8 +150,11 @@ dumps `~/Projects/bl2-rogue/data/gibbed/`; launcher `~/.local/share/applications
 (1=Int32BE, 4=String, 5=Float, 6=Binary, 8=Int8). Ids 136 rank/138 tokens/143 stats/162 keys/300 unlocks.
 The entry table is the byte gate; the container hash is recomputed on write.
 
-**Field 38 `ChallengeList` is a single required message**, not a list. Field 13 `InventorySlotData`
-is a single required message. OP entries (40) must not be synthesized without a verified ContentId.
+**Field 13 `InventorySlotData` is a single required message**; field 38 `ChallengeList` is a
+repeated list (132 entries in the fixture). The field-15 `StatsData` blob holds the challenge
+progress (`u32 4 || u32 size || u16 count` + 12 bytes per entry: `[id:u16][flag][total:i32][flag][prev:i32]`
+little-endian — 387 entries in the fixture). OP entries (40) must not be synthesized without a
+verified ContentId.
 
 **Dumps carry a UTF-8 BOM** — strip `\u{feff}` before serde_json.
 
