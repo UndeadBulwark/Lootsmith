@@ -267,11 +267,16 @@ pub fn ribbon(ui: &egui::Ui, rect: Rect, text: &str) -> Response {
         rect,
         ppp(ui),
         &p,
-        text,
+        "",
         FontId::proportional(15.0),
     );
+    let galley = ui.painter().layout_job(job_with_nums(text, p.onr, 15.0));
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, p.onr);
     let response = respond(ui, rect, &format!("ribbon-{text}"), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
+    // The ribbon repeats the screen title; keep its accessible label distinct from
+    // the sidebar row so a query for the tab label matches only the sidebar.
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, format!("{text} header")));
     response
 }
 
@@ -450,11 +455,11 @@ pub fn nav_row(
         ui.painter().rect_filled(rect, 0.0, p.acc);
     }
     let color = if active { p.on } else { p.fg };
-    ui.painter().text(
-        rect.left_center() + egui::vec2(10.0, 0.0),
-        egui::Align2::LEFT_CENTER,
-        label,
-        FontId::proportional(15.0),
+    let galley = ui.painter().layout_job(job_with_nums(label, color, 15.0));
+    let lh = galley.size().y;
+    ui.painter().galley(
+        pos2(rect.left() + 10.0, rect.center().y - lh / 2.0),
+        galley,
         color,
     );
     if let Some(n) = count {
@@ -498,5 +503,44 @@ pub fn status_chip(ui: &egui::Ui, rect: Rect, text: &str, ok: bool) -> Response 
     );
     let response = respond(ui, rect, &format!("status-{text}"), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
+    response
+}
+
+/// Style the controls drawn on a wood plank (the top and status bars): cream
+/// `onw` text with flat, transparent control fills so text sits on the wood.
+pub fn wood_style(ui: &mut egui::Ui, p: &Palette) {
+    let mut style = (**ui.style()).clone();
+    let stroke = Stroke::new(1.0, p.onw);
+    style.visuals.widgets.noninteractive.fg_stroke = stroke;
+    style.visuals.widgets.inactive.fg_stroke = stroke;
+    style.visuals.widgets.hovered.fg_stroke = stroke;
+    style.visuals.widgets.active.fg_stroke = stroke;
+    style.visuals.widgets.open.fg_stroke = stroke;
+    style.visuals.widgets.noninteractive.weak_bg_fill = Color32::TRANSPARENT;
+    style.visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+    style.visuals.widgets.hovered.weak_bg_fill = Color32::TRANSPARENT;
+    style.visuals.widgets.active.weak_bg_fill = Color32::TRANSPARENT;
+    style.visuals.widgets.open.weak_bg_fill = Color32::TRANSPARENT;
+    style.visuals.override_text_color = Some(p.onw);
+    // Selected controls (the scale chips) use the accent fill with `on` text.
+    style.visuals.selection.bg_fill = p.acc;
+    style.visuals.selection.stroke = Stroke::new(1.0, p.on);
+    ui.set_style(style);
+}
+
+/// A small toggle chip (the UI-scale options): `acc` fill with `on` text when
+/// selected, otherwise flat `onw` text on whatever is behind it. Keeps digits
+/// in the VT323 number font.
+pub fn toggle_chip(ui: &egui::Ui, rect: Rect, label: &str, selected: bool) -> Response {
+    let p = palette(ui);
+    let response = respond(ui, rect, &format!("toggle-{label}"), Sense::click());
+    if selected {
+        ui.painter().rect_filled(rect, 0.0, p.acc);
+    }
+    let color = if selected { p.on } else { p.onw };
+    let galley = ui.painter().layout_job(job_with_nums(label, color, 15.0));
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, color);
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
     response
 }

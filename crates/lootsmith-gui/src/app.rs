@@ -305,6 +305,31 @@ const TABS: [(Tab, &str); 13] = [
     (Tab::About, "About"),
 ];
 
+/// Sidebar groups: label -> tabs (spec §2.2 grouped sidebar).
+const NAV_GROUPS: [(&str, &[Tab]); 4] = [
+    ("Player", &[Tab::General, Tab::Character, Tab::Skills]),
+    (
+        "Loadout",
+        &[Tab::Backpack, Tab::Bank, Tab::Currency, Tab::Ammo],
+    ),
+    (
+        "Progress",
+        &[Tab::Missions, Tab::Vehicles, Tab::Travel, Tab::World],
+    ),
+    ("System", &[Tab::Raw, Tab::About]),
+];
+
+/// The four shell regions, in logical points, recomputed every frame. The shell
+/// test asserts these rects (spec §2.2: 56 px top bar, 204 px sidebar, 34 px
+/// status bar).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ShellRects {
+    pub top: egui::Rect,
+    pub sidebar: egui::Rect,
+    pub status: egui::Rect,
+    pub content: egui::Rect,
+}
+
 pub struct LootsmithApp {
     pub path: String,
     pub dumps: String,
@@ -378,6 +403,8 @@ pub struct LootsmithApp {
     pub ui_scale: f32,
     /// Cached background dither texture, keyed by dark/light.
     dither_tex: [Option<egui::TextureHandle>; 2],
+    /// The shell rects computed by `build` (top bar, sidebar, status bar, content).
+    pub shell: ShellRects,
     /// There are edits in memory that have not been written to disk.
     pub dirty: bool,
     pub status: String,
@@ -467,6 +494,12 @@ impl LootsmithApp {
             theme_applied: false,
             ui_scale: 1.0,
             dither_tex: [None, None],
+            shell: ShellRects {
+                top: egui::Rect::ZERO,
+                sidebar: egui::Rect::ZERO,
+                status: egui::Rect::ZERO,
+                content: egui::Rect::ZERO,
+            },
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
@@ -1993,6 +2026,19 @@ impl LootsmithApp {
     }
 
     /// Build the full UI. Called by both the native app and the test harness.
+    /// The sidebar label for a tab (Backpack/Bank carry a live count badge).
+    fn nav_label(&self, tab: Tab) -> String {
+        match tab {
+            Tab::Backpack => format!("Backpack ({})", self.backpack.len()),
+            Tab::Bank => format!("Bank ({})", self.bank.len()),
+            _ => TABS
+                .iter()
+                .find(|(t, _)| *t == tab)
+                .map(|(_, l)| (*l).to_string())
+                .unwrap_or_else(|| "?".to_string()),
+        }
+    }
+
     pub fn build(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.apply_theme(&ctx);
@@ -2031,14 +2077,70 @@ impl LootsmithApp {
         }
 
         let mut action: Option<Action> = None;
-        egui::Panel::top("toolbar")
-            .frame(
-                egui::Frame::default()
-                    .fill(p.pan)
-                    .inner_margin(egui::Margin::symmetric(12, 8)),
-            )
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
+        let full = ui.max_rect();
+        let ppp = ctx.pixels_per_point();
+        let top = egui::Rect::from_min_size(full.min, egui::vec2(full.width(), 56.0));
+        let status = egui::Rect::from_min_size(
+            egui::pos2(full.min.x, full.max.y - 34.0),
+            egui::vec2(full.width(), 34.0),
+        );
+        let sidebar = egui::Rect::from_min_size(
+            egui::pos2(full.min.x, top.max.y),
+            egui::vec2(204.0, status.min.y - top.max.y),
+        );
+        let content = egui::Rect::from_min_size(
+            egui::pos2(sidebar.max.x, top.max.y),
+            egui::vec2(full.max.x - sidebar.max.x, status.min.y - top.max.y),
+        );
+        self.shell = ShellRects {
+            top,
+            sidebar,
+            status,
+            content,
+        };
+
+        // Spec §2.5: the background dither tile is painted over the whole window.
+        let tex = self.dither_handle(&ctx, p);
+        crate::ui::pixel::dither(ui.painter(), full, &tex);
+
+        // --- Content: a shared screen header ribbon, then the active screen ---
+        let header = egui::Rect::from_min_size(content.min, egui::vec2(content.width(), 28.0));
+        let body = egui::Rect::from_min_max(header.left_bottom(), content.max);
+        self.shell.content = body;
+        let title = self.nav_label(self.tab);
+        crate::ui::widgets::ribbon(ui, header, &title);
+        ui.scope_builder(egui::UiBuilder::new().max_rect(body), |ui| {
+            ui.set_clip_rect(body);
+            if self.save_game.is_none() {
+                empty_state(ui);
+                return;
+            }
+            match self.tab {
+                Tab::General => self.ui_general(ui),
+                Tab::Character => self.ui_character(ui),
+                Tab::Currency => self.ui_currency(ui),
+                Tab::Ammo => self.ui_ammo(ui),
+                Tab::World => self.ui_world(ui),
+                Tab::Skills => self.ui_skills(ui),
+                Tab::Travel => self.ui_travel(ui),
+                Tab::Vehicles => self.ui_vehicles(ui),
+                Tab::Missions => self.ui_missions(ui),
+                Tab::Backpack => self.ui_container(ui, false),
+                Tab::Bank => self.ui_container(ui, true),
+                Tab::Raw => self.ui_raw(ui),
+                Tab::About => tabs::about::ui_about(ui),
+            }
+        });
+
+        // --- Top plank bar (56 px) ---
+        crate::ui::pixel::plank_bar(ui.painter(), top, ppp, p, true);
+        ui.scope_builder(
+            egui::UiBuilder::new().max_rect(top.shrink2(egui::vec2(12.0, 8.0))),
+            |ui| {
+                ui.set_clip_rect(top);
+                crate::ui::widgets::wood_style(ui, p);
+                ui.spacing_mut().item_spacing.x = 6.0;
+                ui.horizontal_centered(|ui| {
                     if ui.button("Open…").clicked() {
                         action = Some(Action::Open);
                     }
@@ -2058,32 +2160,18 @@ impl LootsmithApp {
                         }
                     });
                     toolbar_sep(ui);
-                    if ui
-                        .button("New…")
-                        .on_hover_text("Create a fresh character save (clone or blank)")
-                        .clicked()
-                    {
+                    if ui.button("New…").clicked() {
                         action = Some(Action::New);
                     }
-                    if ui
-                        .button("Import…")
-                        .on_hover_text("Copy sections (skills, missions, …) from another save")
-                        .clicked()
-                    {
+                    if ui.button("Import…").clicked() {
                         action = Some(Action::Import);
                     }
-                    if ui
-                        .button("Profile…")
-                        .on_hover_text(
-                            "Edit profile.bin: golden keys, badass bonuses, customizations",
-                        )
-                        .clicked()
-                    {
+                    if ui.button("Profile…").clicked() {
                         action = Some(Action::Profile);
                     }
                     egui::ComboBox::from_id_salt("save_platform")
                         .selected_text(self.save_platform.id().to_uppercase())
-                        .width(80.0)
+                        .width(70.0)
                         .show_ui(ui, |ui| {
                             for platform in [
                                 Platform::PC,
@@ -2100,120 +2188,95 @@ impl LootsmithApp {
                                 );
                             }
                         });
-                    toolbar_sep(ui);
-                    if ui.button("Game data…").clicked() {
-                        action = Some(Action::PickData);
-                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let icon = if self.theme == Theme::Dark {
                             crate::ui::pixel::Icon::Sun
                         } else {
                             crate::ui::pixel::Icon::Moon
                         };
-                        let resp = crate::ui::widgets::icon_button(
+                        if crate::ui::widgets::icon_button(
                             ui,
                             icon,
                             p.fg,
                             p.pan,
-                            28.0,
+                            26.0,
                             "Toggle light/dark",
-                        );
-                        if resp.clicked() {
+                        )
+                        .clicked()
+                        {
                             action = Some(Action::ToggleTheme);
                         }
-                        // Right-to-left layout: add the scale buttons in
-                        // descending order so they read 100 / 150 / 200 left to
-                        // right, then the label.
                         for value in Self::UI_SCALES.iter().rev() {
-                            let text = crate::ui::widgets::num(
-                                format!("{}%", (value * 100.0).round() as i32),
-                                15.0,
-                            );
-                            if ui
-                                .selectable_label(
-                                    (self.ui_scale - value).abs() < f32::EPSILON,
-                                    text,
-                                )
-                                .on_hover_text("UI scale (whole pixels)")
-                                .clicked()
+                            let label = format!("{}%", (value * 100.0).round() as i32);
+                            let selected = (self.ui_scale - value).abs() < f32::EPSILON;
+                            let (rect, _) = ui
+                                .allocate_exact_size(egui::vec2(46.0, 22.0), egui::Sense::click());
+                            if crate::ui::widgets::toggle_chip(ui, rect, &label, selected).clicked()
                             {
                                 self.ui_scale = *value;
                             }
                         }
-                        ui.label(egui::RichText::new("Scale").color(p.dim).size(11.5));
-                        ui.add_space(4.0);
-                        if self.dirty {
-                            let (rect, _) = ui
-                                .allocate_exact_size(egui::vec2(11.0, 11.0), egui::Sense::hover());
-                            crate::ui::widgets::paint_glyph(
-                                ui.painter(),
-                                rect.center(),
-                                Glyph::Dot,
-                                p.acc,
-                                1.0,
-                            );
-                            ui.label(egui::RichText::new("unsaved").color(p.acc).size(12.0));
-                        }
+                        ui.label(egui::RichText::new("Scale").color(p.onw).size(11.5));
+                        ui.add_space(6.0);
+                        // The path field fills the remaining width (own pan fill,
+                        // `fg` text) so it reads as an editable field on the wood.
+                        let w = (ui.available_width() - 74.0).max(120.0);
+                        ui.scope(|ui| {
+                            let mut st = (**ui.style()).clone();
+                            st.visuals.override_text_color = Some(p.fg);
+                            st.visuals.extreme_bg_color = p.pan;
+                            ui.set_style(st);
+                            crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                ui.add_sized(
+                                    [w, 24.0],
+                                    egui::TextEdit::singleline(&mut self.path)
+                                        .hint_text("/path/to/Save0001.sav"),
+                                )
+                            });
+                        });
+                        ui.label(egui::RichText::new("Save file").color(p.onw).size(11.5));
                     });
                 });
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    let loaded = self.save_game.is_some();
-                    status_dot(
-                        ui,
-                        if loaded { Glyph::Check } else { Glyph::Ring },
-                        if loaded { p.gold } else { p.dim },
-                    );
-                    ui.label(egui::RichText::new("Save file").color(p.dim).size(11.5));
-                    crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                        ui.add_sized(
-                            [430.0, 24.0],
-                            egui::TextEdit::singleline(&mut self.path)
-                                .hint_text("/path/to/Save0001.sav"),
-                        )
-                    });
-                    toolbar_sep(ui);
-                    let data = self.manager.is_some();
-                    status_dot(
-                        ui,
-                        if data { Glyph::Check } else { Glyph::Cross },
-                        if data { p.gold } else { p.dng },
-                    );
-                    ui.label(egui::RichText::new("Game data").color(p.dim).size(11.5));
-                    crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                        ui.add_sized(
-                            [300.0, 24.0],
-                            egui::TextEdit::singleline(&mut self.dumps)
-                                .hint_text("folder with Asset Library Manager.json"),
-                        )
-                    });
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if self.manager.is_some() && self.dumps_bundled {
-                            ui.colored_label(p.dim, "names resolved (bundled)");
-                        } else if self.manager.is_some() {
-                            ui.colored_label(p.dim, "names resolved");
-                        } else {
-                            ui.colored_label(p.dng, "no game data — parts show raw ids");
-                        }
-                    });
-                });
-            });
-        if let Some(action) = action {
-            self.dispatch(action);
-            // A dispatched action (theme toggle, scale, …) must be drawn on the
-            // next frame; without this the change can sit unrendered until the
-            // next input event.
-            ctx.request_repaint();
-        }
+            },
+        );
 
-        egui::Panel::bottom("status")
-            .frame(
-                egui::Frame::default()
-                    .fill(p.pan)
-                    .inner_margin(egui::Margin::symmetric(12, 4)),
-            )
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
+        // --- Sidebar (204 px): logo + grouped nav rows + count badges ---
+        crate::ui::pixel::panel(ui.painter(), sidebar, ppp, p);
+        ui.scope_builder(
+            egui::UiBuilder::new().max_rect(sidebar.shrink(10.0)),
+            |ui| {
+                ui.set_clip_rect(sidebar);
+                ui.spacing_mut().item_spacing.y = 0.0;
+                ui.label(egui::RichText::new("LOOTSMITH").color(p.gold).size(20.0));
+                ui.add_space(8.0);
+                for (group, tabs) in NAV_GROUPS {
+                    ui.label(egui::RichText::new(group).color(p.fg).size(11.5));
+                    ui.add_space(2.0);
+                    for tab in tabs {
+                        let label = self.nav_label(*tab);
+                        let (rect, _) = ui.allocate_exact_size(
+                            egui::vec2(ui.available_width(), 26.0),
+                            egui::Sense::click(),
+                        );
+                        if crate::ui::widgets::nav_row(ui, rect, &label, self.tab == *tab, None)
+                            .clicked()
+                        {
+                            self.tab = *tab;
+                        }
+                    }
+                    ui.add_space(8.0);
+                }
+            },
+        );
+
+        // --- Status plank bar (34 px) ---
+        crate::ui::pixel::plank_bar(ui.painter(), status, ppp, p, true);
+        ui.scope_builder(
+            egui::UiBuilder::new().max_rect(status.shrink2(egui::vec2(12.0, 5.0))),
+            |ui| {
+                ui.set_clip_rect(status);
+                crate::ui::widgets::wood_style(ui, p);
+                ui.horizontal_centered(|ui| {
                     status_dot(
                         ui,
                         if self.dirty { Glyph::Dot } else { Glyph::Check },
@@ -2221,77 +2284,43 @@ impl LootsmithApp {
                     );
                     ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
                         &self.status,
-                        p.fg,
+                        p.onw,
                         12.0,
                     )));
-                });
-            });
-
-        egui::CentralPanel::default().show(ui, |ui| {
-            // Spec §2.5: the background dither tile is painted over the central
-            // panel rect (content panels are drawn on top of it).
-            let tex = self.dither_handle(&ctx, p);
-            crate::ui::pixel::dither(ui.painter(), ui.max_rect(), &tex);
-            if self.save_game.is_none() {
-                empty_state(ui);
-                return;
-            }
-            egui::Panel::top("tabs")
-                .frame(
-                    egui::Frame::default()
-                        .fill(p.pan)
-                        .inner_margin(egui::Margin::symmetric(10, 0)),
-                )
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        for (tab, label) in TABS {
-                            let selected = self.tab == tab;
-                            let color = if selected { p.fg } else { p.dim };
-                            let text = match tab {
-                                Tab::Backpack => crate::ui::widgets::counted_label(
-                                    "Backpack",
-                                    self.backpack.len(),
-                                    color,
-                                    13.0,
-                                ),
-                                Tab::Bank => crate::ui::widgets::counted_label(
-                                    "Bank",
-                                    self.bank.len(),
-                                    color,
-                                    13.0,
-                                ),
-                                _ => {
-                                    let job = egui::text::LayoutJob::simple(
-                                        label.to_string(),
-                                        egui::FontId::proportional(13.0),
-                                        color,
-                                        f32::INFINITY,
-                                    );
-                                    egui::WidgetText::LayoutJob(std::sync::Arc::new(job))
-                                }
-                            };
-                            if theme::tab_widget(ui, selected, text) {
-                                self.tab = tab;
-                            }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let ok = self.manager.is_some();
+                        let (rect, _) =
+                            ui.allocate_exact_size(egui::vec2(170.0, 22.0), egui::Sense::click());
+                        let hover = if self.dumps.trim().is_empty() {
+                            "No game-data folder — using bundled tables".to_string()
+                        } else {
+                            self.dumps.clone()
+                        };
+                        let response = crate::ui::widgets::status_chip(
+                            ui,
+                            rect,
+                            if ok {
+                                "Game data ready"
+                            } else {
+                                "Game data missing"
+                            },
+                            ok,
+                        )
+                        .on_hover_text(hover);
+                        if response.clicked() {
+                            action = Some(Action::PickData);
                         }
                     });
                 });
-            match self.tab {
-                Tab::General => self.ui_general(ui),
-                Tab::Character => self.ui_character(ui),
-                Tab::Currency => self.ui_currency(ui),
-                Tab::Ammo => self.ui_ammo(ui),
-                Tab::World => self.ui_world(ui),
-                Tab::Skills => self.ui_skills(ui),
-                Tab::Travel => self.ui_travel(ui),
-                Tab::Vehicles => self.ui_vehicles(ui),
-                Tab::Missions => self.ui_missions(ui),
-                Tab::Backpack => self.ui_container(ui, false),
-                Tab::Bank => self.ui_container(ui, true),
-                Tab::Raw => self.ui_raw(ui),
-                Tab::About => tabs::about::ui_about(ui),
-            }
-        });
+            },
+        );
+        if let Some(action) = action {
+            self.dispatch(action);
+            // A dispatched action (theme toggle, scale, …) must be drawn on the
+            // next frame; without this the change can sit unrendered until the
+            // next input event.
+            ctx.request_repaint();
+        }
 
         if self.show_saves {
             let saves = self.saves.clone();
