@@ -349,8 +349,13 @@ pub struct LootsmithApp {
     /// Challenge-progress stats (field 15) mirrored for editing.
     pub challenge_stats: Vec<ChallengeStat>,
     challenge_stat_orig: Vec<(u16, i32)>,
+    /// Game-data folder candidates for first-run onboarding.
+    pub dump_candidates: Vec<PathBuf>,
+    /// The onboarding window open flag.
+    show_onboarding: bool,
     /// Search text for the challenge stats.
     pub challenge_filter: String,
+    /// Debug: active tab key (tests).
     /// `NumChallengePrestiges` (field 42).
     pub prestiges: i32,
     /// Missions (field 18) and challenge list (field 38).
@@ -437,6 +442,8 @@ impl LootsmithApp {
             mementos: (0, 0),
             challenge_stats: Vec::new(),
             challenge_stat_orig: Vec::new(),
+            dump_candidates: Vec::new(),
+            show_onboarding: false,
             challenge_filter: String::new(),
             prestiges: 0,
             mission_rows: Vec::new(),
@@ -853,7 +860,10 @@ impl LootsmithApp {
 
     /// Uncovered discoveries count (for the tab header / tests).
     pub fn discoveries_uncovered(&self) -> usize {
-        self.world_discoveries.iter().filter(|d| d.uncovered).count()
+        self.world_discoveries
+            .iter()
+            .filter(|d| d.uncovered)
+            .count()
     }
 
     pub(crate) fn refresh_world(&mut self) {
@@ -1889,6 +1899,15 @@ impl LootsmithApp {
                     self.path = newest.path.display().to_string();
                 }
             }
+            if self.dumps.trim().is_empty() {
+                // First run: adopt a game-data folder when one is obvious.
+                if let Some(dir) = lootsmith_core::find_dump_dirs().first() {
+                    self.dumps = dir.display().to_string();
+                    self.load_dumps();
+                } else {
+                    self.show_onboarding = true;
+                }
+            }
             if !self.path.trim().is_empty() {
                 self.load();
             }
@@ -2036,6 +2055,56 @@ impl LootsmithApp {
             });
         if let Some(action) = action {
             self.dispatch(action);
+        }
+
+        if self.show_onboarding {
+            // A non-blocking banner: no modal stealing clicks.
+            if self.dump_candidates.is_empty() {
+                self.dump_candidates = lootsmith_core::locate::find_dump_dirs();
+            }
+            let candidates = self.dump_candidates.clone();
+            let mut picked = None;
+            let mut browse = false;
+            egui::Panel::top("onboarding")
+                .frame(
+                    egui::Frame::default()
+                        .fill(tint(Tokens::SURFACE, Tokens::WARN, 0.10))
+                        .stroke(egui::Stroke::new(1.0, Tokens::WARN))
+                        .corner_radius(egui::CornerRadius::same(6))
+                        .inner_margin(egui::Margin::symmetric(12, 6)),
+                )
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.colored_label(Tokens::WARN, "Game data missing");
+                        theme::muted(
+                            ui,
+                            "\u{2014} pick the folder containing Asset Library Manager.json so items, missions and travel resolve.",
+                        );
+                        for candidate in &candidates {
+                            if ui
+                                .button("Use this")
+                                .on_hover_text(candidate.display().to_string())
+                                .clicked()
+                            {
+                                picked = Some(candidate.display().to_string());
+                            }
+                        }
+                        if ui.button("Browse\u{2026}").clicked() {
+                            browse = true;
+                        }
+                    });
+                });
+            if let Some(candidate) = picked {
+                self.dumps = candidate;
+                self.load_dumps();
+                self.show_onboarding = false;
+                self.dump_candidates.clear();
+            }
+            if browse {
+                self.show_onboarding = false;
+                self.dump_candidates.clear();
+                self.browse_dumps_dir();
+            }
         }
 
         egui::Panel::bottom("status")

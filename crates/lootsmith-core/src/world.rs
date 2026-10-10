@@ -98,7 +98,10 @@ impl SaveGame {
 
     /// Number of discoveries already uncovered.
     pub fn discoveries_uncovered(&self) -> usize {
-        self.world_discoveries().iter().filter(|d| d.uncovered).count()
+        self.world_discoveries()
+            .iter()
+            .filter(|d| d.uncovered)
+            .count()
     }
 
     /// `LockoutList` (field 43), in order.
@@ -254,11 +257,17 @@ mod tests {
     fn reads_and_edits_world_data() {
         let mut save = world_save();
         assert_eq!(save.region_game_stages().len(), 1);
-        assert_eq!(save.region_game_stages()[0].region, "GD_GameStages.Zone3.FinalBoss");
+        assert_eq!(
+            save.region_game_stages()[0].region,
+            "GD_GameStages.Zone3.FinalBoss"
+        );
 
         save.set_region_game_stage(0, 45).expect("stage");
         assert_eq!(save.region_game_stages()[0].game_stage, 45);
-        assert!(!save.region_game_stages()[0].is_from_dlc, "region untouched");
+        assert!(
+            !save.region_game_stages()[0].is_from_dlc,
+            "region untouched"
+        );
 
         let discoveries = save.world_discoveries();
         assert_eq!(discoveries.len(), 2);
@@ -266,7 +275,11 @@ mod tests {
 
         save.set_discovery(0, true).expect("discover");
         assert_eq!(save.discoveries_uncovered(), 2);
-        assert_eq!(save.world_discoveries()[0].name, "SOUTHERNSHELF_PWDA_0", "name kept");
+        assert_eq!(
+            save.world_discoveries()[0].name,
+            "SOUTHERNSHELF_PWDA_0",
+            "name kept"
+        );
 
         save.set_discovery(5, true).unwrap_err();
     }

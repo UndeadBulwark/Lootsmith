@@ -30,7 +30,7 @@ pub use error::{Error, Result};
 pub use fixture::{synthetic_save, synthetic_save_bytes, write_synthetic_save};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
-pub use locate::{find_saves, find_saves_in, SaveCandidate};
+pub use locate::{find_dump_dirs, find_saves, find_saves_in, SaveCandidate};
 pub use missions::{Mission, Missions};
 pub use nameparts::NameParts;
 pub use partlists::PartLists;

@@ -1,9 +1,9 @@
 //! The World tab: region game stages, world discoveries, lockouts, DLC
 //! expansion state, mementos.
 
-use eframe::egui;
 use crate::app::*;
 use crate::theme::{self, Tokens};
+use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_world(&mut self, ui: &mut egui::Ui) {
@@ -38,7 +38,10 @@ impl LootsmithApp {
         ui.label(
             egui::RichText::new(format!(
                 "uncovered: {} / {total}",
-                self.world_discoveries.iter().filter(|d| d.uncovered).count()
+                self.world_discoveries
+                    .iter()
+                    .filter(|d| d.uncovered)
+                    .count()
             ))
             .color(Tokens::TEXT_DIM),
         );
@@ -80,10 +83,7 @@ impl LootsmithApp {
                     ui.label(format!("#{}", i + 1));
                     ui.label(&region.region);
                     if ui
-                        .add(
-                            egui::DragValue::new(&mut region.game_stage)
-                                .range(1..=80),
-                        )
+                        .add(egui::DragValue::new(&mut region.game_stage).range(1..=80))
                         .changed()
                     {
                         stage_edit = Some((i + 1, region.game_stage));
@@ -101,9 +101,7 @@ impl LootsmithApp {
             theme::muted(ui, "(no lockout timers)");
         } else {
             for lockout in &self.world_lockouts {
-                ui.label(
-                    egui::RichText::new(lockout.label()).color(Tokens::TEXT_DIM),
-                );
+                ui.label(egui::RichText::new(lockout.label()).color(Tokens::TEXT_DIM));
             }
         }
 

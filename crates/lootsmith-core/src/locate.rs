@@ -296,6 +296,50 @@ pub fn find_saves_in(start: &Path) -> Vec<SaveCandidate> {
     found
 }
 
+/// Directories that contain a game-data dumps folder (`Asset Library
+/// Manager.json`), in search order. Empty when no candidate exists; the GUI
+/// uses this for first-run onboarding.
+pub fn find_dump_dirs() -> Vec<PathBuf> {
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    // The user-configured onboarding folder.
+    if let Some(home) = home_dir() {
+        candidates.push(home.join(".local/share/lootsmith/dumps"));
+    }
+    // Next to the running binary (and its parent — for target/Release layouts).
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.to_path_buf());
+            if let Some(parent) = dir.parent() {
+                candidates.push(parent.to_path_buf());
+            }
+        }
+    }
+    // Next to discovered saves (the dumps usually live near the game setup).
+    for candidate in find_saves() {
+        if let Some(dir) = candidate.path.parent() {
+            candidates.push(dir.to_path_buf());
+        }
+    }
+    // Explicit override.
+    if let Ok(extra) = std::env::var("LOOTSMITH_DUMP_DIRS") {
+        for part in extra.split(':') {
+            if !part.trim().is_empty() {
+                candidates.push(PathBuf::from(part.trim()));
+            }
+        }
+    }
+    let dump_file = |dir: &PathBuf| dir.join("Asset Library Manager.json").is_file();
+    candidates
+        .into_iter()
+        .filter(|dir| dump_file(dir))
+        .fold(Vec::new(), |mut acc, dir| {
+            if !acc.contains(&dir) {
+                acc.push(dir);
+            }
+            acc
+        })
+}
+
 /// `YYYY-MM-DD HH:MM` (UTC) from a `SystemTime`.
 fn format_time(time: SystemTime) -> String {
     let secs = time
@@ -366,5 +410,19 @@ mod tests {
         assert_eq!(found[0].steam_id().as_deref(), Some("123"));
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+}
+
+#[cfg(test)]
+mod dump_dirs_tests {
+    use super::*;
+
+    #[test]
+    fn finds_nothing_without_dumps() {
+        // On a machine with the dumps folder the search may find it; assert
+        // only on well-formedness.
+        for dir in find_dump_dirs() {
+            assert!(dir.join("Asset Library Manager.json").is_file());
+        }
     }
 }

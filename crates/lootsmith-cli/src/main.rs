@@ -893,9 +893,7 @@ fn main() -> ExitCode {
                 let total = discoveries.len();
                 (discoveries.iter().filter(|d| d.uncovered).count(), total)
             };
-            println!(
-                "world discoveries: {discovered}/{total} uncovered"
-            );
+            println!("world discoveries: {discovered}/{total} uncovered");
             for (i, discovery) in save_game.world_discoveries().iter().enumerate() {
                 println!(
                     "#{:<2} {} {}",
@@ -907,12 +905,21 @@ fn main() -> ExitCode {
             let lockouts = save_game.lockouts();
             println!("lockouts ({}):", lockouts.len());
             for lockout in &lockouts {
-                println!("  {} ({} = {})", lockout.label(), lockout.lockout, lockout.time);
+                println!(
+                    "  {} ({} = {})",
+                    lockout.label(),
+                    lockout.lockout,
+                    lockout.time
+                );
             }
             let expansions = save_game.dlc_expansions();
             println!("dlc expansions ({}):", expansions.len());
             for expansion in &expansions {
-                println!("  tag={} data={} bytes", expansion.tag, expansion.data.len());
+                println!(
+                    "  tag={} data={} bytes",
+                    expansion.tag,
+                    expansion.data.len()
+                );
             }
             let (weapons, items) = save_game.memento_counts();
             println!("mementos: weapons={weapons} items={items}");
@@ -1403,7 +1410,9 @@ fn main() -> ExitCode {
                         changes += 1;
                     }
                     None => {
-                        eprintln!("error: --unlock-all-travel needs --stations <Travel Stations.json>");
+                        eprintln!(
+                            "error: --unlock-all-travel needs --stations <Travel Stations.json>"
+                        );
                         return ExitCode::FAILURE;
                     }
                 }
@@ -1418,7 +1427,9 @@ fn main() -> ExitCode {
                 });
                 match index {
                     Some(index) => {
-                        save_game.set_region_game_stage(index, stage).expect("stage");
+                        save_game
+                            .set_region_game_stage(index, stage)
+                            .expect("stage");
                         println!("{} game stage = {stage}", regions[index].region);
                         changes += 1;
                     }
