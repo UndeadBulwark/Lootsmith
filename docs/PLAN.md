@@ -234,3 +234,70 @@ baselines** · 7. QoL P0 (close guard, undo/redo, rotating backups, confirmation
 Skills build string (approved): `LS2:<class>:<t1>.<t2>.<t3>`, one digit per skill in
 `skills.json` order, version prefix + short check suffix; import enforces class match and tier
 gating, warns when over budget, never writes an invalid build. No bl2skills link format.
+
+---
+
+## 9. Current state (2026-10-10, HEAD `c1dde46`) — everything below is committed
+
+**Green gate:** `LOOTSMITH_REQUIRE_FIXTURES=1 cargo test --workspace` → 115 passed, 0 failed,
+**1 ignored** (`tests/lint_tokens.rs`, intentionally disabled until the shell migration ends);
+`cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean.
+
+### Done since the last plan revision
+- **Step 1 (workflow)**: `tests/common/mod.rs` — synthetic-save harness, dumps via
+  `LOOTSMITH_ASSET_LIBRARY`, `require_fixtures()` panics under `LOOTSMITH_REQUIRE_FIXTURES=1`;
+  `tests/ui.rs` ported to the synthetic save (no personal fixture needed), `tests/synthetic.rs`
+  folded in; snapshot harness with a smoke shot.
+- **Rarity pipeline (accepted rules)**: `scripts/gen-rarity.py` (Borderlens exact/unique join +
+  reviewed alias file, name-tier patterns for generated gear, no pool data; Legendary is never
+  classified from pools alone). Gates: pinned 6 + cross-check 12 = 100%;
+  pattern-vs-pool 341/345 (name-marked items only, ≥98%); the marker-less pool extension is
+  labelled an inference validated per tier (38 derived, 7 mixed left Unknown, 3 Legendary
+  pool-only left Unknown). Wiki sample logged as **22/25 strict (88%), 25/25 after tier
+  normalization** (wiki "Unique" = our Rare/E-tech). `rarity.json` v2 carries provenance and
+  per-entry origin. Report: `~/Downloads/lootsmith-rarity-report.md`.
+- **Step 2 (palette)**: `theme.rs` — `Palette` (full dark/light token tables), WCAG gate test
+  (text 4.5, non-text 3, diamonds 3) with the full table printed; token fixes: dark `brd`
+  #8C6A40, new `wdb` wood-border token, light `dim` #523D25, light `gold` #5E3E06, six light
+  diamonds darkened; white diamond relies on the 2 px `fg` outline now *specified* in
+  `LOOTSMITH_UI_SPEC.md` §2.3. `apply()` installs the palette (light theme fixed) and disables
+  window/popup shadows.
+- **Data bundling**: 16 tables (2.8 MB) under `crates/lootsmith-core/assets/data/` +
+  `bundled.rs` loaders; a user folder overrides; **no first-run picker**; `PROVENANCE.md`
+  lists every table's source, commit/release, retrieval date and licence status.
+- **Docs**: `AGENTS.md` (rule 4 rewritten, gaps status), `README.md` (fan-project +
+  licensing + bundled-data sections), About-tab lines, spec §2.2 synced to the real tokens.
+
+### Pending (in agreed order)
+1. **Prerequisite**: an `ignore_env` flag + `new_isolated` so the "no folder" tests provably
+   ignore `LOOTSMITH_*` and persisted settings.
+2. **Prerequisite**: `scripts/refresh-data.sh` (pull the 15 dumps from
+   `gibbed/Borderlands2Dumps`, re-serialise, run `gen-rarity.py`).
+3. **Shell a–f, one commit each, PNGs (dark + light) in every report**:
+   a. wire the fetched OFL fonts (`assets/fonts/`) + UI scale 100/150/200
+   b. `ui/pixel.rs` (notched rect, ribbon, plank bar, stitched panel, rivets, trail divider,
+      diamond with outline, dither tile) + geometry/rule tests
+   c. `ui/widgets.rs` components
+   d. plank top bar + sidebar (grouped, counts, logo) + status plank → **commit the real
+      baselines (dark/light × 100/200%) and show the PNGs before (e)**
+   e. Backpack: table + Item workbench + rarity diamonds
+   f. migrate remaining tabs; enable the `Tokens::` lint in the final commit
+4. Then QoL P0 (close guard, undo/redo, rotating backups, confirmations, pre-save diff), P1→P3.
+5. Human steps: in-game validation (blank save, platform conversion, profile keys, class
+   change) and the icon after a menu relaunch.
+
+### Current PNG evidence (all committed)
+- `crates/lootsmith-gui/tests/snapshots/smoke_backpack.png` (dark, synthetic save)
+- `crates/lootsmith-gui/tests/snapshots/smoke_backpack_light.png` (light, synthetic save)
+- `crates/lootsmith-gui/tests/snapshots/smoke_inspector_bundled.png` (bundled tables, no folder)
+- `crates/lootsmith-gui/tests/snapshots/smoke_inspector_real_item_bundled.png` (real pistols:
+  "Smooth Repeater" etc., no folder)
+
+### Harness notes for the next agent
+- The `edit` tool intermittently refuses repo paths ("outside the Plan directory"); if that
+  happens, say so and switch agent/Build mode — do **not** silently rewrite whole files via the
+  shell for the shell work.
+- Keep `cargo fmt` + `clippy -D warnings` green and run the suite with
+  `LOOTSMITH_REQUIRE_FIXTURES=1`; a skipped test counts as not done.
+- Snapshot baselines: regenerate with `UPDATE_SNAPSHOTS=1 cargo test -p lootsmith-gui --test
+  snapshots`, **open the PNGs**, and list every changed baseline with its reason.
