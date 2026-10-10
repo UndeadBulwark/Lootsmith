@@ -284,13 +284,11 @@ pub(crate) fn currency_name(index: usize) -> String {
 
 /// A vertical rule between toolbar groups.
 pub(crate) fn toolbar_sep(ui: &mut egui::Ui) {
+    let brd = theme::active(ui.ctx()).brd;
     ui.add_space(4.0);
     let (rect, _) = ui.allocate_exact_size(egui::vec2(1.0, 18.0), egui::Sense::hover());
-    ui.painter().vline(
-        rect.center().x,
-        rect.y_range(),
-        egui::Stroke::new(1.0, Tokens::BORDER),
-    );
+    ui.painter()
+        .vline(rect.center().x, rect.y_range(), egui::Stroke::new(1.0, brd));
     ui.add_space(4.0);
 }
 
@@ -302,13 +300,14 @@ pub(crate) fn status_dot(ui: &mut egui::Ui, color: egui::Color32) {
 
 /// A grouped surface card of a fixed width.
 pub(crate) fn card(ui: &mut egui::Ui, width: f32, add: impl FnOnce(&mut egui::Ui)) {
+    let p = *theme::active(ui.ctx());
     ui.allocate_ui_with_layout(
         egui::vec2(width, 0.0),
         egui::Layout::top_down(egui::Align::Min),
         |ui| {
             egui::Frame::group(ui.style())
-                .fill(Tokens::SURFACE)
-                .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
+                .fill(p.pan)
+                .stroke(egui::Stroke::new(1.0, p.wdb))
                 .corner_radius(egui::CornerRadius::same(8))
                 .inner_margin(egui::Margin::same(14))
                 .show(ui, |ui| {
@@ -327,7 +326,7 @@ pub(crate) fn empty_state(ui: &mut egui::Ui) {
             egui::RichText::new("Lootsmith")
                 .size(26.0)
                 .strong()
-                .color(Tokens::ACCENT),
+                .color(theme::active(ui.ctx()).gold),
         );
         ui.add_space(6.0);
         theme::muted(ui, "A cross-platform Borderlands 2 save editor.");

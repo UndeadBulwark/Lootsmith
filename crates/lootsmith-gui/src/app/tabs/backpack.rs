@@ -1,11 +1,12 @@
 //! The backpack tab (moved verbatim from the former single-file app.rs).
 
 use crate::app::*;
-use crate::theme::{self, Tokens};
+use crate::theme;
 use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_container(&mut self, ui: &mut egui::Ui, bank: bool) {
+        let p = *theme::active(ui.ctx());
         let mut item_action: Option<ItemAction> = None;
         let mut clicked: Option<(Container, usize)> = None;
         let mut apply = false;
@@ -16,7 +17,7 @@ impl LootsmithApp {
         egui::Panel::top("bag_actions")
             .frame(
                 egui::Frame::default()
-                    .fill(Tokens::BG)
+                    .fill(p.bg)
                     .inner_margin(egui::Margin::symmetric(10, 8)),
             )
             .show(ui, |ui| {
@@ -51,11 +52,7 @@ impl LootsmithApp {
                 });
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new("Item code")
-                            .color(Tokens::TEXT_DIM)
-                            .size(11.5),
-                    );
+                    ui.label(egui::RichText::new("Item code").color(p.dim).size(11.5));
                     ui.add_sized(
                         [520.0, 24.0],
                         egui::TextEdit::singleline(&mut self.item_code)
@@ -110,7 +107,7 @@ impl LootsmithApp {
                 .min_size(330.0)
                 .frame(
                     egui::Frame::default()
-                        .fill(Tokens::SURFACE)
+                        .fill(p.pan)
                         .inner_margin(egui::Margin::symmetric(12, 10)),
                 )
                 .show(ui, |ui| {
@@ -129,7 +126,7 @@ impl LootsmithApp {
                             Some(n) => format!("{} #{n}", edit.container.label()),
                             None => edit.container.label().to_string(),
                         };
-                        ui.label(egui::RichText::new(title).strong().size(14.0));
+                        ui.label(egui::RichText::new(title).strong().size(14.0).color(p.fg));
                         ui.label(theme::mono(format!("id={}", edit.decoded.unique_id)));
                     });
                     let name = item_name(
@@ -138,12 +135,7 @@ impl LootsmithApp {
                         self.name_parts.as_deref(),
                     );
                     if !name.is_empty() {
-                        ui.label(
-                            egui::RichText::new(name)
-                                .strong()
-                                .size(15.0)
-                                .color(Tokens::ACCENT),
-                        );
+                        ui.label(egui::RichText::new(name).strong().size(15.0).color(p.gold));
                     }
                     ui.add_space(6.0);
 
@@ -208,16 +200,14 @@ impl LootsmithApp {
                     egui::Panel::bottom("inspector_actions")
                         .frame(
                             egui::Frame::default()
-                                .fill(Tokens::SURFACE)
+                                .fill(p.pan)
                                 .inner_margin(egui::Margin::symmetric(0, 8)),
                         )
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
-                                ui.add_enabled_ui(edit.dirty, |ui| {
-                                    if ui.button("Apply item changes").clicked() {
-                                        apply = true;
-                                    }
-                                });
+                                if edit.dirty && ui.button("Apply item changes").clicked() {
+                                    apply = true;
+                                }
                                 if edit.container == Container::Bank {
                                     let target = if is_weapon {
                                         Container::BackpackWeapon
@@ -254,9 +244,7 @@ impl LootsmithApp {
                                 .show(ui, |ui| {
                                     for (slot, label) in slots_for(is_weapon) {
                                         ui.label(
-                                            egui::RichText::new(*label)
-                                                .color(Tokens::TEXT_DIM)
-                                                .size(12.0),
+                                            egui::RichText::new(*label).color(p.dim).size(12.0),
                                         );
                                         let group =
                                             items::slot_group(&edit.decoded.slot, slot).unwrap();
@@ -315,7 +303,7 @@ impl LootsmithApp {
 
         // ---- inventory table ----
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().fill(Tokens::BG))
+            .frame(egui::Frame::default().fill(p.bg))
             .show(ui, |ui| {
                 if visible.is_empty() {
                     ui.add_space(12.0);
@@ -354,10 +342,7 @@ impl LootsmithApp {
                         ] {
                             header.col(|ui| {
                                 ui.label(
-                                    egui::RichText::new(name)
-                                        .strong()
-                                        .size(11.5)
-                                        .color(Tokens::TEXT_DIM),
+                                    egui::RichText::new(name).strong().size(11.5).color(p.dim),
                                 );
                             });
                         }
@@ -365,19 +350,18 @@ impl LootsmithApp {
                     .body(|mut body| {
                         for (i, row) in visible.iter().enumerate() {
                             let is_selected = selected == Some((row.container, row.occurrence));
+                            let cell = |base: egui::Color32| if is_selected { p.on } else { base };
                             body.row(24.0, |mut tr| {
                                 tr.set_selected(is_selected);
                                 tr.col(|ui| {
-                                    ui.label((i + 1).to_string());
+                                    ui.label(
+                                        egui::RichText::new((i + 1).to_string()).color(cell(p.dim)),
+                                    );
                                 });
                                 tr.col(|ui| {
                                     ui.label(
                                         egui::RichText::new(&row.kind)
-                                            .color(if row.is_weapon {
-                                                Tokens::ACCENT
-                                            } else {
-                                                Tokens::TEXT_DIM
-                                            })
+                                            .color(cell(if row.is_weapon { p.gold } else { p.dim }))
                                             .size(12.0),
                                     );
                                 });
@@ -385,7 +369,10 @@ impl LootsmithApp {
                                     if ui
                                         .selectable_label(
                                             is_selected,
-                                            theme::mono(format!("id={}", row.id)),
+                                            egui::RichText::new(format!("id={}", row.id))
+                                                .monospace()
+                                                .size(19.0)
+                                                .color(cell(p.fg)),
                                         )
                                         .clicked()
                                     {
@@ -396,35 +383,51 @@ impl LootsmithApp {
                                     if row.is_weapon || row.container == Container::Bank {
                                         ui.label("");
                                     } else {
-                                        ui.label(row.quantity.to_string());
+                                        ui.label(
+                                            egui::RichText::new(row.quantity.to_string())
+                                                .color(cell(p.fg)),
+                                        );
                                     }
                                 });
                                 tr.col(|ui| {
                                     if row.is_weapon || row.container == Container::Bank {
                                         ui.label("");
                                     } else {
-                                        ui.label(if row.equipped { "✓" } else { "" });
+                                        ui.label(
+                                            egui::RichText::new(if row.equipped {
+                                                "✓"
+                                            } else {
+                                                ""
+                                            })
+                                            .color(cell(p.fg)),
+                                        );
                                     }
                                 });
                                 tr.col(|ui| {
                                     if row.is_weapon {
-                                        ui.label(row.quick_slot.to_string());
+                                        ui.label(
+                                            egui::RichText::new(row.quick_slot.to_string())
+                                                .color(cell(p.fg)),
+                                        );
                                     } else {
                                         ui.label("");
                                     }
                                 });
                                 tr.col(|ui| {
-                                    ui.label(player_mark_name(row.mark));
+                                    ui.label(
+                                        egui::RichText::new(player_mark_name(row.mark))
+                                            .color(cell(p.fg)),
+                                    );
                                 });
                                 tr.col(|ui| {
                                     let label = if row.empty {
                                         egui::RichText::new(&row.balance)
-                                            .color(Tokens::TEXT_FAINT)
+                                            .color(cell(p.dim))
                                             .italics()
                                     } else if !row.name.is_empty() {
-                                        egui::RichText::new(&row.name).color(Tokens::TEXT)
+                                        egui::RichText::new(&row.name).color(cell(p.fg))
                                     } else {
-                                        egui::RichText::new(&row.balance).color(Tokens::TEXT_DIM)
+                                        egui::RichText::new(&row.balance).color(cell(p.dim))
                                     };
                                     let tip = if row.name.is_empty() {
                                         row.balance.clone()

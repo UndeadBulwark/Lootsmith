@@ -21,17 +21,16 @@ use image::RgbaImage;
 use lootsmith_gui::app::Theme;
 use lootsmith_gui::theme::contrast;
 
-/// The accepted failing-run count per theme (dark, light) *today*. Must reach 0
-/// for the Backpack screen by the end of the Backpack token migration.
-///
-/// Baseline before the Backpack token migration: dark 5, light 35.
-const ACCEPTED_FAILURES: [usize; 2] = [5, 35];
+/// The accepted failing-run count per theme (dark, light). The Backpack screen
+/// is fully migrated, so this is a hard zero; the gate fails on any failure.
+const ACCEPTED_FAILURES: [usize; 2] = [0, 0];
 
 #[derive(Clone)]
 struct TextRun {
     order: usize,
     rect: Rect,
     color: Color32,
+    opacity: f32,
     text: String,
 }
 
@@ -82,6 +81,7 @@ fn extract(output: &egui::FullOutput) -> (Vec<TextRun>, Vec<Fill>) {
                     order,
                     rect: t.visual_bounding_rect(),
                     color,
+                    opacity: t.opacity_factor,
                     text: t.galley.job.text.clone(),
                 });
             }
@@ -132,6 +132,10 @@ fn analyse(runs: &[TextRun], fills: &[Fill]) -> Vec<Failure> {
     let mut out = Vec::new();
     for run in runs {
         if run.text.trim().is_empty() {
+            continue;
+        }
+        // Disabled/inactive controls are exempt (WCAG 1.4.3); egui fades them.
+        if run.opacity < 0.99 {
             continue;
         }
         let Some(fill) = shape_fill(run, fills) else {
@@ -266,6 +270,7 @@ fn run(order: usize, x: f32, y: f32, color: Color32, text: &str) -> TextRun {
         order,
         rect: Rect::from_min_size(egui::pos2(x, y), egui::vec2(60.0, 12.0)),
         color,
+        opacity: 1.0,
         text: text.to_string(),
     }
 }

@@ -16,7 +16,7 @@ pub(crate) use std::collections::HashMap;
 pub(crate) use std::path::PathBuf;
 pub(crate) use std::sync::Arc;
 
-pub(crate) use crate::theme::{self, Tokens};
+pub(crate) use crate::theme;
 pub(crate) use egui_extras::{Column, TableBuilder};
 
 pub use crate::theme::Theme;
@@ -1973,6 +1973,7 @@ impl LootsmithApp {
         let ctx = ui.ctx().clone();
         self.apply_theme(&ctx);
         ctx.set_pixels_per_point(self.ui_scale);
+        let p = theme::active(&ctx);
         self.handle_shortcuts(&ctx);
 
         if !self.loaded_once {
@@ -2009,7 +2010,7 @@ impl LootsmithApp {
         egui::Panel::top("toolbar")
             .frame(
                 egui::Frame::default()
-                    .fill(Tokens::SURFACE)
+                    .fill(p.pan)
                     .inner_margin(egui::Margin::symmetric(12, 8)),
             )
             .show(ui, |ui| {
@@ -2108,14 +2109,10 @@ impl LootsmithApp {
                                 self.ui_scale = *value;
                             }
                         }
-                        ui.label(
-                            egui::RichText::new("Scale")
-                                .color(Tokens::TEXT_DIM)
-                                .size(11.5),
-                        );
+                        ui.label(egui::RichText::new("Scale").color(p.dim).size(11.5));
                         ui.add_space(4.0);
                         if self.dirty {
-                            ui.colored_label(Tokens::ACCENT, "● unsaved");
+                            ui.colored_label(p.acc, "● unsaved");
                         }
                     });
                 });
@@ -2124,16 +2121,12 @@ impl LootsmithApp {
                     status_dot(
                         ui,
                         if self.save_game.is_some() {
-                            Tokens::OK
+                            p.gold
                         } else {
-                            Tokens::TEXT_FAINT
+                            p.dim
                         },
                     );
-                    ui.label(
-                        egui::RichText::new("Save file")
-                            .color(Tokens::TEXT_DIM)
-                            .size(11.5),
-                    );
+                    ui.label(egui::RichText::new("Save file").color(p.dim).size(11.5));
                     ui.add_sized(
                         [430.0, 24.0],
                         egui::TextEdit::singleline(&mut self.path)
@@ -2143,16 +2136,12 @@ impl LootsmithApp {
                     status_dot(
                         ui,
                         if self.manager.is_some() {
-                            Tokens::OK
+                            p.gold
                         } else {
-                            Tokens::WARN
+                            p.dng
                         },
                     );
-                    ui.label(
-                        egui::RichText::new("Game data")
-                            .color(Tokens::TEXT_DIM)
-                            .size(11.5),
-                    );
+                    ui.label(egui::RichText::new("Game data").color(p.dim).size(11.5));
                     ui.add_sized(
                         [300.0, 24.0],
                         egui::TextEdit::singleline(&mut self.dumps)
@@ -2160,14 +2149,11 @@ impl LootsmithApp {
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if self.manager.is_some() && self.dumps_bundled {
-                            ui.colored_label(
-                                Tokens::TEXT_FAINT,
-                                "names resolved (bundled tables — Game data… overrides)",
-                            );
+                            ui.colored_label(p.dim, "names resolved (bundled)");
                         } else if self.manager.is_some() {
-                            ui.colored_label(Tokens::TEXT_FAINT, "names resolved");
+                            ui.colored_label(p.dim, "names resolved");
                         } else {
-                            ui.colored_label(Tokens::WARN, "no game data — parts show raw ids");
+                            ui.colored_label(p.dng, "no game data — parts show raw ids");
                         }
                     });
                 });
@@ -2179,19 +2165,12 @@ impl LootsmithApp {
         egui::Panel::bottom("status")
             .frame(
                 egui::Frame::default()
-                    .fill(Tokens::SURFACE)
+                    .fill(p.pan)
                     .inner_margin(egui::Margin::symmetric(12, 4)),
             )
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    status_dot(
-                        ui,
-                        if self.dirty {
-                            Tokens::ACCENT
-                        } else {
-                            Tokens::OK
-                        },
-                    );
+                    status_dot(ui, if self.dirty { p.acc } else { p.gold });
                     ui.label(egui::RichText::new(self.status.clone()).size(12.0));
                 });
             });
@@ -2204,7 +2183,7 @@ impl LootsmithApp {
             egui::Panel::top("tabs")
                 .frame(
                     egui::Frame::default()
-                        .fill(Tokens::SURFACE)
+                        .fill(p.pan)
                         .inner_margin(egui::Margin::symmetric(10, 0)),
                 )
                 .show(ui, |ui| {
