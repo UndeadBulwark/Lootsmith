@@ -14,8 +14,10 @@ fn usage() -> ExitCode {
          lootsmith verify  <file.sav> [--platform <id>]\n  \
          lootsmith dump    <file.sav> [--platform <id>]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
+         lootsmith skills  <file.sav> [--platform <id>]\n  \
          lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n  \
-         lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE [--container bag|bank]\n\
+         lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE [--container bag|bank]\n  \
+         lootsmith edit    <file.sav> --skill N [--grade G] [--points P] [--out OUT]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
@@ -43,6 +45,9 @@ struct Args {
     item: Option<usize>,
     part: Option<String>,
     set: Option<String>,
+    skill: Option<usize>,
+    grade: Option<i32>,
+    points: Option<i32>,
     scope: Scope,
 }
 
@@ -85,6 +90,9 @@ fn parse_args() -> Option<Args> {
         item: None,
         part: None,
         set: None,
+        skill: None,
+        grade: None,
+        points: None,
         scope: Scope::All,
     };
     while let Some(arg) = it.next() {
@@ -107,6 +115,9 @@ fn parse_args() -> Option<Args> {
             "--item" => args.item = Some(it.next()?.parse().ok()?),
             "--part" => args.part = Some(it.next()?),
             "--set" => args.set = Some(it.next()?),
+            "--skill" => args.skill = Some(it.next()?.parse().ok()?),
+            "--grade" => args.grade = Some(it.next()?.parse().ok()?),
+            "--points" => args.points = Some(it.next()?.parse().ok()?),
             _ => return None,
         }
     }
@@ -358,6 +369,28 @@ fn main() -> ExitCode {
             println!("total: {count} packed blobs (backpack {backpack}, bank {bank})");
             ExitCode::SUCCESS
         }
+        "skills" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let skills = save_game.skills();
+            for (i, skill) in skills.iter().enumerate() {
+                println!(
+                    "#{:<3} grade={} points={} slot={} {}",
+                    i + 1,
+                    skill.grade,
+                    skill.grade_points,
+                    skill.equipped_slot_index,
+                    skill.skill
+                );
+            }
+            println!("total: {} skills", skills.len());
+            ExitCode::SUCCESS
+        }
         "edit" => {
             let mut save_game = match save.save_game() {
                 Ok(s) => s,
@@ -461,6 +494,37 @@ fn main() -> ExitCode {
                     group.key()
                 );
                 changes += 1;
+            }
+
+            if let Some(skill) = args.skill {
+                let count = save_game.skills().len();
+                if skill == 0 || skill > count {
+                    eprintln!("error: skill index {skill} out of range (1..{count})");
+                    return ExitCode::FAILURE;
+                }
+                if args.grade.is_none() && args.points.is_none() {
+                    eprintln!("error: --skill needs --grade and/or --points");
+                    return ExitCode::FAILURE;
+                }
+                if let Some(grade) = args.grade {
+                    if let Err(e) = save_game.set_skill_grade(skill - 1, grade) {
+                        eprintln!("error: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                    changes += 1;
+                }
+                if let Some(points) = args.points {
+                    if let Err(e) = save_game.set_skill_grade_points(skill - 1, points) {
+                        eprintln!("error: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                    changes += 1;
+                }
+                let now = save_game.skills().into_iter().nth(skill - 1).unwrap();
+                println!(
+                    "skill #{skill}: grade={} points={} ({})",
+                    now.grade, now.grade_points, now.skill
+                );
             }
 
             if changes == 0 {

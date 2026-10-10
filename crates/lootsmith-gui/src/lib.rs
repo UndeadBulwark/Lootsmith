@@ -3,4 +3,4 @@
 
 pub mod app;
 
-pub use app::{slots_for, Form, LootsmithApp, ReadInfo, Row, Tab};
+pub use app::{slots_for, Form, LootsmithApp, ReadInfo, Row, SkillRow, Tab};

@@ -558,6 +558,15 @@ fn render_field(field: &Field, kind: Option<Kind>) -> String {
     }
 }
 
+/// A `SkillData` entry (field 8): one skill-tree node's rank and points.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Skill {
+    pub skill: String,
+    pub grade: i32,
+    pub grade_points: i32,
+    pub equipped_slot_index: i32,
+}
+
 /// Which top-level list a packed blob lives in.
 ///
 /// `PackedItemData`/`PackedWeaponData` (fields 53/54) are the backpack;
@@ -813,6 +822,42 @@ impl SaveGame {
     ) -> crate::error::Result<()> {
         self.mutate_entry(container.field_number(), occurrence, |sub| {
             sub.set(Field::varint(3, u64::from(equipped)));
+        })
+    }
+
+    /// All `SkillData` entries (field 8), in order.
+    pub fn skills(&self) -> Vec<Skill> {
+        self.message
+            .get_all(8)
+            .filter_map(|field| field.as_message().ok().flatten())
+            .map(|sub| Skill {
+                skill: sub
+                    .get(1)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                grade: sub.get(2).and_then(|f| f.as_i32()).unwrap_or(0),
+                grade_points: sub.get(3).and_then(|f| f.as_i32()).unwrap_or(0),
+                equipped_slot_index: sub.get(4).and_then(|f| f.as_i32()).unwrap_or(0),
+            })
+            .collect()
+    }
+
+    /// Set `SkillData.Grade` (field 2) on skill `index`.
+    pub fn set_skill_grade(&mut self, index: usize, grade: i32) -> crate::error::Result<()> {
+        self.mutate_entry(8, index, |sub| {
+            sub.set(Field::varint(2, grade as u32 as u64));
+        })
+    }
+
+    /// Set `SkillData.GradePoints` (field 3) on skill `index`.
+    pub fn set_skill_grade_points(
+        &mut self,
+        index: usize,
+        points: i32,
+    ) -> crate::error::Result<()> {
+        self.mutate_entry(8, index, |sub| {
+            sub.set(Field::varint(3, points as u32 as u64));
         })
     }
 }

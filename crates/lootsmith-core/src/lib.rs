@@ -19,4 +19,4 @@ pub use error::{Error, Result};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
 pub use platform::{CompressionScheme, Endian, Platform};
-pub use savegame::{Container, PackedEntry, SaveGame};
+pub use savegame::{Container, PackedEntry, SaveGame, Skill};

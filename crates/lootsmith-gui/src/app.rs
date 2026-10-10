@@ -16,6 +16,7 @@ pub enum Tab {
     General,
     Character,
     Currency,
+    Skills,
     Backpack,
     Bank,
 }
@@ -74,6 +75,28 @@ pub struct Row {
     pub empty: bool,
 }
 
+/// One editable skill row (a `SkillData` entry, field 8).
+#[derive(Clone, Debug)]
+pub struct SkillRow {
+    pub name: String,
+    pub grade: i32,
+    pub points: i32,
+    pub slot: i32,
+    pub orig_grade: i32,
+    pub orig_points: i32,
+}
+
+/// A readable `Tree.Leaf` label from a full skill resource path.
+fn short_skill(name: &str) -> String {
+    match name.rsplit_once('.') {
+        Some((prefix, leaf)) => {
+            let tree = prefix.rsplit('.').next().unwrap_or(prefix);
+            format!("{tree}.{leaf}")
+        }
+        None => name.to_string(),
+    }
+}
+
 struct ItemEdit {
     container: Container,
     occurrence: usize,
@@ -94,6 +117,7 @@ pub struct LootsmithApp {
     pub read_info: ReadInfo,
     pub backpack: Vec<Row>,
     pub bank: Vec<Row>,
+    pub skills: Vec<SkillRow>,
     pub status: String,
     pub save_as: String,
     loaded_once: bool,
@@ -234,6 +258,7 @@ impl LootsmithApp {
             read_info: ReadInfo::default(),
             backpack: Vec::new(),
             bank: Vec::new(),
+            skills: Vec::new(),
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             loaded_once: false,
@@ -337,6 +362,7 @@ impl LootsmithApp {
             if save.crc32_valid() { "ok" } else { "MISMATCH" }
         );
         self.refresh_rows();
+        self.refresh_skills();
     }
 
     pub fn load_dumps(&mut self) {
@@ -560,6 +586,59 @@ impl LootsmithApp {
         }
     }
 
+    fn refresh_skills(&mut self) {
+        self.skills = self
+            .save_game
+            .as_ref()
+            .map(|save_game| {
+                save_game
+                    .skills()
+                    .into_iter()
+                    .map(|s| SkillRow {
+                        name: s.skill,
+                        grade: s.grade,
+                        points: s.grade_points,
+                        slot: s.equipped_slot_index,
+                        orig_grade: s.grade,
+                        orig_points: s.grade_points,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+    }
+
+    /// Whether any skill row differs from what is stored in the save.
+    pub fn skills_dirty(&self) -> bool {
+        self.skills
+            .iter()
+            .any(|r| r.grade != r.orig_grade || r.points != r.orig_points)
+    }
+
+    /// Write changed skill grade/points back into the save.
+    pub fn apply_skills(&mut self) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let mut changed = 0usize;
+        for (i, row) in self.skills.iter_mut().enumerate() {
+            if row.grade != row.orig_grade && save_game.set_skill_grade(i, row.grade).is_ok() {
+                row.orig_grade = row.grade;
+                changed += 1;
+            }
+            if row.points != row.orig_points
+                && save_game.set_skill_grade_points(i, row.points).is_ok()
+            {
+                row.orig_points = row.points;
+                changed += 1;
+            }
+        }
+        self.status = if changed == 0 {
+            "no skill changes".into()
+        } else {
+            format!("{changed} skill change(s) applied (remember to Save)")
+        };
+    }
+
     fn apply_form(&mut self) -> Option<Vec<u8>> {
         let mut save_game = self.save_game.clone()?;
         save_game.set_i32(2, self.form.level);
@@ -700,6 +779,7 @@ impl LootsmithApp {
                 ui.selectable_value(&mut self.tab, Tab::General, "General");
                 ui.selectable_value(&mut self.tab, Tab::Character, "Character");
                 ui.selectable_value(&mut self.tab, Tab::Currency, "Currency");
+                ui.selectable_value(&mut self.tab, Tab::Skills, "Skills");
                 ui.selectable_value(&mut self.tab, Tab::Backpack, "Backpack");
                 ui.selectable_value(&mut self.tab, Tab::Bank, "Bank");
             });
@@ -709,6 +789,7 @@ impl LootsmithApp {
                 Tab::General => self.ui_general(ui),
                 Tab::Character => self.ui_character(ui),
                 Tab::Currency => self.ui_currency(ui),
+                Tab::Skills => self.ui_skills(ui),
                 Tab::Backpack => self.ui_container(ui, false),
                 Tab::Bank => self.ui_container(ui, true),
             }
@@ -780,6 +861,46 @@ impl LootsmithApp {
                     }
                 });
             });
+        ui.separator();
+        self.ui_save_buttons(ui);
+    }
+
+    fn ui_skills(&mut self, ui: &mut egui::Ui) {
+        ui.label("Skill ranks (grade 0-5, plus grade points). Apply, then Save.");
+        egui::ScrollArea::vertical()
+            .id_salt("skills")
+            .max_height(420.0)
+            .show(ui, |ui| {
+                egui::Grid::new("skills_grid")
+                    .num_columns(4)
+                    .striped(true)
+                    .show(ui, |ui| {
+                        ui.strong("Skill");
+                        ui.strong("Grade");
+                        ui.strong("Points");
+                        ui.strong("Slot");
+                        ui.end_row();
+                        for row in self.skills.iter_mut() {
+                            ui.label(short_skill(&row.name));
+                            ui.add(egui::DragValue::new(&mut row.grade));
+                            ui.add(egui::DragValue::new(&mut row.points));
+                            ui.label(row.slot.to_string());
+                            ui.end_row();
+                        }
+                    });
+            });
+        let dirty = self.skills_dirty();
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.add_enabled_ui(dirty, |ui| {
+                if ui.button("Apply skill changes").clicked() {
+                    self.apply_skills();
+                }
+            });
+            if dirty {
+                ui.label("(unsaved changes)");
+            }
+        });
         ui.separator();
         self.ui_save_buttons(ui);
     }

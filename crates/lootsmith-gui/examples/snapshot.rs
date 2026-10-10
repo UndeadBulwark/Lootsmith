@@ -45,10 +45,11 @@ fn main() {
         harness
     };
 
-    let shots: [Shot; 5] = [
+    let shots: [Shot; 6] = [
         ("general", Tab::General, None),
         ("character", Tab::Character, None),
         ("currency", Tab::Currency, None),
+        ("skills", Tab::Skills, None),
         ("backpack", Tab::Backpack, None),
         ("backpack-selected", Tab::Backpack, Some((Container::BackpackWeapon, 0))),
     ];

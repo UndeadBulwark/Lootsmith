@@ -59,9 +59,10 @@ fn loads_and_switches_tabs_by_label() {
 
     for (label, tab) in [
         ("Character", Tab::Character),
+        ("Currency", Tab::Currency),
+        ("Skills", Tab::Skills),
         ("Backpack", Tab::Backpack),
         ("Bank", Tab::Bank),
-        ("Currency", Tab::Currency),
         ("General", Tab::General),
     ] {
         h.get_by_label(label).click();
@@ -159,6 +160,39 @@ fn moves_a_weapon_to_the_bank_and_back() {
     assert_eq!(h.state().tab, Tab::Backpack);
     assert!(h.state().bank.is_empty());
     assert_eq!(h.state().backpack.len(), 14);
+}
+
+#[test]
+fn edits_a_skill_and_saves() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+
+    h.get_by_label("Skills").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Skills);
+    assert_eq!(h.state().skills.len(), 33);
+
+    let index = h
+        .state()
+        .skills
+        .iter()
+        .position(|s| s.grade == 0)
+        .expect("a rank-0 skill");
+    h.state_mut().skills[index].grade = 5;
+    h.run();
+    assert!(h.state().skills_dirty());
+    h.get_by_label("Apply skill changes").click();
+    h.run();
+
+    let out = std::env::temp_dir().join("lootsmith-ui-skills.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = reopen(&out);
+    assert!(reopened.crc32_valid() && reopened.proto_stable());
+    let sg = reopened.save_game().expect("reparse");
+    assert_eq!(sg.skills()[index].grade, 5, "the skill grade should persist");
 }
 
 #[test]
