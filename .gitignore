@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# Game save fixtures are user data and must not be committed.
+/tests/fixtures/*.sav
+/tests/fixtures/*.bin
+/tests/fixtures/**/*.sav

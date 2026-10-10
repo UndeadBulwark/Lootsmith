@@ -1,0 +1,11 @@
+[package]
+name = "lootsmith-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+lzo = "0.1"
+flate2 = "1"
+sha1 = "0.10"

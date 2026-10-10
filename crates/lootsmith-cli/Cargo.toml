@@ -1,0 +1,13 @@
+[package]
+name = "lootsmith-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "lootsmith"
+path = "src/main.rs"
+
+[dependencies]
+lootsmith-core = { workspace = true }
