@@ -189,8 +189,9 @@ fn tint(base: egui::Color32, accent: egui::Color32, t: f32) -> egui::Color32 {
     )
 }
 
-/// One tree plate: a **3-column × tiers-row grid** of skill tiles (row = tier,
-/// column = slot), with the tree colour filling the plate as points are spent.
+/// One tree plate: a 3-slot-per-row tier pyramid, uniformly tinted with the
+/// tree colour like the community calculator. A tier's single skill centres,
+/// a pair spreads to the outer columns, three fill the row — no empty boxes.
 fn tree_card(
     ui: &mut egui::Ui,
     tree: &crate::skills::SkillTree,
@@ -199,7 +200,7 @@ fn tree_card(
     textures: &std::collections::HashMap<String, Option<egui::TextureHandle>>,
     edit: &mut Option<(usize, i32)>,
 ) {
-    const TILE: f32 = 74.0;
+    const TILE: f32 = 62.0;
     const GAP: f32 = 6.0;
     const COLS: usize = 3;
 
@@ -211,12 +212,10 @@ fn tree_card(
         .filter_map(|n| grade_of(&n.skill))
         .map(|i| grades[i].max(0))
         .sum();
-    let rows = tree.tiers.len().max(1);
     let grid_w = COLS as f32 * TILE + (COLS as f32 - 1.0) * GAP;
-    let grid_h = rows as f32 * TILE + (rows as f32 - 1.0) * GAP;
 
     egui::Frame::default()
-        .fill(tint(Tokens::SURFACE, accent, 0.05))
+        .fill(tint(Tokens::SURFACE, accent, 0.26))
         .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::same(10))
@@ -225,27 +224,18 @@ fn tree_card(
                 ui.set_width(grid_w);
                 ui.spacing_mut().item_spacing = egui::vec2(GAP, GAP);
 
-                // The tree colour fills from the bottom as points are spent (cap 26).
-                let frac = (tree_total as f32 / 26.0).clamp(0.0, 1.0);
-                let area =
-                    egui::Rect::from_min_size(ui.cursor().min, egui::vec2(grid_w, grid_h));
-                if frac > 0.0 {
-                    let filled = egui::Rect::from_min_max(
-                        egui::pos2(area.left(), area.bottom() - grid_h * frac),
-                        area.max,
-                    );
-                    ui.painter().rect_filled(
-                        filled,
-                        egui::CornerRadius::same(6),
-                        accent.gamma_multiply(0.22),
-                    );
-                }
-
                 for tier in &tree.tiers {
                     let unlocked = crate::skills::tier_unlocked(tree_total, tier.level);
+                    let slots: [Option<&crate::skills::SkillNode>; COLS] =
+                        match tier.skills.as_slice() {
+                            [only] => [None, Some(only), None],
+                            [a, b] => [Some(a), None, Some(b)],
+                            [a, b, c, ..] => [Some(a), Some(b), Some(c)],
+                            _ => [None, None, None],
+                        };
                     ui.horizontal(|ui| {
-                        for col in 0..COLS {
-                            match tier.skills.get(col) {
+                        for slot in slots {
+                            match slot {
                                 Some(node) => {
                                     let idx = grade_of(&node.skill);
                                     let grade = idx.map(|i| grades[i]).unwrap_or(0);
@@ -253,12 +243,15 @@ fn tree_card(
                                     let tex = textures.get(&node.icon).cloned().flatten();
                                     let response = skill_tile(
                                         ui,
-                                        node,
-                                        tex.as_ref(),
-                                        grade,
-                                        max,
-                                        unlocked,
-                                        accent,
+                                        &TileState {
+                                            node,
+                                            texture: tex.as_ref(),
+                                            grade,
+                                            max,
+                                            unlocked,
+                                            accent,
+                                            size: TILE,
+                                        },
                                     );
                                     if unlocked {
                                         if let Some(i) = idx {
@@ -270,6 +263,7 @@ fn tree_card(
                                         }
                                     }
                                 }
+                                // Invisible spacer so the pyramid stays centred.
                                 None => {
                                     ui.allocate_exact_size(
                                         egui::vec2(TILE, TILE),
@@ -304,19 +298,23 @@ fn tree_card(
 
 /// One skill tile: icon-centred with a metal frame and a rank badge, matching the
 /// community calculator. Partial/full/locked/hover states are all visualised.
-fn skill_tile(
-    ui: &mut egui::Ui,
-    node: &crate::skills::SkillNode,
-    texture: Option<&egui::TextureHandle>,
+struct TileState<'a> {
+    node: &'a crate::skills::SkillNode,
+    texture: Option<&'a egui::TextureHandle>,
     grade: i32,
     max: i32,
     unlocked: bool,
     accent: egui::Color32,
-) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(74.0, 74.0), egui::Sense::click());
+    size: f32,
+}
+
+fn skill_tile(ui: &mut egui::Ui, t: &TileState) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(t.size, t.size), egui::Sense::click());
     let hovered = response.hovered();
     let painter = ui.painter_at(rect);
-    let full = max > 1 && grade >= max;
+    let full = t.max > 1 && t.grade >= t.max;
+    let unlocked = t.unlocked;
+    let accent = t.accent;
 
     // Soft glow when maxed.
     if full && unlocked {
@@ -340,7 +338,7 @@ fn skill_tile(
     // Border: accent when invested, dim when locked.
     let (width, color) = if !unlocked {
         (1.0, Tokens::SURFACE_ALT)
-    } else if grade > 0 {
+    } else if t.grade > 0 {
         (2.0, accent)
     } else {
         (1.0, Tokens::BORDER)
@@ -353,10 +351,10 @@ fn skill_tile(
     );
 
     // Icon.
-    if let Some(texture) = texture {
+    if let Some(texture) = t.texture {
         let icon = egui::Rect::from_center_size(
-            rect.center() - egui::vec2(0.0, 4.0),
-            egui::vec2(50.0, 50.0),
+            rect.center() - egui::vec2(0.0, 3.0),
+            egui::vec2(t.size - 18.0, t.size - 18.0),
         );
         let icon_tint = if unlocked {
             egui::Color32::WHITE
@@ -388,7 +386,7 @@ fn skill_tile(
         Tokens::TEXT
     };
     let galley = painter.layout_no_wrap(
-        format!("{grade}/{max}"),
+        format!("{}/{}", t.grade, t.max),
         egui::FontId::proportional(11.5),
         badge_color,
     );
@@ -409,12 +407,12 @@ fn skill_tile(
     painter.galley(badge.min + pad, galley, badge_color);
 
     response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Button, unlocked, &node.skill)
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, unlocked, &t.node.skill)
     });
-    if node.desc.is_empty() {
+    if t.node.desc.is_empty() {
         response
     } else {
-        response.on_hover_text(&node.desc)
+        response.on_hover_text(&t.node.desc)
     }
 }
 
@@ -2383,10 +2381,8 @@ impl LootsmithApp {
                         .color(Tokens::TEXT_DIM)
                         .size(12.0),
                 );
-                theme::faint(
-                    ui,
-                    "Left-click a skill to add a rank, right-click to remove. A tier unlocks at 5 points per tier.",
-                );
+                theme::faint(ui, "Left-click adds a rank, right-click removes.");
+                theme::faint(ui, "A tier unlocks every 5 points invested.");
             });
         });
         ui.add_space(6.0);
