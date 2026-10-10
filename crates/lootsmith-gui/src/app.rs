@@ -179,8 +179,9 @@ fn customization_combo(
         });
 }
 
-/// One skill node card for the calculator.
-fn skill_node(
+/// One skill tile for the calculator: the icon fills the tile and the rank is a
+/// badge in the bottom-right corner (matching the community calculator).
+fn skill_tile(
     ui: &mut egui::Ui,
     node: &crate::skills::SkillNode,
     texture: Option<&egui::TextureHandle>,
@@ -189,48 +190,69 @@ fn skill_node(
     unlocked: bool,
     accent: egui::Color32,
 ) -> egui::Response {
-    let frame = egui::Frame::group(ui.style())
-        .fill(if unlocked { Tokens::SURFACE } else { Tokens::BG })
-        .stroke(egui::Stroke::new(
-            1.0,
-            if grade > 0 { accent } else { Tokens::BORDER },
-        ))
+    let border = if grade > 0 {
+        accent
+    } else if unlocked {
+        Tokens::BORDER
+    } else {
+        Tokens::SURFACE_ALT
+    };
+    let frame = egui::Frame::default()
+        .fill(if unlocked {
+            Tokens::SURFACE_ALT
+        } else {
+            Tokens::BG
+        })
+        .stroke(egui::Stroke::new(if grade > 0 { 2.0 } else { 1.0 }, border))
         .corner_radius(egui::CornerRadius::same(6))
         .inner_margin(egui::Margin::same(5));
     let inner = frame.show(ui, |ui| {
-        ui.set_width(120.0);
-        ui.horizontal(|ui| {
-            if let Some(texture) = texture {
-                ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(26.0, 26.0)));
+        ui.set_min_size(egui::vec2(52.0, 52.0));
+        if let Some(texture) = texture {
+            let tint = if unlocked {
+                egui::Color32::WHITE
             } else {
-                let (rect, _) =
-                    ui.allocate_exact_size(egui::vec2(26.0, 26.0), egui::Sense::hover());
-                ui.painter()
-                    .rect_filled(rect, egui::CornerRadius::same(4), Tokens::SURFACE_ALT);
-            }
-            ui.vertical(|ui| {
-                let name = egui::RichText::new(&node.skill).size(11.5);
-                let name = if unlocked {
-                    name.color(Tokens::TEXT)
-                } else {
-                    name.color(Tokens::TEXT_FAINT)
-                };
-                ui.label(name);
-                let points = egui::RichText::new(format!("{grade}/{max}")).size(11.0);
-                let points = if grade >= max {
-                    points.color(accent).strong()
-                } else {
-                    points.color(Tokens::TEXT_DIM)
-                };
-                ui.label(points);
-            });
-        });
+                egui::Color32::from_gray(96)
+            };
+            ui.add(
+                egui::Image::new(texture)
+                    .fit_to_exact_size(egui::vec2(52.0, 52.0))
+                    .tint(tint),
+            );
+        } else {
+            ui.allocate_exact_size(egui::vec2(52.0, 52.0), egui::Sense::hover());
+        }
     });
-    let response = ui.interact(
-        inner.response.rect,
-        ui.id().with(&node.skill),
-        egui::Sense::click(),
+    let rect = inner.response.rect;
+
+    // Rank badge, bottom-right.
+    let painter = ui.painter_at(rect);
+    let color = if grade >= max { accent } else { Tokens::TEXT };
+    let galley = painter.layout_no_wrap(
+        format!("{grade}/{max}"),
+        egui::FontId::proportional(11.0),
+        color,
     );
+    let pad = egui::vec2(4.0, 2.0);
+    let badge_size = galley.size() + pad * 2.0;
+    let badge = egui::Rect::from_min_size(
+        egui::pos2(
+            rect.right() - badge_size.x - 3.0,
+            rect.bottom() - badge_size.y - 3.0,
+        ),
+        badge_size,
+    );
+    painter.rect_filled(
+        badge,
+        egui::CornerRadius::same(3),
+        egui::Color32::from_black_alpha(205),
+    );
+    painter.galley(badge.min + pad, galley, color);
+
+    let response = ui.interact(rect, ui.id().with(&node.skill), egui::Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, unlocked, &node.skill)
+    });
     if node.desc.is_empty() {
         response
     } else {
@@ -1761,7 +1783,8 @@ impl LootsmithApp {
         if let Some(handle) = self.skill_icons.get(filename) {
             return Some(handle.clone());
         }
-        let bytes = crate::skills::icon_bytes(filename)?;
+        let bytes = crate::skills::icon_bytes(filename)
+            .or_else(|| crate::skills::portrait_bytes(filename))?;
         let data = eframe::icon_data::from_png_bytes(bytes).ok()?;
         let image = egui::ColorImage::from_rgba_unmultiplied(
             [data.width as usize, data.height as usize],
@@ -2155,31 +2178,7 @@ impl LootsmithApp {
 
         let spent: i32 = grades.iter().map(|g| (*g).max(0)).sum();
         let available = self.form.general_skill_points;
-
-        ui.add_space(6.0);
-        ui.horizontal(|ui| {
-            ui.label(
-                egui::RichText::new(format!("{} · {}", class.name, class.class_name))
-                    .strong()
-                    .size(16.0),
-            );
-            ui.add_space(16.0);
-            theme::muted(ui, format!("Level {}", self.form.level));
-            ui.add_space(16.0);
-            ui.label(
-                egui::RichText::new(format!("Spent {spent}"))
-                    .color(Tokens::TEXT_DIM)
-                    .size(12.0),
-            );
-            ui.add_space(16.0);
-            ui.colored_label(Tokens::ACCENT, format!("Available {available}"));
-        });
-        ui.add_space(2.0);
-        theme::faint(
-            ui,
-            "Left-click a skill to add a rank, right-click to remove. A tier unlocks at 5 points per tier.",
-        );
-        ui.add_space(4.0);
+        let portrait = self.skill_texture(ui.ctx(), &class.portrait);
 
         // Decode/cache every icon this class needs, once.
         let mut textures: std::collections::HashMap<String, Option<egui::TextureHandle>> =
@@ -2194,6 +2193,48 @@ impl LootsmithApp {
                 }
             }
         }
+
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            if let Some(texture) = &portrait {
+                ui.add(egui::Image::new(texture).max_height(140.0));
+                ui.add_space(12.0);
+            }
+            ui.vertical(|ui| {
+                ui.label(
+                    egui::RichText::new("BORDERLANDS 2 SKILL CALCULATOR")
+                        .strong()
+                        .size(18.0)
+                        .color(Tokens::ACCENT),
+                );
+                ui.add_space(2.0);
+                ui.label(
+                    egui::RichText::new(&class.name)
+                        .strong()
+                        .size(28.0)
+                        .color(Tokens::ACCENT),
+                );
+                ui.label(
+                    egui::RichText::new(format!(
+                        "LEVEL {} {}",
+                        self.form.level,
+                        class.class_name.to_uppercase()
+                    ))
+                    .size(14.0),
+                );
+                ui.add_space(6.0);
+                ui.label(
+                    egui::RichText::new(format!("Spent {spent}     Available {available}"))
+                        .color(Tokens::TEXT_DIM)
+                        .size(12.0),
+                );
+                theme::faint(
+                    ui,
+                    "Left-click a skill to add a rank, right-click to remove. A tier unlocks at 5 points per tier.",
+                );
+            });
+        });
+        ui.add_space(8.0);
 
         let mut edit: Option<(usize, i32)> = None;
 
@@ -2212,47 +2253,75 @@ impl LootsmithApp {
                             .filter_map(|n| grade_of(&n.skill))
                             .map(|i| grades[i].max(0))
                             .sum();
-                        col.horizontal(|ui| {
-                            ui.label(
-                                egui::RichText::new(&tree.name).strong().size(14.0).color(accent),
-                            );
-                            ui.label(
-                                egui::RichText::new(tree_total.to_string())
-                                    .color(Tokens::TEXT_FAINT)
-                                    .size(12.0),
-                            );
-                        });
-                        col.add_space(3.0);
-                        for tier in &tree.tiers {
-                            let unlocked = crate::skills::tier_unlocked(tree_total, tier.level);
-                            col.horizontal_wrapped(|ui| {
-                                for node in &tier.skills {
-                                    let idx = grade_of(&node.skill);
-                                    let grade = idx.map(|i| grades[i]).unwrap_or(0);
-                                    let max = node.max.max(1);
-                                    let tex = textures.get(&node.icon).cloned().flatten();
-                                    let response = skill_node(
-                                        ui,
-                                        node,
-                                        tex.as_ref(),
-                                        grade,
-                                        max,
-                                        unlocked,
-                                        accent,
-                                    );
-                                    if unlocked {
-                                        if let Some(i) = idx {
-                                            if response.clicked() && grade < max {
-                                                edit = Some((i, grade + 1));
-                                            } else if response.secondary_clicked() && grade > 0 {
-                                                edit = Some((i, grade - 1));
+                        egui::Frame::default()
+                            .fill(Tokens::SURFACE)
+                            .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
+                            .corner_radius(egui::CornerRadius::same(8))
+                            .inner_margin(egui::Margin::same(8))
+                            .show(col, |ui| {
+                                // Coloured top accent, like the calculator's tree plate.
+                                let (bar, _) = ui.allocate_exact_size(
+                                    egui::vec2(ui.available_width(), 3.0),
+                                    egui::Sense::hover(),
+                                );
+                                ui.painter()
+                                    .rect_filled(bar, egui::CornerRadius::same(2), accent);
+                                ui.add_space(8.0);
+                                for tier in &tree.tiers {
+                                    let unlocked =
+                                        crate::skills::tier_unlocked(tree_total, tier.level);
+                                    ui.horizontal_wrapped(|ui| {
+                                        for node in &tier.skills {
+                                            let idx = grade_of(&node.skill);
+                                            let grade = idx.map(|i| grades[i]).unwrap_or(0);
+                                            let max = node.max.max(1);
+                                            let tex = textures.get(&node.icon).cloned().flatten();
+                                            let response = skill_tile(
+                                                ui,
+                                                node,
+                                                tex.as_ref(),
+                                                grade,
+                                                max,
+                                                unlocked,
+                                                accent,
+                                            );
+                                            if unlocked {
+                                                if let Some(i) = idx {
+                                                    if response.clicked() && grade < max {
+                                                        edit = Some((i, grade + 1));
+                                                    } else if response.secondary_clicked()
+                                                        && grade > 0
+                                                    {
+                                                        edit = Some((i, grade - 1));
+                                                    }
+                                                }
                                             }
                                         }
-                                    }
+                                    });
+                                    ui.add_space(8.0);
                                 }
+                                ui.add_space(2.0);
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        egui::RichText::new(tree.name.to_uppercase())
+                                            .strong()
+                                            .size(14.0)
+                                            .color(accent),
+                                    );
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            ui.label(
+                                                egui::RichText::new(tree_total.to_string())
+                                                    .strong()
+                                                    .size(14.0)
+                                                    .color(accent),
+                                            );
+                                        },
+                                    );
+                                });
                             });
-                            col.add_space(4.0);
-                        }
+                        col.add_space(8.0);
                     }
                 });
             });

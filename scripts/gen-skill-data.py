@@ -17,6 +17,7 @@ ICON_BASE = "https://bl2skills.com/icons"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "crates", "lootsmith-gui", "assets", "skills")
 ICONS = os.path.join(OUT, "icons")
+PORTRAITS = os.path.join(OUT, "portraits")
 
 CLASSES = [
     ("gunzerker", "Salvador", "Gunzerker", "GD_Mercenary.Character.CharClass_Mercenary"),
@@ -75,6 +76,7 @@ def parse_class(page):
 
 def main():
     os.makedirs(ICONS, exist_ok=True)
+    os.makedirs(PORTRAITS, exist_ok=True)
     data = {"version": 1, "classes": {}}
     icons = set()
     for page, name, cls, key in CLASSES:
@@ -88,7 +90,21 @@ def main():
                 for sk in tier["skills"]:
                     if sk["icon"]:
                         icons.add(sk["icon"])
-        data["classes"][key] = {"name": name, "class": cls, "page": page, "trees": trees}
+        portrait = f"{page}Portrait.png"
+        dest = os.path.join(PORTRAITS, portrait)
+        if not os.path.exists(dest):
+            try:
+                with open(dest, "wb") as fh:
+                    fh.write(subprocess.check_output(["curl", "-sS", f"https://bl2skills.com/{portrait}"]))
+            except subprocess.CalledProcessError as exc:
+                print(f"  !! portrait failed {portrait}: {exc}", file=sys.stderr)
+        data["classes"][key] = {
+            "name": name,
+            "class": cls,
+            "page": page,
+            "portrait": portrait,
+            "trees": trees,
+        }
 
     print(f"downloading {len(icons)} icons…", file=sys.stderr)
     for icon in sorted(icons):

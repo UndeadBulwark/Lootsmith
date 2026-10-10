@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 static ICONS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/assets/skills/icons");
+static PORTRAITS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/assets/skills/portraits");
 static DATA: &str = include_str!("../assets/skills/skills.json");
 
 #[derive(Clone, Debug, Deserialize)]
@@ -42,6 +43,8 @@ pub struct SkillClass {
     #[serde(rename = "class")]
     pub class_name: String,
     pub page: String,
+    #[serde(default)]
+    pub portrait: String,
     pub trees: Vec<SkillTree>,
 }
 
@@ -64,6 +67,11 @@ pub fn for_player_class(player_class: &str) -> Option<&'static SkillClass> {
 /// Raw PNG bytes for a bundled skill icon.
 pub fn icon_bytes(filename: &str) -> Option<&'static [u8]> {
     ICONS.get_file(filename).map(|file| file.contents())
+}
+
+/// Raw PNG bytes for a bundled class portrait.
+pub fn portrait_bytes(filename: &str) -> Option<&'static [u8]> {
+    PORTRAITS.get_file(filename).map(|file| file.contents())
 }
 
 /// A tier unlocks once the tree has at least `5 * level` points invested.

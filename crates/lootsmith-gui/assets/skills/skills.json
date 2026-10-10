@@ -4,6 +4,7 @@
    "class": "Assassin",
    "name": "Zer0",
    "page": "assassin",
+   "portrait": "assassinPortrait.png",
    "trees": [
     {
      "color": "green",
@@ -299,6 +300,7 @@
    "class": "Psycho",
    "name": "Krieg",
    "page": "psycho",
+   "portrait": "psychoPortrait.png",
    "trees": [
     {
      "color": "green",
@@ -630,6 +632,7 @@
    "class": "Gunzerker",
    "name": "Salvador",
    "page": "gunzerker",
+   "portrait": "gunzerkerPortrait.png",
    "trees": [
     {
      "color": "green",
@@ -949,6 +952,7 @@
    "class": "Siren",
    "name": "Maya",
    "page": "siren",
+   "portrait": "sirenPortrait.png",
    "trees": [
     {
      "color": "green",
@@ -1250,6 +1254,7 @@
    "class": "Commando",
    "name": "Axton",
    "page": "commando",
+   "portrait": "commandoPortrait.png",
    "trees": [
     {
      "color": "green",
@@ -1557,6 +1562,7 @@
    "class": "Mechromancer",
    "name": "Gaige",
    "page": "mechromancer",
+   "portrait": "mechromancerPortrait.png",
    "trees": [
     {
      "color": "green",
