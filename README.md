@@ -11,8 +11,8 @@ CLI (`lootsmith-cli`), and (later) an `egui` desktop app (`lootsmith-gui`),
 with `lootsmith` as a facade crate.
 
 Status: **core + CLI complete and validated against a real PC save; the GUI is a
-working editor (General, Character, Currency, Backpack, Bank) with more parity
-tabs to come.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
+working editor (General, Character, Currency, Skills, Backpack, Bank) with more
+parity tabs to come.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
 
 ## Workspace layout
 
@@ -59,10 +59,12 @@ cargo run -p lootsmith-cli -- verify  /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- dump    /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --dumps "/path/Asset Library Manager.json"
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --container bank
+cargo run -p lootsmith-cli -- skills  /path/to/Save0001.sav
 ```
 
 `items` lists the backpack (fields 53/54) and the bank (field 41); pass
-`--container bag|bank` to filter (default `all`).
+`--container bag|bank` to filter (default `all`). `skills` lists the skill tree
+(`SkillData`, field 8) with each node's grade and points.
 
 Edit and write (in place with a `.bak` backup, or with `--out`):
 
@@ -87,6 +89,13 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
 `--item N` indexes the backpack (fields 53 then 54); add `--container bank` to
 address a bank entry (field 41) instead.
 
+Edit a skill's grade and grade points by index (1-based, as shown by `skills`):
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
+    --skill 4 --grade 5 --points 5 --out /path/to/edited.sav
+```
+
 ## GUI
 
 ```sh
@@ -97,11 +106,11 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 ```
 
 A native window with tabs for **General**, **Character**, **Currency**,
-**Backpack**, and **Bank**. Edit the common scalars; see the item list with
-per-item quantity/equipped and per-weapon quick slot; select an entry to edit its
-parts by name, change a stack quantity, **Move to bank** / **Move to backpack**,
-or **Remove**; then **Save** (in place, creating a `.bak`) or **Save As**. The
-Asset Library path enables item names.
+**Skills**, **Backpack**, and **Bank**. Edit the common scalars; raise or lower
+skill ranks; see the item list with per-item quantity/equipped and per-weapon
+quick slot; select an entry to edit its parts by name, change a stack quantity,
+**Move to bank** / **Move to backpack**, or **Remove**; then **Save** (in place,
+creating a `.bak`) or **Save As**. The Asset Library path enables item names.
 
 ### Desktop launcher (interim)
 
