@@ -1,43 +1,17 @@
-//! Phase 3 gate: asset indices resolve to names and back.
+//! Asset indices resolve to names and back — using the bundled asset library on
+//! the synthetic save.
 
-use lootsmith_core::gameinfo::AssetLibraryManager;
+mod common;
+
+use common::synthetic_file;
 use lootsmith_core::items::{self, PackedSlot};
-use lootsmith_core::{container, proto::Message, AssetGroup, Platform};
-
-fn dumps_path() -> Option<std::path::PathBuf> {
-    [
-        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
-        Some(format!(
-            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
-            env!("CARGO_MANIFEST_DIR")
-        )),
-    ]
-    .into_iter()
-    .flatten()
-    .map(std::path::PathBuf::from)
-    .find(|p| p.exists())
-}
+use lootsmith_core::{proto::Message, AssetGroup};
 
 #[test]
 fn asset_names_resolve_and_round_trip() {
-    let Some(dump) = dumps_path() else {
-        eprintln!("no dumps file; skipping");
-        return;
-    };
-    let manager = AssetLibraryManager::from_path(&dump).expect("load manager");
+    let manager = lootsmith_core::bundled::asset_library().expect("bundled asset library");
 
-    let path = format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    let data = match std::fs::read(&path) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("fixture not present; skipping");
-            return;
-        }
-    };
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
+    let save = synthetic_file();
     let top = Message::parse(&save.proto).expect("protobuf");
 
     let mut resolved = 0usize;

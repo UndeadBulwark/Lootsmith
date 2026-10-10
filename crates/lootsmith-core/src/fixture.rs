@@ -116,6 +116,52 @@ fn named_weapon(unique_id: i32, stage: i32, parts: &[(&str, &str)]) -> PackedDat
     decoded
 }
 
+/// A named artifact item (all references resolve in the bundled library).
+fn named_item(unique_id: i32, stage: i32) -> PackedData {
+    let Ok(manager) = crate::bundled::asset_library() else {
+        return test_item(unique_id);
+    };
+    let set = 0;
+    let r = |group, name| {
+        manager
+            .find_asset(group, set, name)
+            .map(
+                |(asset_index, sublibrary_index, use_set_id)| PackedAssetReference {
+                    asset_index,
+                    sublibrary_index,
+                    use_set_id,
+                },
+            )
+            .unwrap_or(PackedAssetReference::NONE)
+    };
+    let item = PackedItem {
+        item: r(
+            crate::AssetGroup::ItemTypes,
+            "GD_Artifacts.A_Item.Artifact_AggressionA",
+        ),
+        balance: r(
+            crate::AssetGroup::BalanceDefs,
+            "GD_Artifacts.A_Item.A_AggressionA",
+        ),
+        manufacturer: r(
+            crate::AssetGroup::Manufacturers,
+            "GD_Manufacturers.Artifacts.Artifact_TypeA",
+        ),
+        manufacturer_grade_index: 1,
+        game_stage: stage,
+        alpha_part: r(
+            crate::AssetGroup::ItemParts,
+            "GD_Artifacts.Body.Body_Aggression",
+        ),
+        material_part: r(
+            crate::AssetGroup::ItemParts,
+            "GD_Artifacts.Body.Body_Afterburner",
+        ),
+        ..Default::default()
+    };
+    item.into_packed(unique_id)
+}
+
 /// The synthetic save.
 pub fn synthetic_save() -> SaveGame {
     let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
@@ -138,11 +184,30 @@ pub fn synthetic_save() -> SaveGame {
     ));
     save.set_str(26, "20260101000001");
 
+    // UI preferences (field 19) with a character name, and applied
+    // customizations (field 35: index 0 is the head, index 4 the skin), so the
+    // character tests run on the synthetic save with no personal fixture.
+    {
+        let mut prefs = Message::default();
+        prefs.push(Field::bytes(1, b"Lootsmith Test"));
+        save.message.push(Field::bytes(19, &prefs.to_bytes()));
+        save.set_str_list(
+            35,
+            &[
+                "GD_DefaultCustoms_MainGame.Soldier.Head_Default".to_string(),
+                "GD_DefaultCustoms_MainGame.Soldier.Head_A".to_string(),
+                "GD_DefaultCustoms_MainGame.Soldier.Head_B".to_string(),
+                "GD_DefaultCustoms_MainGame.Soldier.Skin_A".to_string(),
+                "GD_DefaultCustoms_MainGame.Soldier.Skin_Default".to_string(),
+            ],
+        );
+    }
+
     let configs = crate::gameinfo::AssetLibraryConfigs::pc_default();
     let blobs: Vec<(Container, PackedData)> = vec![
-        (Container::BackpackItem, test_item(100)),
-        // Named weapons first, so the inspector's first row has real parts and
-        // a composed display name (no personal save needed).
+        (Container::BackpackItem, named_item(100, 30)),
+        // All blobs are built from real asset names, so name/index round trips
+        // and the inspector apply to every entry (no personal save needed).
         (
             Container::BackpackWeapon,
             named_weapon(400, 40, DAHL_PISTOL),
@@ -151,9 +216,15 @@ pub fn synthetic_save() -> SaveGame {
             Container::BackpackWeapon,
             named_weapon(401, 40, JAKOBS_PISTOL),
         ),
-        (Container::BackpackWeapon, test_weapon(200, 12)),
-        (Container::BackpackWeapon, test_weapon(201, 17)),
-        (Container::Bank, test_weapon(300, 5)),
+        (
+            Container::BackpackWeapon,
+            named_weapon(402, 12, DAHL_PISTOL),
+        ),
+        (
+            Container::BackpackWeapon,
+            named_weapon(403, 17, JAKOBS_PISTOL),
+        ),
+        (Container::Bank, named_weapon(300, 5, JAKOBS_PISTOL)),
     ];
     let quantity = 3;
     let packed_entries: Vec<(Container, Vec<u8>)> = blobs
@@ -193,6 +264,7 @@ pub fn synthetic_save() -> SaveGame {
         ("GD_Soldier_Skills.Guerrilla.Sentry", 3),
         ("GD_Soldier_Skills.Guerrilla.Ready", 5),
         ("GD_Soldier_Skills.Survival.Willing", 2),
+        ("GD_Soldier_Skills.Survival.Hardened", 0),
     ] {
         let mut sub = Message::default();
         sub.push(Field::string(1, skill));
@@ -264,6 +336,19 @@ pub fn synthetic_save() -> SaveGame {
     save.set_bytes(15, &blob);
     save.set_int_list_packed(39, &[1, 2, 5]);
 
+    // Challenge list (field 38): two entries (one DLC) so the challenge
+    // accessor has data without a personal save.
+    for (challenge, dlc) in [
+        ("GD_Challenges.Player.Player_Combat_Assault", false),
+        ("GD_ChallengeDLC1.Challenges.Challenge_RaidBoss_Kill", true),
+    ] {
+        let mut sub = Message::default();
+        sub.push(Field::string(1, challenge));
+        sub.push(Field::varint(2, u64::from(dlc)));
+        sub.push(Field::varint(3, 0));
+        save.message.push(Field::bytes(38, &sub.to_bytes()));
+    }
+
     // One mission playthrough with two missions (field 18).
     {
         let mut playthrough = Message::default();
@@ -302,11 +387,12 @@ pub fn synthetic_save() -> SaveGame {
         save.set_i32(58, 0);
     }
 
-    // Travel: a few visited stations + the last one.
+    // Travel: a few visited stations + the last one. Names must exist in the
+    // bundled `Travel Stations.json` so the lookups resolve.
     save.set_visited_teleporters(&[
-        "SouthernShelfBay".to_string(),
+        "SouthernShelfTown".to_string(),
         "Sanctuary".to_string(),
-        "ThreeHornsValley".to_string(),
+        "Helios".to_string(),
     ]);
     save.set_last_visited_teleporter("Sanctuary");
 
@@ -339,7 +425,14 @@ mod tests {
         assert_eq!(save.num_golden_keys_notified(), Some(3));
         assert_eq!(save.packed_entries().len(), 5);
         assert_eq!(save.bank_entries().len(), 1);
-        assert_eq!(save.skills().len(), 3);
+        assert_eq!(save.skills().len(), 4);
+        assert_eq!(save.challenges().len(), 2);
+        assert_eq!(
+            save.character_name().as_deref(),
+            Some("Lootsmith Test"),
+            "synthetic UIPreferences name"
+        );
+        assert_eq!(save.applied_customizations().len(), 5);
         assert_eq!(save.resources().len(), 3);
         assert_eq!(save.mission_playthroughs().len(), 1);
         assert_eq!(save.mission_playthroughs()[0].missions.len(), 2);
@@ -350,7 +443,7 @@ mod tests {
         assert_eq!(save.level_challenge_unlocks(), [1, 2, 5]);
         assert_eq!(
             save.visited_teleporters(),
-            ["SouthernShelfBay", "Sanctuary", "ThreeHornsValley"]
+            ["SouthernShelfTown", "Sanctuary", "Helios"]
         );
         assert_eq!(
             save.last_visited_teleporter(),

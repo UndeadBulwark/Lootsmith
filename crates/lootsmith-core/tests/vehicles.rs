@@ -1,47 +1,27 @@
-//! Vehicle customizations (field 57) and steering mode (field 58).
+//! Vehicle customizations (field 57) and steering mode (field 58), on the
+//! synthetic save, plus the bundled `Customizations.json` lookup.
 
-use lootsmith_core::{container, Customizations, Platform, VehicleCustomization, VEHICLE_FAMILIES};
+mod common;
 
-fn fixture_path() -> String {
-    format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    )
-}
-
-fn dumps_dir() -> std::path::PathBuf {
-    std::env::var("LOOTSMITH_DUMPS")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| {
-            std::path::PathBuf::from(format!(
-                "{}/../../../bl2-rogue/data/gibbed",
-                env!("CARGO_MANIFEST_DIR")
-            ))
-        })
-}
-
-fn fixture_save() -> Option<lootsmith_core::SaveGame> {
-    let data = std::fs::read(fixture_path()).ok()?;
-    let save = container::unpack(&data, Platform::PC).ok()?;
-    save.save_game().ok()
-}
+use common::synthetic;
+use lootsmith_core::{container, Platform, VehicleCustomization, VEHICLE_FAMILIES};
 
 #[test]
-fn fixture_has_no_vehicles_but_a_steering_mode() {
-    let Some(sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
-    assert!(sg.vehicles().is_empty(), "fixture has no chosen vehicles");
-    assert_eq!(sg.vehicle_steering_mode(), Some(2));
+fn synthetic_has_one_vehicle_and_a_steering_mode() {
+    let sg = synthetic();
+    let vehicles = sg.vehicles();
+    assert_eq!(
+        vehicles.len(),
+        1,
+        "the synthetic save has one vehicle family"
+    );
+    assert!(vehicles[0].family.contains("Runner"));
+    assert_eq!(sg.vehicle_steering_mode(), Some(0));
 }
 
 #[test]
 fn sets_vehicles_and_steering_and_reloads() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     let runner_family = VEHICLE_FAMILIES[0].1;
     sg.set_vehicles(&[VehicleCustomization {
         family: runner_family.to_string(),
@@ -77,12 +57,8 @@ fn sets_vehicles_and_steering_and_reloads() {
 
 #[test]
 fn resolves_skin_options_for_each_family() {
-    let path = dumps_dir().join("Customizations.json");
-    if !path.exists() {
-        eprintln!("no Customizations.json at {}; skipping", path.display());
-        return;
-    }
-    let customizations = Customizations::from_path(&path).expect("parse Customizations.json");
+    let customizations =
+        lootsmith_core::bundled::customizations().expect("bundled Customizations.json");
     assert!(customizations.len() > 1000);
     for (usage, _family) in VEHICLE_FAMILIES {
         let options = customizations.skin_options(usage);

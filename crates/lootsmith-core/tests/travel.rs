@@ -1,52 +1,27 @@
-//! Fast-travel accessors (fields 16/17) and the `Travel Stations.json` lookup.
+//! Fast-travel accessors (fields 16/17) and the bundled `Travel Stations.json`
+//! lookup, on the synthetic save.
 
-use lootsmith_core::{container, Platform, TravelStations};
+mod common;
 
-fn fixture_path() -> String {
-    format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    )
-}
-
-fn dumps_dir() -> std::path::PathBuf {
-    std::env::var("LOOTSMITH_DUMPS")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| {
-            std::path::PathBuf::from(format!(
-                "{}/../../../bl2-rogue/data/gibbed",
-                env!("CARGO_MANIFEST_DIR")
-            ))
-        })
-}
-
-fn fixture_save() -> Option<lootsmith_core::SaveGame> {
-    let data = std::fs::read(fixture_path()).ok()?;
-    let save = container::unpack(&data, Platform::PC).ok()?;
-    save.save_game().ok()
-}
+use common::synthetic;
+use lootsmith_core::{container, Platform};
 
 #[test]
-fn fixture_teleporters_enumerate() {
-    let Some(sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+fn synthetic_teleporters_enumerate() {
+    let sg = synthetic();
     let visited = sg.visited_teleporters();
-    assert_eq!(visited.len(), 23, "the fixture has 23 visited teleporters");
-    assert!(visited.iter().any(|s| s == "Sanctuary"));
     assert_eq!(
-        sg.last_visited_teleporter().as_deref(),
-        Some("SouthernShelfTown")
+        visited.len(),
+        3,
+        "the synthetic save has 3 visited teleporters"
     );
+    assert!(visited.iter().any(|s| s == "Sanctuary"));
+    assert_eq!(sg.last_visited_teleporter().as_deref(), Some("Sanctuary"));
 }
 
 #[test]
 fn add_remove_set_and_reload() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     let before = sg.visited_teleporters();
 
     assert!(
@@ -73,13 +48,8 @@ fn add_remove_set_and_reload() {
 }
 
 #[test]
-fn resolves_against_real_stations() {
-    let path = dumps_dir().join("Travel Stations.json");
-    if !path.exists() {
-        eprintln!("no Travel Stations.json at {}; skipping", path.display());
-        return;
-    }
-    let stations = TravelStations::from_path(&path).expect("parse Travel Stations.json");
+fn resolves_against_bundled_stations() {
+    let stations = lootsmith_core::bundled::travel_stations().expect("bundled Travel Stations");
     assert!(stations.len() > 100, "expected a large station table");
 
     let shelf = stations
@@ -95,13 +65,12 @@ fn resolves_against_real_stations() {
     );
     assert_eq!(stations.label_for("UnknownStation"), "UnknownStation");
 
-    // Every teleporter in the fixture resolves to a known station.
-    if let Some(sg) = fixture_save() {
-        for name in sg.visited_teleporters() {
-            assert!(
-                stations.find(&name).is_some(),
-                "teleporter {name} not found in Travel Stations.json"
-            );
-        }
+    // Every teleporter in the synthetic save resolves to a known station.
+    let sg = synthetic();
+    for name in sg.visited_teleporters() {
+        assert!(
+            stations.find(&name).is_some(),
+            "teleporter {name} not found in Travel Stations.json"
+        );
     }
 }

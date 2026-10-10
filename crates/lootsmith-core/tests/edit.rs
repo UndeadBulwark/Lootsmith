@@ -1,23 +1,14 @@
-//! Phase 5 gate: edit in memory, serialize the whole file, and re-open it.
+//! Edit in memory, serialize the whole file, and re-open it — on the synthetic
+//! save.
 
+mod common;
+
+use common::{synthetic, synthetic_file};
 use lootsmith_core::{container, items, Platform};
-
-fn fixture() -> Option<Vec<u8>> {
-    let path = format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    std::fs::read(path).ok()
-}
 
 #[test]
 fn edit_level_serializes_and_reopens() {
-    let Some(data) = fixture() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
-
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
+    let save = synthetic_file();
     let mut save_game = save.save_game().expect("parse");
 
     let original_class = save_game.player_class();
@@ -47,11 +38,7 @@ fn edit_level_serializes_and_reopens() {
 
 #[test]
 fn edit_currency_replaces_first_slot_only() {
-    let Some(data) = fixture() else {
-        return;
-    };
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
-    let mut save_game = save.save_game().expect("parse");
+    let mut save_game = synthetic();
 
     let before = save_game.currency_on_hand();
     assert!(!before.is_empty());
@@ -68,33 +55,11 @@ fn edit_currency_replaces_first_slot_only() {
     assert_eq!(&after[1..], &before[1..]);
 }
 
-fn dumps_path() -> Option<std::path::PathBuf> {
-    [
-        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
-        Some(format!(
-            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
-            env!("CARGO_MANIFEST_DIR")
-        )),
-    ]
-    .into_iter()
-    .flatten()
-    .map(std::path::PathBuf::from)
-    .find(|p| p.exists())
-}
-
 #[test]
 fn edit_weapon_part_by_name() {
-    let Some(data) = fixture() else {
-        return;
-    };
-    let Some(dump) = dumps_path() else {
-        eprintln!("no dumps file; skipping");
-        return;
-    };
-    let manager = lootsmith_core::AssetLibraryManager::from_path(&dump).expect("manager");
+    let manager = lootsmith_core::bundled::asset_library().expect("bundled asset library");
 
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
-    let mut save_game = save.save_game().expect("parse");
+    let mut save_game = synthetic();
     let entries = save_game.packed_entries();
 
     let entry = entries

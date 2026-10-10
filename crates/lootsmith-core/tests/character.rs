@@ -1,26 +1,16 @@
 //! Character name (UIPreferences, field 19) and applied customizations (field 35).
 
-use lootsmith_core::{container, Platform};
+mod common;
 
-fn fixture_save() -> Option<lootsmith_core::SaveGame> {
-    let path = format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    let data = std::fs::read(path).ok()?;
-    let save = container::unpack(&data, Platform::PC).ok()?;
-    save.save_game().ok()
-}
+use common::synthetic;
+use lootsmith_core::{container, Platform};
 
 #[test]
 fn character_name_and_customizations_round_trip() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     assert!(
         sg.character_name().is_some(),
-        "the fixture has a UI preferences block"
+        "the synthetic save has a UI preferences block"
     );
     assert!(
         sg.applied_customizations().len() >= 5,

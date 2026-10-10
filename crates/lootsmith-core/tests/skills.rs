@@ -1,30 +1,17 @@
-//! SkillData (field 8) accessors and write path.
+//! SkillData (field 8) accessors and write path, on the synthetic save.
 //!
 //! Each entry is `{1: Skill, 2: Grade, 3: GradePoints, 4: EquippedSlotIndex}`.
 
+mod common;
+
+use common::synthetic;
 use lootsmith_core::{container, Platform};
 
-fn fixture_path() -> String {
-    format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    )
-}
-
-fn fixture_save() -> Option<lootsmith_core::SaveGame> {
-    let data = std::fs::read(fixture_path()).ok()?;
-    let save = container::unpack(&data, Platform::PC).ok()?;
-    save.save_game().ok()
-}
-
 #[test]
-fn fixture_skills_enumerate() {
-    let Some(sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+fn synthetic_skills_enumerate() {
+    let sg = synthetic();
     let skills = sg.skills();
-    assert_eq!(skills.len(), 33, "the soldier fixture has 33 skill entries");
+    assert_eq!(skills.len(), 4, "the synthetic save has 4 skill entries");
     assert!(
         skills.iter().all(|s| s.skill.starts_with("GD_")),
         "skill names are resource paths"
@@ -33,14 +20,15 @@ fn fixture_skills_enumerate() {
         skills.iter().any(|s| s.grade > 0),
         "a leveled character has invested ranks"
     );
+    assert!(
+        skills.iter().any(|s| s.grade == 0),
+        "one skill is still at rank 0"
+    );
 }
 
 #[test]
 fn edits_a_skill_grade_and_reloads() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     let before = sg.skills();
     // Pick a skill at rank 0 and raise it.
     let index = before
@@ -69,9 +57,6 @@ fn edits_a_skill_grade_and_reloads() {
 
 #[test]
 fn out_of_range_skill_errors() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     assert!(sg.set_skill_grade(9999, 5).is_err());
 }

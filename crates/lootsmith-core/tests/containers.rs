@@ -1,93 +1,59 @@
-//! Container (backpack/bank) operations: enumerate, move, append, remove, and
-//! round-trip the whole save through the container codec.
-//!
-//! The bank (field 41) stores the same `InventorySerialNumber` blob shape as
-//! the backpack (fields 53/54), so moving a blob between lists must preserve its
-//! bytes and survive a serialize/reload with crc32, protobuf and huffman intact.
+//! Container (backpack/bank) operations on the synthetic save: enumerate, move,
+//! append, remove, and a full serialize/reload with crc32/protobuf/huffman intact.
 
+mod common;
+
+use common::synthetic;
 use lootsmith_core::gameinfo::AssetLibraryConfigs;
 use lootsmith_core::{container, items, Container, Platform};
-use std::path::Path;
 
-fn fixture_path() -> String {
-    format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    )
-}
-
-fn load_configs() -> AssetLibraryConfigs {
-    for candidate in [
-        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
-        Some(format!(
-            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
-            env!("CARGO_MANIFEST_DIR")
-        )),
-    ]
-    .into_iter()
-    .flatten()
-    {
-        let path = Path::new(&candidate);
-        if path.exists() {
-            if let Ok(configs) = AssetLibraryConfigs::from_path(path) {
-                return configs;
-            }
-        }
-    }
+fn configs() -> AssetLibraryConfigs {
     AssetLibraryConfigs::pc_default()
 }
 
-fn fixture_save() -> Option<lootsmith_core::SaveGame> {
-    let data = std::fs::read(fixture_path()).ok()?;
-    let save = container::unpack(&data, Platform::PC).ok()?;
-    save.save_game().ok()
-}
-
 #[test]
-fn fixture_containers_enumerate() {
-    let Some(sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+fn synthetic_containers_enumerate() {
+    let sg = synthetic();
     assert_eq!(
         sg.entries_in(Container::BackpackItem).len(),
-        5,
-        "expected 5 backpack items"
+        1,
+        "expected 1 backpack item"
     );
     assert_eq!(
         sg.entries_in(Container::BackpackWeapon).len(),
-        9,
-        "expected 9 backpack weapons"
+        4,
+        "expected 4 backpack weapons"
     );
-    assert_eq!(sg.bank_entries().len(), 0, "fixture bank should be empty");
-    assert_eq!(sg.entries().len(), 14);
+    assert_eq!(
+        sg.bank_entries().len(),
+        1,
+        "the synthetic save banks one weapon"
+    );
+    assert_eq!(sg.entries().len(), 6);
 
-    // Weapon quick-slot metadata comes from field 2 of `PackedWeaponData`.
     let weapons = sg.entries_in(Container::BackpackWeapon);
     assert!(weapons.iter().all(|e| e.quick_slot >= 0));
 }
 
 #[test]
 fn bank_move_round_trips_and_survives_reload() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
-    let configs = load_configs();
+    let mut sg = synthetic();
+    let configs = configs();
     let weapons_before = sg.entries_in(Container::BackpackWeapon).len();
+    let bank_before = sg.bank_entries().len();
     let moved = sg.entries_in(Container::BackpackWeapon)[0].serial.clone();
 
     let occurrence = sg
         .move_entry(Container::BackpackWeapon, 0, Container::Bank)
         .expect("move to bank");
-    assert_eq!(occurrence, 0);
-    assert_eq!(sg.bank_entries().len(), 1);
+    assert_eq!(occurrence, bank_before);
+    assert_eq!(sg.bank_entries().len(), bank_before + 1);
     assert_eq!(
         sg.entries_in(Container::BackpackWeapon).len(),
         weapons_before - 1
     );
     assert_eq!(
-        sg.bank_entries()[0].serial,
+        sg.bank_entries()[bank_before].serial,
         moved,
         "blob bytes must be kept"
     );
@@ -99,15 +65,16 @@ fn bank_move_round_trips_and_survives_reload() {
     assert!(reopened.huffman_stable(), "huffman unstable after move");
 
     let mut sg2 = reopened.save_game().expect("reparse");
-    assert_eq!(sg2.bank_entries().len(), 1);
-    assert_eq!(sg2.bank_entries()[0].serial, moved);
-    let decoded = items::unpack(&sg2.bank_entries()[0].serial, &configs).expect("decode bank blob");
+    assert_eq!(sg2.bank_entries().len(), bank_before + 1);
+    assert_eq!(sg2.bank_entries()[bank_before].serial, moved);
+    let decoded =
+        items::unpack(&sg2.bank_entries()[bank_before].serial, &configs).expect("decode bank blob");
     assert!(decoded.is_weapon, "the moved blob should still be a weapon");
 
     // And it can come back.
-    sg2.move_entry(Container::Bank, 0, Container::BackpackWeapon)
+    sg2.move_entry(Container::Bank, bank_before, Container::BackpackWeapon)
         .expect("move back");
-    assert_eq!(sg2.bank_entries().len(), 0);
+    assert_eq!(sg2.bank_entries().len(), bank_before);
     assert_eq!(
         sg2.entries_in(Container::BackpackWeapon).len(),
         weapons_before
@@ -116,26 +83,25 @@ fn bank_move_round_trips_and_survives_reload() {
 
 #[test]
 fn append_and_remove_entries() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     let items_before = sg.entries_in(Container::BackpackItem).len();
+    let bank_before = sg.bank_entries().len();
     let serial = sg.entries_in(Container::BackpackItem)[0].serial.clone();
 
     let occurrence = sg.append_entry(Container::Bank, &serial).expect("append");
-    assert_eq!(occurrence, 0);
-    assert_eq!(sg.bank_entries().len(), 1);
-    assert_eq!(sg.bank_entries()[0].serial, serial);
+    assert_eq!(occurrence, bank_before);
+    assert_eq!(sg.bank_entries().len(), bank_before + 1);
+    assert_eq!(sg.bank_entries()[bank_before].serial, serial);
 
-    // A second copy lands at occurrence 1.
+    // A second copy lands at the next occurrence.
     let occurrence = sg.append_entry(Container::Bank, &serial).expect("append");
-    assert_eq!(occurrence, 1);
-    assert_eq!(sg.bank_entries().len(), 2);
+    assert_eq!(occurrence, bank_before + 1);
+    assert_eq!(sg.bank_entries().len(), bank_before + 2);
 
-    // Removing the first leaves the second.
-    sg.remove_entry(Container::Bank, 0).expect("remove");
-    assert_eq!(sg.bank_entries().len(), 1);
+    // Removing the first appended copy leaves the second.
+    sg.remove_entry(Container::Bank, bank_before)
+        .expect("remove");
+    assert_eq!(sg.bank_entries().len(), bank_before + 1);
 
     // Metadata edits on a backpack item write quantity/equipped and reload.
     sg.set_entry_quantity(Container::BackpackItem, 0, 7)
@@ -150,22 +116,20 @@ fn append_and_remove_entries() {
     assert_eq!(entry.quantity, 7);
     assert!(entry.equipped);
     assert_eq!(sg2.entries_in(Container::BackpackItem).len(), items_before);
-    assert_eq!(sg2.bank_entries().len(), 1);
+    assert_eq!(sg2.bank_entries().len(), bank_before + 1);
 }
 
 #[test]
 fn edits_a_bank_entry_serial() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
-    let configs = load_configs();
+    let mut sg = synthetic();
+    let configs = configs();
+    let bank_before = sg.bank_entries().len();
     let serial = sg.entries_in(Container::BackpackWeapon)[0].serial.clone();
     let occurrence = sg.append_entry(Container::Bank, &serial).expect("append");
 
     let mut decoded = items::unpack(&serial, &configs).expect("decode");
     match &mut decoded.slot {
-        items::PackedSlot::Weapon(w) => w.elemental_part = items::PackedAssetReference::NONE,
+        items::PackedSlot::Weapon(w) => w.grip_part = items::PackedAssetReference::NONE,
         items::PackedSlot::Item(_) => panic!("expected a weapon"),
     }
     let edited = items::pack(&decoded, &configs).expect("re-pack");
@@ -179,14 +143,11 @@ fn edits_a_bank_entry_serial() {
 
     let sg2 = reopened.save_game().expect("reparse");
     let bank = sg2.bank_entries();
-    assert_eq!(bank.len(), 1);
-    let round_tripped = items::unpack(&bank[0].serial, &configs).expect("re-decode");
+    assert_eq!(bank.len(), bank_before + 1);
+    let round_tripped = items::unpack(&bank[bank_before].serial, &configs).expect("re-decode");
     match round_tripped.slot {
         items::PackedSlot::Weapon(w) => {
-            assert!(
-                w.elemental_part.is_none(),
-                "elemental part should be cleared"
-            )
+            assert!(w.grip_part.is_none(), "grip part should be cleared")
         }
         items::PackedSlot::Item(_) => panic!("expected a weapon"),
     }
@@ -194,10 +155,7 @@ fn edits_a_bank_entry_serial() {
 
 #[test]
 fn moving_does_not_touch_other_blobs() {
-    let Some(mut sg) = fixture_save() else {
-        eprintln!("fixture not present; skipping");
-        return;
-    };
+    let mut sg = synthetic();
     let before: Vec<Vec<u8>> = sg
         .packed_entries()
         .iter()
@@ -210,8 +168,9 @@ fn moving_does_not_touch_other_blobs() {
         .iter()
         .map(|e| e.serial.clone())
         .collect();
-    // One weapon was removed; the rest keep their exact bytes and order.
+    // One weapon was removed; the rest keep their exact bytes and order. There
+    // is 1 backpack item before the 4 weapons.
     let mut expected = before.clone();
-    expected.remove(5 + 3); // 5 backpack items precede the weapons
+    expected.remove(1 + 3);
     assert_eq!(after, expected);
 }

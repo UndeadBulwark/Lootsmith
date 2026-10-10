@@ -1,43 +1,12 @@
-//! Phase 4 gate for the packed item/weapon codec.
-//!
-//! Every blob in a real save must decode, and re-encoding must round-trip
-//! semantically. For blobs with real content (non-zero unique id, i.e. actually
-//! obfuscated), re-encoding must also be byte-identical to the original — this
-//! exercises the full pipeline: bit layout, checksum fold, obfuscation and
-//! trailing trim. Blank 40-byte placeholders (unique id 0) are zero-filled by
-//! the game and are only semantically stable; the C# reference cannot reproduce
-//! their trailing fill byte either.
+//! Packed item/weapon codec gate on the synthetic save: every blob must decode,
+//! re-encode semantically, and (for real-content blobs) byte-identically.
 
+mod common;
+
+use common::synthetic_file;
 use lootsmith_core::gameinfo::AssetLibraryConfigs;
 use lootsmith_core::items;
-use lootsmith_core::{container, proto::Message, Platform};
-use std::path::Path;
-
-fn fixture_path() -> String {
-    format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    )
-}
-
-fn load_configs() -> AssetLibraryConfigs {
-    let candidates = [
-        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
-        Some(format!(
-            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
-            env!("CARGO_MANIFEST_DIR")
-        )),
-    ];
-    for candidate in candidates.into_iter().flatten() {
-        let path = Path::new(&candidate);
-        if path.exists() {
-            if let Ok(configs) = AssetLibraryConfigs::from_path(path) {
-                return configs;
-            }
-        }
-    }
-    AssetLibraryConfigs::pc_default()
-}
+use lootsmith_core::proto::Message;
 
 fn serial_numbers(save: &lootsmith_core::SaveFile, field: u32) -> Vec<Vec<u8>> {
     let top = Message::parse(&save.proto).expect("parse top-level protobuf");
@@ -55,19 +24,10 @@ fn serial_numbers(save: &lootsmith_core::SaveFile, field: u32) -> Vec<Vec<u8>> {
 }
 
 #[test]
-fn real_save_items_decode_and_reencode() {
-    let path = fixture_path();
-    let data = match std::fs::read(&path) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("fixture not present; skipping");
-            return;
-        }
-    };
-
-    let configs = load_configs();
+fn synthetic_items_decode_and_reencode() {
+    let configs = AssetLibraryConfigs::pc_default();
     assert_eq!(configs.version, 7, "unexpected asset library version");
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
+    let save = synthetic_file();
 
     let mut total = 0usize;
     let mut byte_identical = 0usize;
@@ -114,24 +74,15 @@ fn real_save_items_decode_and_reencode() {
     );
 }
 
+/// `pc_default()` must match the configs the bundled asset library was built
+/// with — no external dumps folder needed.
 #[test]
-fn pc_default_matches_dump_configs() {
-    let Some(dump) = [
-        std::env::var("LOOTSMITH_ASSET_LIBRARY").ok(),
-        Some(format!(
-            "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
-            env!("CARGO_MANIFEST_DIR")
-        )),
-    ]
-    .into_iter()
-    .flatten()
-    .map(std::path::PathBuf::from)
-    .find(|p| p.exists()) else {
-        eprintln!("no dumps file; skipping cross-check");
-        return;
-    };
-
-    let loaded = AssetLibraryConfigs::from_path(&dump).expect("load dump");
+fn pc_default_matches_bundled_configs() {
+    let dump = format!(
+        "{}/assets/data/asset-library-manager.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let loaded = AssetLibraryConfigs::from_path(std::path::Path::new(&dump)).expect("load bundled");
     let default = AssetLibraryConfigs::pc_default();
     assert_eq!(loaded.version, default.version);
     for group in lootsmith_core::AssetGroup::ALL {
@@ -142,5 +93,4 @@ fn pc_default_matches_dump_configs() {
             group.key()
         );
     }
-    eprintln!("pc_default() matches {}", dump.display());
 }

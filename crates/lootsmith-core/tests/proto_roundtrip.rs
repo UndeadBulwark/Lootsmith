@@ -1,27 +1,14 @@
-//! Phase 2b gate: the real save's protobuf payload must survive parse/re-emit
+//! The synthetic save's protobuf payload must survive parse/re-emit
 //! byte-for-byte, and the typed top-level schema must read known fields.
 
-use lootsmith_core::{container, proto::Message, Platform};
+mod common;
 
-fn fixture_path() -> String {
-    format!(
-        "{}/../../tests/fixtures/pc_Save0001.sav",
-        env!("CARGO_MANIFEST_DIR")
-    )
-}
+use common::synthetic_file;
+use lootsmith_core::proto::Message;
 
 #[test]
-fn real_save_protobuf_is_byte_identical() {
-    let path = fixture_path();
-    let data = match std::fs::read(&path) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("fixture not present at {path}; skipping");
-            return;
-        }
-    };
-
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
+fn synthetic_protobuf_is_byte_identical() {
+    let save = synthetic_file();
     assert!(save.crc32_valid());
     assert!(
         save.proto_stable(),
@@ -32,7 +19,7 @@ fn real_save_protobuf_is_byte_identical() {
     assert_eq!(message.to_bytes(), save.proto, "raw re-emit differs");
 
     let save_game = save.save_game().expect("typed parse");
-    // Every field in a real save must be a known top-level field 1..=58.
+    // Every field must be a known top-level field 1..=58.
     for field in &save_game.message.fields {
         assert!(
             (1..=58).contains(&field.number),
@@ -43,24 +30,11 @@ fn real_save_protobuf_is_byte_identical() {
     assert!(save_game.player_class().is_some(), "missing PlayerClass");
     assert!(save_game.exp_level().is_some(), "missing ExpLevel");
     assert!(!save_game.currency_on_hand().is_empty());
-
-    eprintln!(
-        "protobuf OK: {} fields, PlayerClass={:?}, ExpLevel={:?}, Currency={:?}",
-        save_game.message.fields.len(),
-        save_game.player_class(),
-        save_game.exp_level(),
-        save_game.currency_on_hand()
-    );
 }
 
 #[test]
 fn edit_and_reexport_stays_parseable() {
-    let path = fixture_path();
-    let data = match std::fs::read(&path) {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-    let save = container::unpack(&data, Platform::PC).expect("unpack");
+    let save = synthetic_file();
     let mut save_game = save.save_game().expect("parse");
 
     // Mutate a scalar, then re-parse and confirm the edit took while the rest
