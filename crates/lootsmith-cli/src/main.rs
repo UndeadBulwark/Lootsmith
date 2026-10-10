@@ -19,6 +19,9 @@ fn usage() -> ExitCode {
          lootsmith new     --out OUT [--class NAME] [--platform <id>]\n  \
          lootsmith json    <file.sav> [--out FILE] [--platform <id>]\n  \
          lootsmith unjson  <file.json> --out OUT [--platform <id>]\n  \
+         lootsmith profile <profile.bin> [--golden-keys N] [--badass-rank N] [--badass-tokens N]\n  \
+          \
+                          [--unlock-customizations] [--out OUT]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith skills  <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
@@ -79,6 +82,9 @@ struct Args {
     mission_index: Option<usize>,
     mission_status: Option<String>,
     class: Option<String>,
+    badass_rank: Option<i64>,
+    badass_tokens: Option<i64>,
+    unlock_customizations: bool,
     scope: Scope,
 }
 
@@ -143,6 +149,9 @@ fn parse_args() -> Option<Args> {
         mission_index: None,
         mission_status: None,
         class: None,
+        badass_rank: None,
+        badass_tokens: None,
+        unlock_customizations: false,
         scope: Scope::All,
     };
     while let Some(arg) = it.next() {
@@ -181,6 +190,9 @@ fn parse_args() -> Option<Args> {
             "--mission-index" => args.mission_index = Some(it.next()?.parse().ok()?),
             "--mission-status" => args.mission_status = Some(it.next()?),
             "--class" => args.class = Some(it.next()?),
+            "--badass-rank" => args.badass_rank = Some(it.next()?.parse().ok()?),
+            "--badass-tokens" => args.badass_tokens = Some(it.next()?.parse().ok()?),
+            "--unlock-customizations" => args.unlock_customizations = true,
             _ => return None,
         }
     }
@@ -376,6 +388,69 @@ fn main() -> ExitCode {
                 eprintln!("error: {e}");
                 return ExitCode::FAILURE;
             }
+        }
+        return ExitCode::SUCCESS;
+    }
+
+    if args.command == "profile" {
+        let data = match std::fs::read(&args.file) {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("error: cannot read {}: {e}", args.file);
+                return ExitCode::FAILURE;
+            }
+        };
+        let mut profile = match lootsmith_core::profile::Profile::parse(&data) {
+            Ok(profile) => profile,
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let mut changed = false;
+        if let Some(keys) = args.golden_keys {
+            profile.set_golden_keys(keys as i64);
+            changed = true;
+        }
+        if let Some(rank) = args.badass_rank {
+            profile.set_badass_rank(rank.max(0) as u32);
+            changed = true;
+        }
+        if let Some(tokens) = args.badass_tokens {
+            profile.set_badass_tokens(tokens.max(0) as u32);
+            changed = true;
+        }
+        if args.unlock_customizations {
+            if let Err(e) = profile.unlock_all_customizations() {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+            changed = true;
+        }
+        println!(
+            "golden keys:  {:?}\nbadass rank:  {:?}\nb tokens:     {:?}\nall customs:  {}",
+            profile.golden_keys(),
+            profile.badass_rank(),
+            profile.badass_tokens(),
+            profile.all_customizations_unlocked()
+        );
+        if let Ok(stats) = profile.stats() {
+            for (name, value) in lootsmith_core::STAT_NAMES.iter().zip(stats.iter()) {
+                println!("{name:26} {value:.1}");
+            }
+        }
+        if changed {
+            let bytes = profile.to_bytes();
+            let target = args.out.clone().unwrap_or_else(|| args.file.clone());
+            if args.out.is_none() && args.backup && !std::path::Path::new(&format!("{target}.bak")).exists()
+            {
+                let _ = std::fs::copy(&target, format!("{target}.bak"));
+            }
+            if let Err(e) = std::fs::write(&target, &bytes) {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+            println!("wrote {target} ({} bytes)", bytes.len());
         }
         return ExitCode::SUCCESS;
     }

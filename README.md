@@ -159,7 +159,8 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 ```
 
 A native window with a toolbar (**Open / Find saves / Save / Save As / Reload /
-New… / Import… / platform / Game data**, with `Ctrl+O/S/Shift+S/R`), a
+New… / Import… / Profile… / platform / Game data**, with `Ctrl+O/S/Shift+S/R`),
+a
 light/dark theme toggle, and a status bar. Lootsmith **finds your saves
 automatically** — native Aspyr, Steam/Proton (appid 49520, all Steam roots incl.
 Flatpak), and generic Wine/Lutris/custom prefixes like a ZLuda prefix under
@@ -168,7 +169,12 @@ from what it found. Pick the **game-data folder** once (the directory holding
 `Asset Library Manager.json`) and the Asset Library, Travel Stations,
 Customizations and Missions tables are all loaded from it, so names resolve
 everywhere. The **platform combo** next to Save As… writes PC/PS3/X360/… container
-formats for porting saves between platforms.
+formats for porting saves between platforms. **Profile…** edits `profile.bin` —
+the account-wide file holding golden keys, badass rank & tokens, the 14 badass
+bonus stats, and the head/skin unlock list (unlock everything, or set keys;
+`.bak` backup on save). The CLI equivalent is
+`lootsmith profile <profile.bin> --golden-keys N --badass-rank N
+--badass-tokens N --unlock-customizations`.
 
 Tabs: **General**, **Character** (name, level, head & skin), **Currency**
 (named money/eridium/seraph/torgue), **Skills**, **Fast Travel**, **Vehicles**,

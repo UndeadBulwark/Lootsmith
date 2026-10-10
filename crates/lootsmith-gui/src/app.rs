@@ -7,9 +7,9 @@ use eframe::egui;
 use lootsmith_core::savegame::Kind;
 use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, SaveCandidate,
-    SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
-    VEHICLE_FAMILIES,
+    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, Profile,
+    SaveCandidate, SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
+    STAT_NAMES, VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -493,6 +493,7 @@ enum Action {
     Reload,
     New,
     Import,
+    Profile,
     PickData,
     ToggleTheme,
 }
@@ -504,6 +505,18 @@ enum Modal {
     None,
     NewSave,
     Import,
+    Profile,
+}
+
+/// Editable values for the `profile.bin` window.
+#[derive(Default, Clone)]
+pub struct ProfileForm {
+    pub loaded: bool,
+    pub golden_keys: i64,
+    pub badass_rank: i64,
+    pub badass_tokens: i64,
+    pub unlocked: bool,
+    pub stats: [f64; 14],
 }
 
 /// Sections the Import dialog can copy from another save.
@@ -664,6 +677,9 @@ pub struct LootsmithApp {
     /// Import dialog state: other save's path and chosen sections.
     pub import_path: String,
     pub import_sel: ImportSel,
+    /// Profile.bin editor state: file path and editable values.
+    pub profile_path: String,
+    pub profile_form: ProfileForm,
     loaded_once: bool,
     pub tab: Tab,
     /// Selected entry as (container, occurrence).
@@ -839,6 +855,8 @@ impl LootsmithApp {
             new_blank: false,
             import_path: String::new(),
             import_sel: ImportSel::default(),
+            profile_path: String::new(),
+            profile_form: ProfileForm::default(),
             loaded_once: false,
             tab: Tab::General,
             selected: None,
@@ -1993,6 +2011,100 @@ impl LootsmithApp {
         self.modal = Modal::None;
     }
 
+    // ---- profile.bin (golden keys, badass, customizations) ----
+
+    /// Open the profile window, suggesting a profile.bin next to the save.
+    pub fn open_profile_modal(&mut self) {
+        self.modal = Modal::Profile;
+        if self.profile_path.trim().is_empty() {
+            self.profile_path = self.suggested_profile().unwrap_or_default();
+        }
+        self.load_profile();
+    }
+
+    /// The `profile.bin` next to the open save, else any we can find.
+    fn suggested_profile(&self) -> Option<String> {
+        if !self.path.trim().is_empty() {
+            let profile = PathBuf::from(self.path.trim())
+                .parent()?
+                .join("profile.bin");
+            if profile.exists() {
+                return Some(profile.display().to_string());
+            }
+        }
+        for candidate in lootsmith_core::locate::find_saves() {
+            let profile = candidate.path.parent()?.join("profile.bin");
+            if profile.exists() {
+                return Some(profile.display().to_string());
+            }
+        }
+        None
+    }
+
+    /// Read the profile's values into the editor form.
+    pub fn load_profile(&mut self) {
+        if self.profile_path.trim().is_empty() {
+            self.status = "no profile.bin path — install/launch the game once".into();
+            return;
+        }
+        match Profile::from_path(std::path::Path::new(self.profile_path.trim())) {
+            Ok(profile) => {
+                self.profile_form = ProfileForm {
+                    loaded: true,
+                    golden_keys: profile.golden_keys().unwrap_or(0),
+                    badass_rank: profile.badass_rank().unwrap_or(0) as i64,
+                    badass_tokens: profile.badass_tokens().unwrap_or(0) as i64,
+                    unlocked: profile.all_customizations_unlocked(),
+                    stats: profile.stats().unwrap_or([0.0; 14]),
+                };
+                self.status = format!("loaded profile {}", self.profile_path.trim());
+            }
+            Err(e) => {
+                self.profile_form.loaded = false;
+                self.status = format!("profile error: {e}");
+            }
+        }
+    }
+
+    /// Write the edited values back into profile.bin (with a .bak backup).
+    pub fn save_profile(&mut self) {
+        let path = self.profile_path.trim().to_string();
+        if path.is_empty() {
+            self.status = "no profile.bin path".into();
+            return;
+        }
+        let Ok(mut profile) = Profile::from_path(std::path::Path::new(&path)) else {
+            self.status = "profile.bin could not be re-read; reload first".into();
+            return;
+        };
+        let form = self.profile_form.clone();
+        profile.set_golden_keys(form.golden_keys.max(0));
+        profile.set_badass_rank(form.badass_rank.max(0) as u32);
+        profile.set_badass_tokens(form.badass_tokens.max(0) as u32);
+        if form.unlocked && !profile.all_customizations_unlocked() {
+            let _ = profile.unlock_all_customizations();
+        }
+        // Only write stats when the profile already carries a stats entry
+        // (fresh profiles with badass rank 0 legitimately have none).
+        if profile.has_stats() {
+            if let Err(e) = profile.set_stats(&form.stats) {
+                self.status = format!("profile stats error: {e}");
+                return;
+            }
+        }
+        let backup = format!("{path}.bak");
+        if !std::path::Path::new(&backup).exists() {
+            let _ = std::fs::copy(&path, &backup);
+        }
+        let bytes = profile.to_bytes();
+        match std::fs::write(&path, &bytes) {
+            Ok(()) => {
+                self.status = format!("saved profile {path} ({} bytes, backup {backup})", bytes.len());
+            }
+            Err(e) => self.status = format!("profile write error: {e}"),
+        }
+    }
+
     // ---- settings / theme / shortcuts ----
 
     /// Serialize the persisted settings (paths, theme, tab) as JSON.
@@ -2105,6 +2217,7 @@ impl LootsmithApp {
                     self.import_path = self.path.clone();
                 }
             }
+            Action::Profile => self.open_profile_modal(),
             Action::PickData => self.browse_dumps_dir(),
             Action::ToggleTheme => {
                 self.theme = match self.theme {
@@ -2241,6 +2354,13 @@ impl LootsmithApp {
                         .clicked()
                     {
                         action = Some(Action::Import);
+                    }
+                    if ui
+                        .button("Profile…")
+                        .on_hover_text("Edit profile.bin: golden keys, badass bonuses, customizations")
+                        .clicked()
+                    {
+                        action = Some(Action::Profile);
                     }
                     egui::ComboBox::from_id_salt("save_platform")
                         .selected_text(self.save_platform.id().to_uppercase())
@@ -2481,6 +2601,112 @@ impl LootsmithApp {
                     self.new_blank_save();
                 } else {
                     self.new_clone_save();
+                }
+            }
+        }
+
+        if self.modal == Modal::Profile {
+            let mut path = self.profile_path.clone();
+            let mut form = self.profile_form.clone();
+            let mut open = true;
+            // 1 = load from disk, 2 = save to disk
+            let mut act: Option<u8> = None;
+            egui::Window::new("Profile")
+                .collapsible(false)
+                .resizable(true)
+                .open(&mut open)
+                .default_width(470.0)
+                .show(ui.ctx(), |ui| {
+                    ui.label(
+                        "Edits profile.bin (shared account data): golden keys, badass rank & \
+                         tokens, stat bonuses, customization unlocks.",
+                    );
+                    ui.add_space(6.0);
+                    ui.horizontal(|ui| {
+                        ui.label("File");
+                        ui.add_sized([360.0, 24.0], egui::TextEdit::singleline(&mut path));
+                    });
+                    ui.add_space(6.0);
+                    if !form.loaded {
+                        theme::muted(
+                            ui,
+                            "Profile not loaded yet — set the path and click Load.",
+                        );
+                    }
+                    egui::Grid::new("profile_grid")
+                        .num_columns(2)
+                        .spacing([16.0, 6.0])
+                        .show(ui, |ui| {
+                            ui.label("Golden keys");
+                            ui.add(
+                                egui::DragValue::new(&mut form.golden_keys)
+                                    .range(0..=100_000),
+                            );
+                            ui.end_row();
+                            ui.label("Badass rank");
+                            ui.add(
+                                egui::DragValue::new(&mut form.badass_rank)
+                                    .range(0..=2_000_000_000),
+                            );
+                            ui.end_row();
+                            ui.label("Badass tokens");
+                            ui.add(
+                                egui::DragValue::new(&mut form.badass_tokens)
+                                    .range(0..=500),
+                            );
+                            ui.end_row();
+                            ui.label("Unlock all customizations");
+                            ui.checkbox(&mut form.unlocked, "");
+                            ui.end_row();
+                        });
+                    ui.add_space(6.0);
+                    theme::section(ui, "Badass bonus stats");
+                    egui::Grid::new("profile_stats")
+                        .num_columns(2)
+                        .striped(true)
+                        .spacing([12.0, 4.0])
+                        .show(ui, |ui| {
+                            for (i, (name, value)) in
+                                STAT_NAMES.iter().zip(form.stats.iter_mut()).enumerate()
+                            {
+                                ui.label(format!("{i}: {name}"));
+                                ui.add(
+                                    egui::DragValue::new(value)
+                                        .range(0.0..=9_975_792.3)
+                                        .speed(1.0),
+                                );
+                                ui.end_row();
+                            }
+                        });
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("Load")
+                            .on_hover_text("Re-read profile.bin from disk")
+                            .clicked()
+                        {
+                            act = Some(1);
+                        }
+                        if ui
+                            .button("Save profile")
+                            .on_hover_text("Write profile.bin (with a .bak backup)")
+                            .clicked()
+                        {
+                            act = Some(2);
+                        }
+                    });
+                });
+            if !open {
+                self.modal = Modal::None;
+            }
+            self.profile_path = path;
+            if let Some(one) = act {
+                if one == 1 {
+                    self.profile_form = form;
+                    self.load_profile();
+                } else {
+                    self.profile_form = form;
+                    self.save_profile();
                 }
             }
         }

@@ -584,3 +584,32 @@ fn import_sections_copies_travel_from_another_save() {
     assert!(app.dirty);
     let _ = std::fs::remove_file(&copy);
 }
+
+#[test]
+fn profile_editor_round_trips_values() {
+    use lootsmith_core::profile::Profile;
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    // A small profile with 52 golden keys.
+    let probe = std::env::temp_dir().join("lootsmith-test-profile.bin");
+    let mut profile = Profile::default();
+    profile.set_golden_keys(52);
+    std::fs::write(&probe, profile.to_bytes()).expect("write probe profile");
+
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+    app.profile_path = probe.to_str().unwrap().to_string();
+    app.load_profile();
+
+    assert!(app.profile_form.loaded);
+    assert_eq!(app.profile_form.golden_keys, 52);
+
+    app.profile_form.golden_keys = 200;
+    app.save_profile();
+
+    println!("STATUS: {}", app.status);
+    let reopened = Profile::from_path(&probe).expect("re-read profile");
+    assert_eq!(reopened.golden_keys(), Some(200));
+    let _ = std::fs::remove_file(&probe);
+}

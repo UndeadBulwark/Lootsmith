@@ -14,6 +14,7 @@ pub mod items;
 pub mod locate;
 pub mod missions;
 pub mod platform;
+pub mod profile;
 pub mod proto;
 pub mod savegame;
 pub mod savejson;
@@ -27,6 +28,7 @@ pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot
 pub use locate::{find_saves, find_saves_in, SaveCandidate};
 pub use missions::{Mission, Missions};
 pub use platform::{CompressionScheme, Endian, Platform};
+pub use profile::{Profile, ProfileEntry, ProfileValue, STAT_NAMES};
 pub use savegame::{
     mission_status_name, player_mark_name, Challenge, Container, MissionEntry, MissionPlaythrough,
     PackedEntry, SaveGame, Skill, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
