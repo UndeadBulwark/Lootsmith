@@ -58,27 +58,34 @@ fn build(ui: &mut egui::Ui, g: &mut Gallery) {
     );
     y += 104.0;
 
-    caption(&painter, y, "Ribbon: swallow-tail ends, onr text");
+    caption(
+        &painter,
+        y,
+        "Ribbon: swallow-tail ends (transparent), onr text",
+    );
     pixel::ribbon(
         &painter,
         Rect::from_min_size(pos2(x + 20.0, y + 24.0), vec2(w - 40.0, 30.0)),
         ppp,
         p,
-        p.pan,
         "Weapon parts",
         FontId::proportional(15.0),
     );
     y += 78.0;
 
-    caption(&painter, y, "Plank bar: wd fill, wd2 lines, gold rule");
+    caption(
+        &painter,
+        y,
+        "Plank bar: wd fill, horizontal wd2 seams, gold rule",
+    );
     pixel::plank_bar(
         &painter,
-        Rect::from_min_size(pos2(x, y + 22.0), vec2(w, 44.0)),
+        Rect::from_min_size(pos2(x, y + 22.0), vec2(w, 74.0)),
         ppp,
         p,
         true,
     );
-    y += 88.0;
+    y += 118.0;
 
     caption(&painter, y, "Rivets: 8x8 gold");
     for i in 0..6 {
@@ -92,17 +99,44 @@ fn build(ui: &mut egui::Ui, g: &mut Gallery) {
 
     caption(&painter, y, "Rarity diamonds: 14 px, 2 px fg outline");
     for (i, (name, fill)) in p.diamond_pairs().iter().enumerate() {
-        let cx = x + 24.0 + i as f32 * 56.0;
+        let cx = x + 28.0 + i as f32 * 64.0;
         pixel::diamond(&painter, pos2(cx, y + 54.0), 14.0, *fill, ppp, p);
         painter.text(
             pos2(cx, y + 70.0),
             Align2::CENTER_TOP,
             *name,
-            FontId::proportional(11.0),
+            FontId::proportional(10.0),
             p.dim,
         );
     }
     y += 100.0;
+
+    caption(
+        &painter,
+        y,
+        "Dither tile (8x8 checker) and hatch (45deg, 2 px / 7 px)",
+    );
+    let dither_rect = Rect::from_min_size(pos2(x, y + 22.0), vec2(160.0, 48.0));
+    let hatch_rect = Rect::from_min_size(pos2(x + 180.0, y + 22.0), vec2(160.0, 48.0));
+    painter.rect_filled(dither_rect, 0.0, p.bg);
+    if let Some(texture) = &g.dither {
+        pixel::dither(&painter, dither_rect, texture);
+    }
+    painter.rect_filled(hatch_rect, 0.0, p.bg);
+    pixel::hatch(&painter, hatch_rect, ppp, p);
+    painter.rect_stroke(
+        dither_rect,
+        0.0,
+        egui::Stroke::new(lootsmith_gui::ui::pixel::snap_len(1.0, ppp), p.brd),
+        egui::StrokeKind::Inside,
+    );
+    painter.rect_stroke(
+        hatch_rect,
+        0.0,
+        egui::Stroke::new(lootsmith_gui::ui::pixel::snap_len(1.0, ppp), p.brd),
+        egui::StrokeKind::Inside,
+    );
+    y += 90.0;
 
     caption(
         &painter,

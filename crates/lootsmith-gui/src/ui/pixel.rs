@@ -102,63 +102,45 @@ pub fn panel(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette) {
     ));
 }
 
-/// A banner ribbon with swallow-tail ends. The V notches are cut with `under`
-/// (the fill the ribbon sits on — normally `pan`).
-#[allow(clippy::too_many_arguments)]
+/// A banner ribbon with swallow-tail ends. Drawn as two convex halves (no
+/// backing rect), so the notches are genuinely transparent.
 pub fn ribbon(
     painter: &egui::Painter,
     rect: Rect,
     ppp: f32,
     p: &Palette,
-    under: Color32,
     text: &str,
     font: FontId,
 ) {
     let r = snap_rect(rect, ppp);
     let notch = snap_len(10.0, ppp);
-    painter.rect_filled(r, 0.0, p.rib);
     let cy = snap((r.top() + r.bottom()) / 2.0, ppp);
-    painter.add(egui::Shape::convex_polygon(
-        vec![
-            pos2(r.left(), r.top()),
-            pos2(r.left() + notch, cy),
-            pos2(r.left(), r.bottom()),
-        ],
-        under,
-        Stroke::NONE,
-    ));
-    painter.add(egui::Shape::convex_polygon(
-        vec![
-            pos2(r.right(), r.top()),
-            pos2(r.right() - notch, cy),
-            pos2(r.right(), r.bottom()),
-        ],
-        under,
-        Stroke::NONE,
-    ));
+    let upper = vec![
+        pos2(r.left(), r.top()),
+        pos2(r.right(), r.top()),
+        pos2(r.right() - notch, cy),
+        pos2(r.left() + notch, cy),
+    ];
+    let lower = vec![
+        pos2(r.left() + notch, cy),
+        pos2(r.right() - notch, cy),
+        pos2(r.right(), r.bottom()),
+        pos2(r.left(), r.bottom()),
+    ];
+    painter.add(egui::Shape::convex_polygon(upper, p.rib, Stroke::NONE));
+    painter.add(egui::Shape::convex_polygon(lower, p.rib, Stroke::NONE));
     painter.text(r.center(), Align2::CENTER_CENTER, text, font, p.onr);
 }
 
-/// A plank bar: `wd` fill, a `wd2` plank line every 26 px, and a 4 px `gold`
-/// rule on the inner edge.
+/// A plank bar: `wd` fill, **horizontal** plank seams (`wd2`, 2 px every 26 px —
+/// the mockup's `repeating-linear-gradient(180deg, ...)`), and a 4 px `gold`
+/// rule on the inner edge. A vertical bar uses vertical seams.
 pub fn plank_bar(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette, horizontal: bool) {
     let r = snap_rect(rect, ppp);
     painter.rect_filled(r, 0.0, p.wd);
     let line = Stroke::new(snap_len(2.0, ppp), p.wd2);
     let spacing = 26.0;
     if horizontal {
-        let mut x = r.left() + spacing;
-        while x < r.right() {
-            let sx = snap(x, ppp);
-            painter.line_segment([pos2(sx, r.top()), pos2(sx, r.bottom())], line);
-            x += spacing;
-        }
-        painter.rect_filled(
-            Rect::from_min_max(pos2(r.left(), r.bottom() - 4.0), r.right_bottom()),
-            0.0,
-            p.gold,
-        );
-    } else {
         let mut y = r.top() + spacing;
         while y < r.bottom() {
             let sy = snap(y, ppp);
@@ -166,10 +148,38 @@ pub fn plank_bar(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette, hor
             y += spacing;
         }
         painter.rect_filled(
+            Rect::from_min_max(pos2(r.left(), r.bottom() - 4.0), r.right_bottom()),
+            0.0,
+            p.gold,
+        );
+    } else {
+        let mut x = r.left() + spacing;
+        while x < r.right() {
+            let sx = snap(x, ppp);
+            painter.line_segment([pos2(sx, r.top()), pos2(sx, r.bottom())], line);
+            x += spacing;
+        }
+        painter.rect_filled(
             Rect::from_min_max(pos2(r.right() - 4.0, r.top()), r.right_bottom()),
             0.0,
             p.gold,
         );
+    }
+}
+
+/// A 45° hatch: `tex` lines 2 px wide on a 7 px period (the mockup's
+/// `repeating-linear-gradient(45deg, tex 0 2px, transparent 2px 7px)`).
+pub fn hatch(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette) {
+    let r = snap_rect(rect, ppp);
+    let painter = painter.with_clip_rect(r);
+    let stroke = Stroke::new(snap_len(2.0, ppp), p.tex);
+    let period = snap_len(7.0, ppp) * std::f32::consts::SQRT_2;
+    let h = r.height();
+    let mut x = r.left() - h;
+    while x < r.right() {
+        let sx = snap(x, ppp);
+        painter.line_segment([pos2(sx, r.top()), pos2(sx + h, r.bottom())], stroke);
+        x += period;
     }
 }
 

@@ -102,10 +102,11 @@ Derive rarity from the balance definition: `items::rarity(balance) -> Rarity` in
 |---|---|
 | Notched rect (4 px stepped corners) | `notched_rect(rect, step) -> Vec<Pos2>` (12-point polygon); draw with `Shape::convex_polygon` for fill and `Shape::closed_line` for the border |
 | Panel | Notched rect, 4 px `wd` border, `pan` fill, plus a 2 px dashed `brd` "stitch" line inset 10 px (`Shape::dashed_line`, dash 6, gap 4) |
-| Ribbon (section title) | Polygon with swallow-tail ends (10 px notch both sides), `rib` fill, `onr` bold text, 5 px vertical padding, 26 px horizontal padding |
-| Plank bar (top bar, status bar) | `wd` fill with a 2 px `wd2` line every 26 px; 4 px `gold` rule on the inner edge |
+| Ribbon (section title) | Polygon with swallow-tail ends (10 px notch both sides), drawn as two convex halves so the notches are transparent; `rib` fill, `onr` text, 5 px vertical padding, 26 px horizontal padding |
+| Plank bar (top bar, status bar) | `wd` fill with a 2 px `wd2` **horizontal** seam every 26 px (the mockup's `repeating-linear-gradient(180deg, …)`); 4 px `gold` rule on the inner edge |
 | Rivet | 8 x 8 px `gold` square |
 | Trail divider | 3 px dotted `brd` line (`dashed_line`, dash 3, gap 5) |
+| Hatch | 45° diagonal `tex` lines, 2 px wide on a 7 px period (the mockup's `repeating-linear-gradient(45deg, tex 0 2px, transparent 2px 7px)`) |
 | Gem | 4-point diamond polygon, flat fill |
 | Dither background | 8 x 8 px two-color checker tile, generated at startup as a `ColorImage`, uploaded with `TextureOptions::NEAREST` and `wrap_mode: Repeat`, painted over the central panel rect with a large UV range |
 | Logo | `Lootsmith.png` loaded as a `NEAREST` texture, drawn at 96 x 96 in the sidebar |
