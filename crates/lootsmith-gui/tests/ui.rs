@@ -613,3 +613,51 @@ fn profile_editor_round_trips_values() {
     assert_eq!(reopened.golden_keys(), Some(200));
     let _ = std::fs::remove_file(&probe);
 }
+
+#[test]
+fn balance_constrained_choices_use_the_part_lists() {
+    use lootsmith_core::AssetGroup;
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+
+    let Some(lists) = app.part_lists.clone() else {
+        eprintln!("no part lists in game data; skipping");
+        return;
+    };
+    assert!(lists.len() > 100, "part lists loaded: {}", lists.len());
+
+    // Find an item whose balance has a part list record, then check that the
+    // picker offers the balance's parts.
+    let mut found = false;
+    for row in app.backpack.clone() {
+        if row.balance.starts_with('#') {
+            continue; // balance not resolved by the manager
+        }
+        let Some(record) = lists.for_balance(&row.balance) else {
+            continue;
+        };
+        let slot = ["barrel", "body", "alpha", "beta", "gamma"]
+            .into_iter()
+            .find(|slot| record.slots.contains_key(*slot));
+        let Some(slot) = slot else { continue };
+        app.select_entry(row.container, row.occurrence);
+        let choices = app.balanced_choices(&0, &row.balance, AssetGroup::WeaponParts, slot);
+        let expected = record
+            .slots
+            .get(slot)
+            .and_then(|names| names.first())
+            .expect("record has parts");
+        assert_eq!(
+            choices.first().map(String::as_str),
+            Some(expected.as_str()),
+            "balance parts come first for {slot} on {}",
+            row.balance
+        );
+        found = true;
+        break;
+    }
+    assert!(found, "no backpack item matched a balance part list");
+}

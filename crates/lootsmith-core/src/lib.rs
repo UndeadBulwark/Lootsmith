@@ -13,6 +13,7 @@ pub mod huffman;
 pub mod items;
 pub mod locate;
 pub mod missions;
+pub mod partlists;
 pub mod platform;
 pub mod profile;
 pub mod proto;
@@ -27,6 +28,7 @@ pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryMan
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
 pub use locate::{find_saves, find_saves_in, SaveCandidate};
 pub use missions::{Mission, Missions};
+pub use partlists::PartLists;
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use profile::{Profile, ProfileEntry, ProfileValue, STAT_NAMES};
 pub use savegame::{

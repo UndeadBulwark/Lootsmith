@@ -188,7 +188,9 @@ calculator (like bl2skills.com): per-class trees with tiers, icons and max ranks
 left-click to add a rank and right-click to remove, tier gating at 5 points per
 tier, and live spent/available counts. The Backpack/Bank tabs create blank
 weapons/items, duplicate, **copy/paste `BL2(...)` item codes**, sync item levels,
-set a stack quantity/mark/quick-slot, edit every part, move bank↔backpack, and
+set a stack quantity/mark/quick-slot, **edit every part** with balance-constrained
+part pickers (from the `Balance Part Lists` dumps; "Complete" balances offer only
+the parts that balance allows), move bank↔backpack, and
 remove. Changes mark the document as unsaved; Save writes in place with a `.bak`.
 Settings (paths, theme, tab) persist between runs.
 

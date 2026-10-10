@@ -7,9 +7,9 @@ use eframe::egui;
 use lootsmith_core::savegame::Kind;
 use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, Profile,
-    SaveCandidate, SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
-    STAT_NAMES, VEHICLE_FAMILIES,
+    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, PartLists, Platform,
+    Profile, SaveCandidate, SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES,
+    PLAYER_MARKS, STAT_NAMES, VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -644,6 +644,8 @@ pub struct LootsmithApp {
     pub vehicles: Vec<VehicleRow>,
     pub steering_mode: i32,
     pub customizations: Option<Arc<Customizations>>,
+    /// Balance → allowed parts, for balance-constrained part pickers.
+    pub part_lists: Option<Arc<PartLists>>,
     /// Missions (field 18) and challenge list (field 38).
     pub mission_rows: Vec<MissionRow>,
     pub plot_mission: i32,
@@ -833,6 +835,7 @@ impl LootsmithApp {
             vehicles: Vec::new(),
             steering_mode: 0,
             customizations: None,
+            part_lists: None,
             mission_rows: Vec::new(),
             plot_mission: 0,
             active_mission: 0,
@@ -1026,10 +1029,61 @@ impl LootsmithApp {
                 self.status = format!("asset library error: {e}");
             }
         }
+        self.part_lists = self.load_part_lists();
         self.refresh_rows();
         self.load_travel_stations();
         self.load_customizations();
         self.load_missions_data();
+    }
+
+    /// The part choices for one slot: constrained by the balance's part list
+    /// when the game data has one for the selected balance ("Complete" =
+    /// only these; "Selective" = these first, then the library), otherwise
+    /// the plain library choices.
+    pub fn balanced_choices(
+        &self,
+        _set: &i32,
+        balance: &str,
+        group: AssetGroup,
+        slot: &str,
+    ) -> Vec<String> {
+        if let (Some(lists), Some(all)) = (self.part_lists.as_ref(), self.choices.get(&group)) {
+            let mut constrained: Vec<String> = Vec::new();
+            if let Some((complete, names)) = lists.choices_for(balance, slot) {
+                if complete {
+                    constrained = names;
+                } else {
+                    constrained = names.clone();
+                    for choice in all {
+                        if !constrained.contains(choice) {
+                            constrained.push(choice.clone());
+                        }
+                    }
+                }
+            }
+            if !constrained.is_empty() {
+                return constrained;
+            }
+        }
+        self.choices.get(&group).cloned().unwrap_or_default()
+    }
+
+    /// Load the balance part lists (from the game-data folder or
+    /// `LOOTSMITH_PART_LISTS`) for the balance-constrained pickers.
+    fn load_part_lists(&self) -> Option<Arc<PartLists>> {
+        if let Ok(path) = std::env::var("LOOTSMITH_PART_LISTS") {
+            if !path.trim().is_empty() {
+                if let Ok(lists) = PartLists::from_path(std::path::Path::new(&path)) {
+                    return Some(Arc::new(lists));
+                }
+            }
+        }
+        if let Some(dir) = self.dumps_dir() {
+            if let Ok(lists) = PartLists::from_dir(&dir) {
+                return Some(Arc::new(lists));
+            }
+        }
+        None
     }
 
     fn refresh_rows(&mut self) {
@@ -3744,7 +3798,14 @@ impl LootsmithApp {
                                                 }),
                                             None => "-".to_string(),
                                         };
-                                        let choices = self.choices.get(&group);
+                                        let balance_name =
+                                            resolve_balance(&Some(manager.clone()), &edit.decoded);
+                                        let choices = self.balanced_choices(
+                                            &edit.decoded.asset_library_set_id,
+                                            &balance_name,
+                                            group,
+                                            slot,
+                                        );
                                         egui::ComboBox::from_id_salt(format!("slot_{slot}"))
                                             .selected_text(current)
                                             .width(270.0)
@@ -3754,8 +3815,7 @@ impl LootsmithApp {
                                                         edit.decoded.set_part(manager, slot, "None");
                                                     edit.dirty = true;
                                                 }
-                                                if let Some(list) = choices {
-                                                    for choice in list {
+                                                for choice in &choices {
                                                         if ui
                                                             .selectable_label(false, choice)
                                                             .clicked()
@@ -3765,7 +3825,6 @@ impl LootsmithApp {
                                                                 .set_part(manager, slot, choice);
                                                             edit.dirty = true;
                                                         }
-                                                    }
                                                 }
                                             });
                                         ui.end_row();
