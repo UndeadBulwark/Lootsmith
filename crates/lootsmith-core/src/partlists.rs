@@ -41,6 +41,8 @@ impl PartLists {
 
     /// Merge another part lists JSON into this one (item + weapon files).
     pub fn add_json_str(&mut self, text: &str) -> Result<()> {
+        // The Gibbed dumps carry a UTF-8 BOM; strip it before parsing.
+        let text = text.strip_prefix('\u{feff}').unwrap_or(text);
         let raw: HashMap<String, serde_json::Value> = serde_json::from_str(text)
             .map_err(|e| Error::GameData(format!("bad part lists JSON: {e}")))?;
         for (key, record) in raw {

@@ -159,8 +159,10 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 ```
 
 A native window with a toolbar (**Open / Find saves / Save / Save As / Reload /
-New… / Import… / Profile… / platform / Game data**, with `Ctrl+O/S/Shift+S/R`),
-a
+New… / Import… / Profile… / platform / Game data**, with `Ctrl+O/S/Shift+S/R`)
+and tabs **General / Character / Currency / Skills / Fast Travel / Vehicles /
+Missions / Backpack (n) / Bank (n) / Raw / About**.
+The
 light/dark theme toggle, and a status bar. Lootsmith **finds your saves
 automatically** — native Aspyr, Steam/Proton (appid 49520, all Steam roots incl.
 Flatpak), and generic Wine/Lutris/custom prefixes like a ZLuda prefix under
@@ -179,7 +181,14 @@ bonus stats, and the head/skin unlock list (unlock everything, or set keys;
 Tabs: **General**, **Character** (name, level, head & skin), **Currency**
 (named money/eridium/seraph/torgue), **Skills**, **Fast Travel**, **Vehicles**,
 **Missions**, **Backpack**, **Bank**, and **Raw** (edit any scalar top-level
-field). The **General** tab has Max / OP-max level buttons (72 / 80). **New…**
+field). The **General** tab has Max / OP-max level buttons (72 / 80).
+**Backpack/Bank rows and the item inspector show the item's composed display
+name** (from the `Weapon/Item Name Parts` dumps) instead of raw asset paths;
+the editor exposes **Game Stage** and **Manufacturer grade** per item. The
+**Character** tab changes the class (with the DLC-class flags) and shows the
+**Overpower level** (resettable). **Fast Travel** groups stations by DLC with
+per-group **Check all / Uncheck all**. A **search box** filters the Raw list;
+the item table's **filter** also matches display names. **New…**
 creates a fresh character save — clone-and-reset (reliable) or a spec-driven
 blank save (experimental); **Import…** copies chosen sections (skills, missions,
 challenges, fast travel, vehicles, DLC data, bank slots) from another save into

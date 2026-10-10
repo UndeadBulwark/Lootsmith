@@ -64,8 +64,8 @@ fn loads_and_switches_tabs_by_label() {
         ("Fast Travel", Tab::Travel),
         ("Vehicles", Tab::Vehicles),
         ("Missions", Tab::Missions),
-        ("Backpack", Tab::Backpack),
-        ("Bank", Tab::Bank),
+        ("Backpack (14)", Tab::Backpack),
+        ("Bank (0)", Tab::Bank),
         ("General", Tab::General),
     ] {
         h.get_by_label(label).click();
@@ -81,7 +81,7 @@ fn selects_a_backpack_row_by_label() {
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Backpack").click();
+    h.get_by_label("Backpack (14)").click();
     h.run();
 
     h.get_by_label_contains(DAHL_PISTOL_ID).click();
@@ -138,7 +138,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Backpack").click();
+    h.get_by_label("Backpack (14)").click();
     h.run();
     h.get_by_label_contains(DAHL_PISTOL_ID).click();
     h.run();
@@ -231,10 +231,8 @@ fn edits_fast_travel_and_saves() {
     assert_eq!(h.state().travel.len(), 22);
     assert!(!h.state().travel.contains(&first));
 
-    // Add one through the dropdown + button.
-    h.state_mut().new_station = Some("Xmas".to_string());
-    h.run();
-    h.get_by_label("Add station").click();
+    // Add one programmatically (the tab now uses per-station checkboxes).
+    h.state_mut().add_teleporter("Xmas");
     h.run();
     assert!(h.state().travel.iter().any(|s| s == "Xmas"));
 
@@ -384,7 +382,7 @@ fn creates_duplicates_and_inserts_codes() {
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Backpack").click();
+    h.get_by_label("Backpack (14)").click();
     h.run();
     let before = h.state().backpack.len();
 
@@ -416,7 +414,7 @@ fn duplicates_a_selected_item() {
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Backpack").click();
+    h.get_by_label("Backpack (14)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
@@ -433,7 +431,7 @@ fn syncs_item_levels() {
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Backpack").click();
+    h.get_by_label("Backpack (14)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.state_mut().form.level = 60;
@@ -484,7 +482,7 @@ fn removes_an_entry() {
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Backpack").click();
+    h.get_by_label("Backpack (14)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
@@ -660,4 +658,87 @@ fn balance_constrained_choices_use_the_part_lists() {
         break;
     }
     assert!(found, "no backpack item matched a balance part list");
+}
+
+#[test]
+fn items_get_display_names_from_name_parts() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+    let Some(parts) = app.name_parts.clone() else {
+        eprintln!("name parts missing; skipping");
+        return;
+    };
+    assert!(parts.len() > 500, "name parts loaded: {}", parts.len());
+    let named = app
+        .backpack
+        .iter()
+        .filter(|row| !row.empty && !row.name.is_empty())
+        .count();
+    assert!(named > 0, "at least one item resolves to a display name");
+}
+
+#[test]
+fn change_class_updates_flags_and_calculator() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+    assert_eq!(app.read_info.player_class, "GD_Soldier.Character.CharClass_Soldier");
+
+    app.change_class("GD_Siren.Character.CharClass_Siren");
+    let save = app.save_game.as_ref().expect("open save");
+    assert_eq!(save.player_class(), Some("GD_Siren.Character.CharClass_Siren".into()));
+    assert_eq!(save.get_bool(44), Some(false));
+    assert_eq!(save.get_i32(45), Some(0));
+    assert_eq!(app.read_info.player_class, "GD_Siren.Character.CharClass_Siren");
+
+    app.change_class("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass");
+    let save = app.save_game.as_ref().expect("open save");
+    assert_eq!(save.get_bool(44), Some(true));
+    assert_eq!(save.get_i32(45), Some(6), "Psycho Pack is package 6");
+
+    app.change_class("GD_Tulip_Mechromancer.Character.CharClass_Mechromancer");
+    let save = app.save_game.as_ref().expect("open save");
+    assert_eq!(save.get_i32(45), Some(2), "Mechromancer is package 2");
+    assert!(app.dirty);
+}
+
+#[test]
+fn item_game_stage_edits_through_the_inspector_model() {
+    use lootsmith_core::{items as core_items, Platform};
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+    app.select_entry(Container::BackpackWeapon, 0);
+    let mut before = 0;
+    app.selected_item_editor(|edit| {
+        before = edit.decoded.game_stage();
+        edit.decoded.set_game_stage(50);
+        edit.decoded.set_manufacturer_grade(2);
+        edit.dirty = true;
+    });
+    assert_ne!(before, 0, "weapon has a game stage");
+    app.apply_item();
+    let serial = app
+        .save_game
+        .as_ref()
+        .expect("open save")
+        .entries_in(Container::BackpackWeapon)
+        .into_iter()
+        .next()
+        .expect("weapon entry")
+        .serial
+        .clone();
+    let configs = app.configs();
+    let decoded = core_items::unpack(&serial, &configs).expect("re-decode");
+    assert_eq!(decoded.game_stage(), 50);
+    assert_eq!(decoded.manufacturer_grade(), 2);
+    assert!(app.dirty);
+    let _ = Platform::PC;
 }

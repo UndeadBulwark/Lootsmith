@@ -7,8 +7,8 @@ use eframe::egui;
 use lootsmith_core::savegame::Kind;
 use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, PartLists, Platform,
-    Profile, SaveCandidate, SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES,
+    AssetLibraryManager, Container, Customizations, Missions, NameParts, PackedEntry, PartLists, Platform,
+    Profile, SaveCandidate, SaveGame, TravelStations, DlcTitles, VehicleCustomization, MISSION_STATUSES,
     PLAYER_MARKS, STAT_NAMES, VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
@@ -32,6 +32,7 @@ pub enum Tab {
     Backpack,
     Bank,
     Raw,
+    About,
 }
 
 #[derive(Clone)]
@@ -88,6 +89,8 @@ pub struct Row {
     pub kind: String,
     pub id: i32,
     pub balance: String,
+    /// Composed display name (prefix + title words), when a part list maps it.
+    pub name: String,
     pub quantity: i32,
     pub equipped: bool,
     pub mark: i32,
@@ -452,6 +455,28 @@ fn currency_name(index: usize) -> String {
     }
 }
 
+/// The About tab: credits and pointers.
+fn ui_about(ui: &mut egui::Ui) {
+    ui.add_space(10.0);
+    card(ui, 620.0, |ui| {
+        theme::section(ui, "About");
+        ui.label(
+            egui::RichText::new("Lootsmith — a cross-platform Borderlands 2 save editor")
+                .strong()
+                .size(15.0)
+                .color(Tokens::ACCENT),
+        );
+        ui.add_space(6.0);
+        theme::muted(ui, "A Rust port based on Gibbed's Borderlands 2 Save Editor");
+        theme::muted(ui, "(zlib license). Game data is read from Rick Gibbed's dumps.");
+        ui.add_space(8.0);
+        theme::faint(ui, "Skill calculator data compressed from the UCP calculator");
+        theme::faint(ui, "(bl2skills.com, /patch variant) and embedded in the app.");
+        ui.add_space(8.0);
+        theme::muted(ui, "CLI: lootsmith inspect / verify / dump / items / edit / json / profile …");
+    });
+}
+
 fn tab_key(tab: Tab) -> &'static str {
     match tab {
         Tab::General => "general",
@@ -464,6 +489,7 @@ fn tab_key(tab: Tab) -> &'static str {
         Tab::Backpack => "backpack",
         Tab::Bank => "bank",
         Tab::Raw => "raw",
+        Tab::About => "about",
     }
 }
 
@@ -479,6 +505,7 @@ fn tab_from_key(key: &str) -> Option<Tab> {
         "backpack" => Some(Tab::Backpack),
         "bank" => Some(Tab::Bank),
         "raw" => Some(Tab::Raw),
+        "about" => Some(Tab::About),
         _ => None,
     }
 }
@@ -544,7 +571,7 @@ enum ItemAction {
 }
 
 /// The tab list, in order.
-const TABS: [(Tab, &str); 10] = [
+const TABS: [(Tab, &str); 11] = [
     (Tab::General, "General"),
     (Tab::Character, "Character"),
     (Tab::Currency, "Currency"),
@@ -555,6 +582,7 @@ const TABS: [(Tab, &str); 10] = [
     (Tab::Backpack, "Backpack"),
     (Tab::Bank, "Bank"),
     (Tab::Raw, "Raw"),
+    (Tab::About, "About"),
 ];
 
 /// A vertical rule between toolbar groups.
@@ -609,19 +637,19 @@ fn empty_state(ui: &mut egui::Ui) {
     });
 }
 
-struct ItemEdit {
-    container: Container,
-    occurrence: usize,
-    decoded: items::PackedData,
-    quantity: i32,
-    equipped: bool,
-    mark: i32,
-    quick_slot: i32,
-    orig_quantity: i32,
-    orig_equipped: bool,
-    orig_mark: i32,
-    orig_quick_slot: i32,
-    dirty: bool,
+pub struct ItemEdit {
+    pub container: Container,
+    pub occurrence: usize,
+    pub decoded: items::PackedData,
+    pub quantity: i32,
+    pub equipped: bool,
+    pub mark: i32,
+    pub quick_slot: i32,
+    pub orig_quantity: i32,
+    pub orig_equipped: bool,
+    pub orig_mark: i32,
+    pub orig_quick_slot: i32,
+    pub dirty: bool,
 }
 
 pub struct LootsmithApp {
@@ -646,6 +674,10 @@ pub struct LootsmithApp {
     pub customizations: Option<Arc<Customizations>>,
     /// Balance → allowed parts, for balance-constrained part pickers.
     pub part_lists: Option<Arc<PartLists>>,
+    /// Prefix/title part words, for item display names.
+    pub name_parts: Option<Arc<NameParts>>,
+    /// DLC chapter titles, for grouping fast-travel stations.
+    pub dlc_titles: Option<Arc<DlcTitles>>,
     /// Missions (field 18) and challenge list (field 38).
     pub mission_rows: Vec<MissionRow>,
     pub plot_mission: i32,
@@ -654,6 +686,10 @@ pub struct LootsmithApp {
     pub missions_data: Option<Arc<Missions>>,
     /// Every top-level field, for the raw view.
     pub raw: Vec<RawField>,
+    /// Search text for the raw view.
+    pub raw_filter: String,
+    /// Show the trailing reserved/unused currency slots.
+    pub currency_show_unused: bool,
     pub theme: Theme,
     theme_applied: bool,
     /// There are edits in memory that have not been written to disk.
@@ -752,11 +788,47 @@ fn resolve_balance(
     }
 }
 
+/// Compose an item's display name from its prefix/title part words, when the
+/// game data's name parts map them (`Weapon/Item Name Parts.json`).
+fn item_name(
+    decoded: &items::PackedData,
+    manager: &Option<Arc<AssetLibraryManager>>,
+    name_parts: Option<&NameParts>,
+) -> String {
+    let (Some(manager), Some(name_parts)) = (manager.as_ref(), name_parts) else {
+        return String::new();
+    };
+    let set = decoded.asset_library_set_id;
+    let mut words: Vec<&str> = Vec::new();
+    for slot in ["prefix", "title"] {
+        let Some((reference, group)) = decoded.part(slot) else {
+            continue;
+        };
+        if reference == items::PackedAssetReference::NONE {
+            continue;
+        }
+        let Ok(asset) = manager.lookup_asset(
+            group,
+            set,
+            reference.asset_index,
+            reference.sublibrary_index,
+            reference.use_set_id,
+        ) else {
+            continue;
+        };
+        if let Some(word) = name_parts.part_name(&asset) {
+            words.push(word);
+        }
+    }
+    words.join(" ")
+}
+
 fn row_for(
     entry: &PackedEntry,
     display: usize,
     manager: &Option<Arc<AssetLibraryManager>>,
     configs: &AssetLibraryConfigs,
+    name_parts: Option<&NameParts>,
 ) -> Row {
     match items::unpack(&entry.serial, configs) {
         Ok(decoded) => {
@@ -780,6 +852,7 @@ fn row_for(
             };
             let mark = if decoded.unique_id == 0 { " (empty)" } else { "" };
             let balance = resolve_balance(manager, &decoded);
+            let name = item_name(&decoded, manager, name_parts);
             Row {
                 container: entry.container,
                 occurrence: entry.occurrence,
@@ -790,6 +863,7 @@ fn row_for(
                 kind: kind.to_string(),
                 id: decoded.unique_id,
                 balance,
+                name,
                 quantity: entry.quantity,
                 equipped: entry.equipped,
                 mark: entry.mark,
@@ -805,6 +879,7 @@ fn row_for(
             kind: "?".to_string(),
             id: 0,
             balance: format!("decode error: {e}"),
+            name: String::new(),
             quantity: entry.quantity,
             equipped: entry.equipped,
             mark: entry.mark,
@@ -836,12 +911,16 @@ impl LootsmithApp {
             steering_mode: 0,
             customizations: None,
             part_lists: None,
+            name_parts: None,
+            dlc_titles: None,
             mission_rows: Vec::new(),
             plot_mission: 0,
             active_mission: 0,
             challenges: Vec::new(),
             missions_data: None,
             raw: Vec::new(),
+            raw_filter: String::new(),
+            currency_show_unused: false,
             theme: Theme::Dark,
             theme_applied: false,
             dirty: false,
@@ -897,7 +976,8 @@ impl LootsmithApp {
         }
     }
 
-    fn configs(&self) -> AssetLibraryConfigs {
+    /// The current item-pack/asset configs (also used by tests and tools).
+    pub fn configs(&self) -> AssetLibraryConfigs {
         self.manager
             .as_ref()
             .map(|m| m.configs.clone())
@@ -1030,6 +1110,8 @@ impl LootsmithApp {
             }
         }
         self.part_lists = self.load_part_lists();
+        self.name_parts = self.load_name_parts();
+        self.dlc_titles = self.load_dlc_titles();
         self.refresh_rows();
         self.load_travel_stations();
         self.load_customizations();
@@ -1068,6 +1150,33 @@ impl LootsmithApp {
         self.choices.get(&group).cloned().unwrap_or_default()
     }
 
+    /// Load DLC chapter titles for the travel-tab grouping.
+    fn load_dlc_titles(&self) -> Option<Arc<DlcTitles>> {
+        let dir = self.dumps_dir()?;
+        DlcTitles::from_path(&dir.join("Downloadable Contents.json"))
+            .ok()
+            .filter(|t| !t.is_empty())
+            .map(Arc::new)
+    }
+
+    /// Load the name parts (from the game-data folder or
+    /// `LOOTSMITH_NAME_PARTS`) for item display names.
+    fn load_name_parts(&self) -> Option<Arc<NameParts>> {
+        if let Some(dir) = self.dumps_dir() {
+            if let Ok(parts) = NameParts::from_dir(&dir) {
+                return Some(Arc::new(parts));
+            }
+        }
+        if let Ok(path) = std::env::var("LOOTSMITH_NAME_PARTS") {
+            if !path.trim().is_empty() {
+                if let Ok(parts) = NameParts::from_dir(std::path::Path::new(&path)) {
+                    return Some(Arc::new(parts));
+                }
+            }
+        }
+        None
+    }
+
     /// Load the balance part lists (from the game-data folder or
     /// `LOOTSMITH_PART_LISTS`) for the balance-constrained pickers.
     fn load_part_lists(&self) -> Option<Arc<PartLists>> {
@@ -1089,14 +1198,15 @@ impl LootsmithApp {
     fn refresh_rows(&mut self) {
         let configs = self.configs();
         let manager = self.manager.clone();
+        let name_parts = self.name_parts.clone();
         let mut backpack = Vec::new();
         let mut bank = Vec::new();
         if let Some(save_game) = &self.save_game {
             for (i, entry) in save_game.packed_entries().iter().enumerate() {
-                backpack.push(row_for(entry, i + 1, &manager, &configs));
+                backpack.push(row_for(entry, i + 1, &manager, &configs, name_parts.as_deref()));
             }
             for (i, entry) in save_game.bank_entries().iter().enumerate() {
-                bank.push(row_for(entry, i + 1, &manager, &configs));
+                bank.push(row_for(entry, i + 1, &manager, &configs, name_parts.as_deref()));
             }
         }
         self.backpack = backpack;
@@ -1160,6 +1270,17 @@ impl LootsmithApp {
             orig_quick_slot: entry.quick_slot,
             dirty: false,
         });
+    }
+
+    /// Mutate the currently selected item's editor (tests/tools); `None`
+    /// when nothing is selected or game data is not loaded.
+    pub fn selected_item_editor(
+        &mut self,
+        change: impl FnOnce(&mut ItemEdit),
+    ) {
+        if let Some(edit) = self.item_edit.as_mut() {
+            change(edit);
+        }
     }
 
     /// Set a named slot on the currently selected item (programmatic editing).
@@ -2527,7 +2648,12 @@ impl LootsmithApp {
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         for (tab, label) in TABS {
-                            if theme::tab(ui, self.tab == tab, label) {
+                            let text = match tab {
+                                Tab::Backpack => format!("Backpack ({})", self.backpack.len()),
+                                Tab::Bank => format!("Bank ({})", self.bank.len()),
+                                _ => label.to_string(),
+                            };
+                            if theme::tab(ui, self.tab == tab, &text) {
                                 self.tab = tab;
                             }
                         }
@@ -2544,6 +2670,7 @@ impl LootsmithApp {
                 Tab::Backpack => self.ui_container(ui, false),
                 Tab::Bank => self.ui_container(ui, true),
                 Tab::Raw => self.ui_raw(ui),
+                Tab::About => ui_about(ui),
             }
         });
 
@@ -2909,11 +3036,57 @@ impl LootsmithApp {
         });
     }
 
+    /// Change the character's class in the open save (field 1 plus the
+    /// DLC-class flags). Skills are left as-is; respend them after switching.
+    pub fn change_class(&mut self, player_class: &str) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let is_dlc = player_class.contains("Lilac") || player_class.contains("Tulip");
+        let package = if player_class.contains("Lilac") {
+            6 // Psycho Pack
+        } else if player_class.contains("Tulip") {
+            2 // Mechromancer
+        } else {
+            0
+        };
+        save_game.set_str(1, player_class);
+        save_game.set_bool(44, is_dlc);
+        save_game.set_i32(45, package);
+        self.read_info.player_class = player_class.to_string();
+        self.dirty = true;
+        self.status = format!(
+            "class changed to {} — skills and the action skill may need re-spending",
+            crate::skills::class_display_name(player_class)
+        );
+    }
+
+    /// How many one-off level challenges (Digistruct Peak OP levels) the
+    /// character has completed (field 40).
+    pub fn overpower_level(&self) -> i32 {
+        self.save_game
+            .as_ref()
+            .map(|s| s.message.count(40) as i32)
+            .unwrap_or(0)
+    }
+
+    /// Clear all completed one-off level challenges (resets OP level to 0).
+    pub fn reset_overpower(&mut self) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        save_game.message.remove_all(40);
+        self.dirty = true;
+        self.status = "overpower levels reset".into();
+    }
+
     fn ui_character(&mut self, ui: &mut egui::Ui) {
         ui.add_space(10.0);
         let customizations = self.customizations.clone();
         let usage = lootsmith_core::usage_for_player_class(&self.read_info.player_class);
         let mut changed = false;
+        let mut change_class: Option<String> = None;
+        let mut reset_op = false;
         card(ui, 620.0, |ui| {
         theme::section(ui, "Character");
         egui::Grid::new("character")
@@ -2929,7 +3102,38 @@ impl LootsmithApp {
                     .changed();
                 ui.end_row();
                 ui.label("Class");
-                ui.label(&self.read_info.player_class);
+                let classes = crate::skills::class_ids();
+                let current = crate::skills::class_display_name(&self.read_info.player_class);
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_salt("class_choice")
+                        .selected_text(&current)
+                        .width(220.0)
+                        .show_ui(ui, |ui| {
+                            for id in &classes {
+                                let label = crate::skills::class_display_name(id);
+                                let selected = *id == self.read_info.player_class;
+                                if ui.selectable_label(selected, label).clicked() {
+                                    change_class = Some((*id).to_string());
+                                }
+                            }
+                        });
+                    if self.overpower_level() > 0
+                        && ui
+                            .button("Reset OP")
+                            .on_hover_text("Clear all Digistruct Peak overpower completions")
+                            .clicked()
+                    {
+                        reset_op = true;
+                    }
+                });
+                ui.end_row();
+                ui.label("Overpower level");
+                let op = self.overpower_level();
+                ui.label(if op > 0 {
+                    op.to_string()
+                } else {
+                    "—".to_string()
+                });
                 ui.end_row();
                 ui.label("Level");
                 changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
@@ -2985,11 +3189,22 @@ impl LootsmithApp {
             ui.add_space(6.0);
             theme::muted(ui, "Load the game-data folder to pick heads and skins by name.");
         }
+        if let Some(class) = change_class {
+            self.change_class(&class);
+        }
+        if reset_op {
+            self.reset_overpower();
+        }
     }
 
     fn ui_currency(&mut self, ui: &mut egui::Ui) {
         ui.add_space(4.0);
-        ui.heading("Currency");
+        ui.horizontal(|ui| {
+            ui.heading("Currency");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.checkbox(&mut self.currency_show_unused, "show unused slots");
+            });
+        });
         ui.add_space(2.0);
         ui.label("Index 0 is money. Other slots are eridium, seraph crystals, Torgue tokens, ...");
         ui.add_space(4.0);
@@ -3003,7 +3218,10 @@ impl LootsmithApp {
                     .spacing([16.0, 6.0])
                     .show(ui, |ui| {
                         for (i, value) in self.form.currency.iter_mut().enumerate() {
-                            ui.label(currency_name(i));
+                            if i >= 4 && !self.currency_show_unused {
+                                continue;
+                            }
+                            ui.label(if i >= 4 { "Reserved / unused".to_string() } else { currency_name(i) });
                             changed |= ui.add(egui::DragValue::new(value)).changed();
                             ui.end_row();
                         }
@@ -3169,91 +3387,131 @@ impl LootsmithApp {
     }
 
     fn ui_travel(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.label(format!("Visited stations: {}", self.travel.len()));
-            if self.stations.is_some() {
-                ui.label("(names resolved from Travel Stations.json)");
-            } else {
-                ui.label("(load Travel Stations.json next to the Asset Library for names)");
-            }
-        });
+        let stations = self.stations.clone();
+        let Some(stations) = stations else {
+            theme::muted(
+                ui,
+                "Load Travel Stations.json (next to the Asset Library) to list every station.",
+            );
+            return;
+        };
+        let titles = self.dlc_titles.clone();
 
-        let choices = self
-            .stations
-            .as_ref()
-            .map(|s| s.destination_labels())
-            .unwrap_or_default();
-        let mut add_requested = false;
-        ui.horizontal(|ui| {
-            ui.label("Add station:");
-            if choices.is_empty() {
-                ui.label("—");
-            } else {
-                egui::ComboBox::from_id_salt("add_station")
-                    .selected_text(
-                        self.new_station
-                            .clone()
-                            .unwrap_or_else(|| "choose station…".to_string()),
-                    )
-                    .width(420.0)
-                    .show_ui(ui, |ui| {
-                        for choice in &choices {
-                            let selected = self.new_station.as_deref() == Some(choice.as_str());
-                            if ui.selectable_label(selected, choice).clicked() {
-                                self.new_station = Some(choice.clone());
-                            }
-                        }
-                    });
-            }
-            ui.add_enabled_ui(self.new_station.is_some(), |ui| {
-                if ui.button("Add station").clicked() {
-                    add_requested = true;
+        // Group every known station: Base Game first, DLC chapters after.
+        let mut groups: Vec<(String, Vec<(String, String)>)> = vec![(
+            "Base Game".to_string(),
+            Vec::new(),
+        )];
+        for station in stations.all() {
+            let display = stations.label_for(&station.resource_name);
+            match station.dlc_expansion.as_deref() {
+                None | Some("") => groups[0].1.push((
+                    station.resource_name.clone(),
+                    display,
+                )),
+                Some(expansion) => {
+                    let title = titles
+                        .as_ref()
+                        .and_then(|t| t.title(expansion))
+                        .unwrap_or("Unknown");
+                    if let Some(group) = groups.iter_mut().find(|(name, _)| name == title) {
+                        group.1.push((station.resource_name.clone(), display));
+                    } else {
+                        groups.push((
+                            title.to_string(),
+                            vec![(station.resource_name.clone(), display)],
+                        ));
+                    }
                 }
-            });
-        });
-        if add_requested {
-            if let Some(name) = self.new_station.clone() {
-                self.add_teleporter(&name);
             }
         }
+        let visited = format!("visited: {} / {}", self.travel.len(), stations.len());
+        ui.label(
+            egui::RichText::new(visited).color(Tokens::TEXT_DIM),
+        );
+        ui.add_space(4.0);
 
-        let travel = self.travel.clone();
+        // Apply deferred checkbox / group edits after rendering.
+        let mut toggles: Vec<(String, bool)> = Vec::new();
+        let mut group_toggles: Vec<(String, bool)> = Vec::new();
+        let mut set_last: Option<String> = None;
         let last = self.travel_last.clone();
-        let stations = self.stations.clone();
-        let mut remove = None;
-        let mut set_last = None;
-        ui.separator();
         egui::ScrollArea::vertical()
             .id_salt("travel")
-            .max_height(360.0)
             .show(ui, |ui| {
-                if travel.is_empty() {
-                    ui.label("(no stations visited)");
-                }
-                for (i, name) in travel.iter().enumerate() {
+                for (title, rows) in &groups {
                     ui.horizontal(|ui| {
-                        let label = match &stations {
-                            Some(s) => s.label_for(name),
-                            None => name.clone(),
-                        };
-                        let is_last = last.as_deref() == Some(name.as_str());
-                        ui.label(format!("{}{label}", if is_last { "★ " } else { "" }));
-                        if ui.small_button("Set last").clicked() {
-                            set_last = Some(name.clone());
-                        }
-                        if ui.small_button("Remove").clicked() {
-                            remove = Some(i);
-                        }
+                        ui.strong(title);
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            // with_layout consumes its row; buttons toggle the group.
+                            if ui
+                                .small_button("Uncheck all")
+                                .on_hover_text(format!("clear every {title} station"))
+                                .clicked()
+                            {
+                                group_toggles.push((title.clone(), false));
+                            }
+                            if ui
+                                .small_button("Check all")
+                                .on_hover_text(format!("visit every {title} station"))
+                                .clicked()
+                            {
+                                group_toggles.push((title.clone(), true));
+                            }
+                        });
                     });
+                    for (resource, display) in rows {
+                        let mut checked = self.travel.contains(resource);
+                        let marker = if last.as_deref() == Some(resource.as_str()) {
+                            "★ "
+                        } else {
+                            ""
+                        };
+                        ui.horizontal(|ui| {
+                            if ui
+                                .checkbox(
+                                    &mut checked,
+                                    format!("{marker}{display}"),
+                                )
+                                .changed()
+                            {
+                                toggles.push((resource.clone(), checked));
+                            }
+                            if checked && ui
+                                .button("☆ last")
+                                .on_hover_text("Make this the current station")
+                                .clicked()
+                            {
+                                set_last = Some(resource.clone());
+                            }
+                        });
+                    }
                 }
             });
+        for (resource, on) in toggles {
+            if on {
+                self.add_teleporter(&resource);
+            } else if let Some(index) = self.travel.iter().position(|name| *name == resource) {
+                self.remove_teleporter(index);
+            }
+        }
+        for (title, on) in group_toggles {
+            let resources: Vec<String> = groups
+                .iter()
+                .find(|(name, _)| *name == title)
+                .map(|(_, rows)| rows.iter().map(|(r, _)| r.clone()).collect())
+                .unwrap_or_default();
+            for resource in resources {
+                if on {
+                    self.add_teleporter(&resource);
+                } else if let Some(index) = self.travel.iter().position(|name| *name == resource) {
+                    self.remove_teleporter(index);
+                }
+            }
+        }
         if let Some(name) = set_last {
             self.set_last_teleporter(&name);
         }
-        if let Some(i) = remove {
-            self.remove_teleporter(i);
-        }
-
     }
 
     fn ui_vehicles(&mut self, ui: &mut egui::Ui) {
@@ -3394,13 +3652,26 @@ impl LootsmithApp {
 
     fn ui_raw(&mut self, ui: &mut egui::Ui) {
         ui.add_space(4.0);
-        ui.heading("Raw fields");
+        ui.horizontal(|ui| {
+            ui.heading("Raw fields");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("✕").on_hover_text("Clear search").clicked() {
+                    self.raw_filter.clear();
+                }
+                ui.add_sized(
+                    [260.0, 22.0],
+                    egui::TextEdit::singleline(&mut self.raw_filter)
+                        .hint_text("search fields…"),
+                );
+            });
+        });
         ui.add_space(2.0);
         ui.label(
             "Edit scalar fields and int/string list elements directly. Nested \
              messages and byte blobs are read-only here (use the CLI json dump).",
         );
         ui.add_space(4.0);
+        let needle = self.raw_filter.to_lowercase();
         let mut changed = false;
         let mut list_ops: Vec<(u32, RawListOp)> = Vec::new();
         egui::ScrollArea::vertical()
@@ -3418,6 +3689,11 @@ impl LootsmithApp {
                         ui.strong("Value");
                         ui.end_row();
                         for field in self.raw.iter_mut() {
+                            if !needle.is_empty()
+                                && !field.name.to_lowercase().contains(&needle)
+                            {
+                                continue;
+                            }
                             ui.label(field.number.to_string());
                             ui.label(&field.name);
                             ui.label(&field.kind);
@@ -3655,6 +3931,7 @@ impl LootsmithApp {
                     || row.kind.to_lowercase().contains(&needle)
                     || row.id.to_string().contains(&needle)
                     || row.balance.to_lowercase().contains(&needle)
+                    || row.name.to_lowercase().contains(&needle)
             })
             .collect();
 
@@ -3692,6 +3969,14 @@ impl LootsmithApp {
                         ui.label(egui::RichText::new(title).strong().size(14.0));
                         ui.label(theme::mono(format!("id={}", edit.decoded.unique_id)));
                     });
+                    let name = item_name(
+                        &edit.decoded,
+                        &Some(manager.clone()),
+                        self.name_parts.as_deref(),
+                    );
+                    if !name.is_empty() {
+                        ui.label(egui::RichText::new(name).strong().size(15.0).color(Tokens::ACCENT));
+                    }
                     ui.add_space(6.0);
 
                     if edit.container == Container::BackpackItem
@@ -3726,6 +4011,37 @@ impl LootsmithApp {
                                         }
                                     }
                                 });
+                        });
+                        ui.add_space(6.0);
+                        let (gstage, mgrade) = match &mut edit.decoded.slot {
+                            lootsmith_core::items::PackedSlot::Weapon(weapon) => (
+                                &mut weapon.game_stage,
+                                &mut weapon.manufacturer_grade_index,
+                            ),
+                            lootsmith_core::items::PackedSlot::Item(item) => (
+                                &mut item.game_stage,
+                                &mut item.manufacturer_grade_index,
+                            ),
+                        };
+                        ui.horizontal(|ui| {
+                            ui.label("Game stage");
+                            if ui
+                                .add(
+                                    egui::DragValue::new(gstage).range(1..=80),
+                                )
+                                .changed()
+                            {
+                                edit.dirty = true;
+                            }
+                            ui.label("Manufacturer grade");
+                            if ui
+                                .add(
+                                    egui::DragValue::new(mgrade).range(1..=10),
+                                )
+                                .changed()
+                            {
+                                edit.dirty = true;
+                            }
                         });
                         ui.add_space(6.0);
                     }
@@ -3920,14 +4236,21 @@ impl LootsmithApp {
                                 ui.label(player_mark_name(row.mark));
                             });
                             tr.col(|ui| {
-                                let text = if row.empty {
+                                let label = if row.empty {
                                     egui::RichText::new(&row.balance)
                                         .color(Tokens::TEXT_FAINT)
                                         .italics()
+                                } else if !row.name.is_empty() {
+                                    egui::RichText::new(&row.name).color(Tokens::TEXT)
                                 } else {
                                     egui::RichText::new(&row.balance).color(Tokens::TEXT_DIM)
                                 };
-                                ui.label(text).on_hover_text(&row.balance);
+                                let tip = if row.name.is_empty() {
+                                    row.balance.clone()
+                                } else {
+                                    format!("{} — {}", row.name, row.balance)
+                                };
+                                ui.label(label).on_hover_text(tip);
                             });
                             if tr.response().clicked() {
                                 clicked = Some((row.container, row.occurrence));

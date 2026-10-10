@@ -199,6 +199,50 @@ fn parse_args() -> Option<Args> {
     Some(args)
 }
 
+/// Load the name-parts dumps (`Weapon/Item Name Parts` + `Items.json`) — from
+/// `LOOTSMITH_NAME_PARTS`, or next to `--dumps` / the asset library env var.
+/// Compose a display name from resolved prefix/title asset paths, using the
+/// name-parts map; `None` when nothing maps (`#n/m` indices are skipped).
+fn item_display_name(
+    name_parts: &Option<lootsmith_core::NameParts>,
+    assets: &[&str],
+) -> Option<String> {
+    let parts = name_parts.as_ref()?;
+    let mut words = Vec::new();
+    for asset in assets {
+        if let Some(word) = parts.part_name(asset) {
+            words.push(word);
+        }
+    }
+    (!words.is_empty()).then(|| words.join(" "))
+}
+
+fn load_name_parts(args: &Args) -> Option<lootsmith_core::NameParts> {
+    let dumps = args
+        .dumps
+        .clone()
+        .or_else(|| std::env::var("LOOTSMITH_ASSET_LIBRARY").ok());
+    if let Some(dumps) = dumps {
+        let path = std::path::PathBuf::from(dumps);
+        let dir = if path.is_dir() {
+            path
+        } else {
+            path.parent().map(<std::path::Path>::to_path_buf)?
+        };
+        if let Ok(parts) = lootsmith_core::NameParts::from_dir(&dir) {
+            return Some(parts);
+        }
+    }
+    if let Ok(path) = std::env::var("LOOTSMITH_NAME_PARTS") {
+        if !path.trim().is_empty() {
+            if let Ok(parts) = lootsmith_core::NameParts::from_path(std::path::Path::new(&path)) {
+                return Some(parts);
+            }
+        }
+    }
+    None
+}
+
 fn load_manager(dumps: &Option<String>) -> Option<AssetLibraryManager> {
     let path = dumps
         .clone()
@@ -584,6 +628,8 @@ fn main() -> ExitCode {
                 },
                 None => None,
             };
+            // Display names from the Name Parts dumps (optional).
+            let name_parts = load_name_parts(&args);
             let configs = manager
                 .as_ref()
                 .map(|m| m.configs.clone())
@@ -653,6 +699,8 @@ fn main() -> ExitCode {
                         let set = decoded.asset_library_set_id;
                         match &decoded.slot {
                             items::PackedSlot::Weapon(w) => {
+                                let prefix = resolve(AssetGroup::WeaponParts, set, w.prefix_part);
+                                let title = resolve(AssetGroup::WeaponParts, set, w.title_part);
                                 println!(
                                     "{kind:>6} #{count} id={} balance={} mfr={} grade={} \
                                      stage={}{meta}",
@@ -662,6 +710,9 @@ fn main() -> ExitCode {
                                     w.manufacturer_grade_index,
                                     w.game_stage,
                                 );
+                                if let Some(name) = item_display_name(&name_parts, &[&prefix, &title]) {
+                                    println!("        name={name}");
+                                }
                                 println!(
                                     "        type={} body={} grip={} barrel={} sight={} stock={} \
                                      elemental={} acc1={} acc2={} material={} prefix={} title={}",
@@ -675,11 +726,13 @@ fn main() -> ExitCode {
                                     resolve(AssetGroup::WeaponParts, set, w.accessory1_part),
                                     resolve(AssetGroup::WeaponParts, set, w.accessory2_part),
                                     resolve(AssetGroup::WeaponParts, set, w.material_part),
-                                    resolve(AssetGroup::WeaponParts, set, w.prefix_part),
-                                    resolve(AssetGroup::WeaponParts, set, w.title_part),
+                                    prefix,
+                                    title,
                                 );
                             }
                             items::PackedSlot::Item(it) => {
+                                let prefix = resolve(AssetGroup::ItemParts, set, it.prefix_part);
+                                let title = resolve(AssetGroup::ItemParts, set, it.title_part);
                                 println!(
                                     "{kind:>6} #{count} id={} balance={} mfr={} grade={} \
                                      stage={}{meta}",
@@ -689,6 +742,11 @@ fn main() -> ExitCode {
                                     it.manufacturer_grade_index,
                                     it.game_stage,
                                 );
+                                if let Some(name) =
+                                    item_display_name(&name_parts, &[&prefix, &title])
+                                {
+                                    println!("        name={name}");
+                                }
                             }
                         }
                     }

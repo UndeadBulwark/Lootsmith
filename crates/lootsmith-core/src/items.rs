@@ -358,6 +358,36 @@ fn slot_target<'a>(
 }
 
 impl PackedData {
+    /// The item's game stage (the level the item is tuned to).
+    pub fn game_stage(&self) -> i32 {
+        match &self.slot {
+            PackedSlot::Weapon(weapon) => weapon.game_stage,
+            PackedSlot::Item(item) => item.game_stage,
+        }
+    }
+
+    pub fn set_game_stage(&mut self, stage: i32) {
+        match &mut self.slot {
+            PackedSlot::Weapon(weapon) => weapon.game_stage = stage,
+            PackedSlot::Item(item) => item.game_stage = stage,
+        }
+    }
+
+    /// The manufacturer's grade index (drives the item's stat curve).
+    pub fn manufacturer_grade(&self) -> i32 {
+        match &self.slot {
+            PackedSlot::Weapon(weapon) => weapon.manufacturer_grade_index,
+            PackedSlot::Item(item) => item.manufacturer_grade_index,
+        }
+    }
+
+    pub fn set_manufacturer_grade(&mut self, grade: i32) {
+        match &mut self.slot {
+            PackedSlot::Weapon(weapon) => weapon.manufacturer_grade_index = grade,
+            PackedSlot::Item(item) => item.manufacturer_grade_index = grade,
+        }
+    }
+
     /// Set a named slot from a `package.asset` name (or `"None"`). Returns the
     /// asset group that was resolved.
     pub fn set_part(

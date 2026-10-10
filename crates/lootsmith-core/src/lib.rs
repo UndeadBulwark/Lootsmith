@@ -13,6 +13,7 @@ pub mod huffman;
 pub mod items;
 pub mod locate;
 pub mod missions;
+pub mod nameparts;
 pub mod partlists;
 pub mod platform;
 pub mod profile;
@@ -29,6 +30,7 @@ pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot
 pub use locate::{find_saves, find_saves_in, SaveCandidate};
 pub use missions::{Mission, Missions};
 pub use partlists::PartLists;
+pub use nameparts::NameParts;
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use profile::{Profile, ProfileEntry, ProfileValue, STAT_NAMES};
 pub use savegame::{
@@ -36,4 +38,4 @@ pub use savegame::{
     PackedEntry, SaveGame, Skill, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
     VEHICLE_FAMILIES,
 };
-pub use travel::{TravelStation, TravelStations};
+pub use travel::{DlcTitles, TravelStation, TravelStations};

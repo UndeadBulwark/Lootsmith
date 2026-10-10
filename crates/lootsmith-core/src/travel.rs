@@ -9,6 +9,53 @@
 use crate::error::{Error, Result};
 use std::collections::HashMap;
 
+/// DLC expansion titles (`Downloadable Contents.json`, type "Expansion"),
+/// used to group fast-travel stations by chapter in the UI.
+#[derive(Clone, Debug, Default)]
+pub struct DlcTitles {
+    titles: std::collections::HashMap<String, String>,
+}
+
+impl DlcTitles {
+    /// Parse a `Downloadable Contents.json` string, keeping Expansion entries.
+    pub fn from_json_str(text: &str) -> Result<DlcTitles> {
+        // The Gibbed dumps carry a UTF-8 BOM; strip it before parsing.
+        let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+        let raw: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(text)
+            .map_err(|e| crate::error::Error::GameData(format!("bad DLC contents JSON: {e}")))?;
+        let mut titles = std::collections::HashMap::new();
+        for (key, record) in raw {
+            if record.get("type").and_then(serde_json::Value::as_str) != Some("Expansion") {
+                continue;
+            }
+            if let Some(name) = record.get("name").and_then(serde_json::Value::as_str) {
+                titles.insert(key, name.to_string());
+            }
+        }
+        Ok(DlcTitles { titles })
+    }
+
+    /// Load `Downloadable Contents.json` from the game-data folder (or the
+    /// file directly).
+    pub fn from_path(path: &std::path::Path) -> Result<DlcTitles> {
+        Self::from_json_str(
+            &std::fs::read_to_string(path).map_err(|e| crate::error::Error::Io(e.to_string()))?,
+        )
+    }
+
+    pub fn title(&self, expansion_key: &str) -> Option<&str> {
+        self.titles.get(expansion_key).map(String::as_str)
+    }
+
+    pub fn len(&self) -> usize {
+        self.titles.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.titles.is_empty()
+    }
+}
+
 /// One `FastTravelStationDefinition`.
 #[derive(Clone, Debug)]
 pub struct TravelStation {
