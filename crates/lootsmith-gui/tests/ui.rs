@@ -8,10 +8,7 @@
 
 mod common;
 
-use common::{
-    dumps_or_none, harness, harness_isolated, harness_with, reopen, require_fixtures,
-    synthetic_save_path,
-};
+use common::{harness, harness_isolated, reopen, synthetic_save_path};
 use egui::Vec2;
 use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
@@ -19,7 +16,7 @@ use lootsmith_core::Container;
 use lootsmith_gui::app::{LootsmithApp, Tab};
 
 /// Unique id of the first synthetic backpack weapon.
-const TEST_WEAPON_ID: &str = "id=200";
+const TEST_WEAPON_ID: &str = "id=400";
 
 #[test]
 fn loads_the_synthetic_save_and_switches_tabs() {
@@ -28,7 +25,7 @@ fn loads_the_synthetic_save_and_switches_tabs() {
     let state = h.state();
     assert!(state.is_loaded(), "the synthetic save loads");
     assert_eq!(state.form.level, 40);
-    assert_eq!(state.backpack.len(), 3, "1 item + 2 weapons");
+    assert_eq!(state.backpack.len(), 5, "1 item + 4 weapons");
     assert_eq!(state.bank.len(), 1);
 
     for (label, tab) in [
@@ -40,7 +37,7 @@ fn loads_the_synthetic_save_and_switches_tabs() {
         ("Fast Travel", Tab::Travel),
         ("Vehicles", Tab::Vehicles),
         ("Missions", Tab::Missions),
-        ("Backpack (3)", Tab::Backpack),
+        ("Backpack (5)", Tab::Backpack),
         ("Bank (1)", Tab::Bank),
         ("Raw", Tab::Raw),
         ("About", Tab::About),
@@ -56,7 +53,7 @@ fn loads_the_synthetic_save_and_switches_tabs() {
 fn selects_a_backpack_row_by_label() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
 
     h.get_by_label_contains(TEST_WEAPON_ID).click();
@@ -72,7 +69,7 @@ fn selects_a_backpack_row_by_label() {
 fn moves_a_weapon_to_the_bank_and_back() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     // Select the first weapon (index 1: the item is index 0).
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
@@ -80,7 +77,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
 
     h.get_by_label("Move to bank").click();
     h.run();
-    assert_eq!(h.state().backpack.len(), 2);
+    assert_eq!(h.state().backpack.len(), 4);
     assert_eq!(h.state().bank.len(), 2);
 
     h.get_by_label("Bank (2)").click();
@@ -89,7 +86,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
     h.run();
     h.get_by_label("Move to backpack").click();
     h.run();
-    assert_eq!(h.state().backpack.len(), 3);
+    assert_eq!(h.state().backpack.len(), 5);
     assert_eq!(h.state().bank.len(), 1);
 }
 
@@ -97,7 +94,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
 fn removes_an_entry() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
@@ -113,7 +110,7 @@ fn removes_an_entry() {
 fn duplicates_a_selected_item() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackItem, 0);
     h.run();
@@ -129,7 +126,7 @@ fn duplicates_a_selected_item() {
 fn syncs_item_levels_to_the_character() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     h.state_mut().sync_levels(false);
     h.run();
@@ -145,7 +142,7 @@ fn syncs_item_levels_to_the_character() {
         assert_eq!(decoded.game_stage(), 40, "weapon synced to level 40");
         weapons += 1;
     }
-    assert_eq!(weapons, 2);
+    assert_eq!(weapons, 4);
     let _ = std::fs::remove_file(&out);
 }
 
@@ -170,11 +167,11 @@ fn save_configs(_file: &lootsmith_core::SaveFile) -> lootsmith_core::AssetLibrar
 fn creates_a_new_weapon_and_inserts_an_item_code() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     h.get_by_label("New weapon").click();
     h.run();
-    assert_eq!(h.state().backpack.len(), 4);
+    assert_eq!(h.state().backpack.len(), 6);
     assert!(h.state().dirty);
 
     // Round-trip a code through the paste box.
@@ -189,7 +186,7 @@ fn creates_a_new_weapon_and_inserts_an_item_code() {
     h.get_by_label("Insert code(s)").click();
     h.run();
     // A malformed code must not add an entry.
-    assert_eq!(h.state().backpack.len(), 4);
+    assert_eq!(h.state().backpack.len(), 6);
 }
 
 #[test]
@@ -274,10 +271,7 @@ fn edits_missions_and_saves() {
 
 #[test]
 fn edits_vehicles_and_saves() {
-    let Some(dumps) = dumps_or_none("edits_vehicles_and_saves") else {
-        return;
-    };
-    let mut h = harness_with(&synthetic_save_path(), Some(&dumps));
+    let mut h = harness_isolated(&synthetic_save_path());
     h.run();
     h.get_by_label("Vehicles").click();
     h.run();
@@ -313,12 +307,9 @@ fn edits_vehicles_and_saves() {
 
 #[test]
 fn edits_a_weapon_part_by_name_and_saves() {
-    let Some(dumps) = dumps_or_none("edits_a_weapon_part_by_name_and_saves") else {
-        return;
-    };
-    let mut h = harness_with(&synthetic_save_path(), Some(&dumps));
+    let mut h = harness_isolated(&synthetic_save_path());
     h.run();
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
@@ -573,7 +564,7 @@ fn bundled_tables_resolve_names_with_no_game_data_folder() {
     assert!(state.missions_data.is_some(), "bundled missions");
 
     // The parts editor resolves a slot to a name (not "#i/j").
-    h.get_by_label("Backpack (3)").click();
+    h.get_by_label("Backpack (5)").click();
     h.run();
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
@@ -626,14 +617,12 @@ fn ui_scale_setter_clamps() {
 
 #[test]
 fn require_fixtures_is_off_by_default_here() {
-    // A guard so the suite notices if someone flips the flag in CI without
-    // providing the data.
-    if require_fixtures() {
-        assert!(
-            common::dumps_path().is_some(),
-            "LOOTSMITH_REQUIRE_FIXTURES=1 demands dumps"
-        );
-    }
+    // The suite must need no external data: the synthetic save plus the bundled
+    // tables are always enough (a clean clone with no fixtures still tests).
+    let h = harness();
+    assert!(h.state().manager.is_some());
+    assert!(h.state().dumps_bundled);
+    assert!(h.state().ignores_env());
 }
 
 /// Kept so the harness type is exercised even when no dumps exist.

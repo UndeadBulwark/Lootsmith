@@ -55,6 +55,67 @@ fn test_item(unique_id: i32) -> PackedData {
     .into_packed(unique_id)
 }
 
+/// Dahl pistol parts (real asset names, so the inspector resolves them).
+const DAHL_PISTOL: &[(&str, &str)] = &[
+    ("type", "GD_Weap_Pistol.A_Weapons.WeaponType_Dahl_Pistol"),
+    ("balance", "GD_Weap_Pistol.A_Weapons.Pistol_Dahl_4_VeryRare"),
+    ("manufacturer", "GD_Manufacturers.Manufacturers.Dahl"),
+    ("body", "GD_Weap_Pistol.Body.Pistol_Body_Dahl_4"),
+    ("grip", "GD_Weap_Pistol.Grip.Pistol_Grip_Dahl"),
+    ("barrel", "GD_Weap_Pistol.Barrel.Pistol_Barrel_Dahl"),
+    (
+        "material",
+        "GD_Weap_Pistol.ManufacturerMaterials.Mat_Dahl_4",
+    ),
+    (
+        "prefix",
+        "GD_Weap_Shared_Names.Name.Prefix_Dahl.Prefix_Grip_Dahl",
+    ),
+    ("title", "GD_Weap_Pistol.Name.Title_Dahl.Title__Repeater"),
+];
+
+/// Jakobs pistol parts.
+const JAKOBS_PISTOL: &[(&str, &str)] = &[
+    ("type", "GD_Weap_Pistol.A_Weapons.WeaponType_Jakobs_Pistol"),
+    (
+        "balance",
+        "GD_Weap_Pistol.A_Weapons.Pistol_Jakobs_4_VeryRare",
+    ),
+    ("manufacturer", "GD_Manufacturers.Manufacturers.Jakobs"),
+    ("body", "GD_Weap_Pistol.Body.Pistol_Body_Jakobs_4"),
+    ("grip", "GD_Weap_Pistol.Grip.Pistol_Grip_Jakobs"),
+    ("barrel", "GD_Weap_Pistol.Barrel.Pistol_Barrel_Jakobs"),
+    (
+        "material",
+        "GD_Weap_Pistol.ManufacturerMaterials.Mat_Jakobs_4",
+    ),
+    (
+        "prefix",
+        "GD_Weap_Shared_Names.Name.Prefix_Jakobs.Prefix_Hard",
+    ),
+    ("title", "GD_Weap_Pistol.Name.Title_Jakobs.Title__Iron"),
+];
+
+/// A weapon assembled by **name** from the bundled asset library, so the item
+/// inspector resolves real parts and a composed display name without any
+/// personal save. Falls back to the index-based test weapon if the bundled
+/// library is unavailable.
+fn named_weapon(unique_id: i32, stage: i32, parts: &[(&str, &str)]) -> PackedData {
+    let Ok(manager) = crate::bundled::asset_library() else {
+        return test_weapon(unique_id, stage);
+    };
+    let weapon = PackedWeapon {
+        manufacturer_grade_index: 2,
+        game_stage: stage,
+        ..Default::default()
+    };
+    let mut decoded = weapon.into_packed(unique_id);
+    for (slot, name) in parts {
+        let _ = decoded.set_part(&manager, slot, name);
+    }
+    decoded
+}
+
 /// The synthetic save.
 pub fn synthetic_save() -> SaveGame {
     let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
@@ -78,8 +139,18 @@ pub fn synthetic_save() -> SaveGame {
     save.set_str(26, "20260101000001");
 
     let configs = crate::gameinfo::AssetLibraryConfigs::pc_default();
-    let blobs: &[(Container, PackedData)] = &[
+    let blobs: Vec<(Container, PackedData)> = vec![
         (Container::BackpackItem, test_item(100)),
+        // Named weapons first, so the inspector's first row has real parts and
+        // a composed display name (no personal save needed).
+        (
+            Container::BackpackWeapon,
+            named_weapon(400, 40, DAHL_PISTOL),
+        ),
+        (
+            Container::BackpackWeapon,
+            named_weapon(401, 40, JAKOBS_PISTOL),
+        ),
         (Container::BackpackWeapon, test_weapon(200, 12)),
         (Container::BackpackWeapon, test_weapon(201, 17)),
         (Container::Bank, test_weapon(300, 5)),
@@ -266,7 +337,7 @@ mod tests {
         assert_eq!(save.exp_level(), Some(40));
         assert_eq!(save.currency_on_hand(), [12_345, 30, 4, 9]);
         assert_eq!(save.num_golden_keys_notified(), Some(3));
-        assert_eq!(save.packed_entries().len(), 3);
+        assert_eq!(save.packed_entries().len(), 5);
         assert_eq!(save.bank_entries().len(), 1);
         assert_eq!(save.skills().len(), 3);
         assert_eq!(save.resources().len(), 3);

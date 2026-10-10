@@ -64,9 +64,10 @@ pub fn dumps_path() -> Option<String> {
     }
 }
 
-/// The synthetic save with dumps when available (the common case).
+/// The synthetic save with the **bundled** game-data tables (no external
+/// folder, no environment): the common case for every GUI test.
 pub fn harness() -> Harness<'static, LootsmithApp> {
-    harness_with(&synthetic_save_path(), dumps_path().as_deref())
+    harness_isolated(&synthetic_save_path())
 }
 
 /// A harness over an explicit save (and optional dumps).
