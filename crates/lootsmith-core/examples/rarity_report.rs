@@ -52,15 +52,15 @@ fn main() {
     let mut groups: BTreeMap<&str, Vec<&String>> = BTreeMap::new();
     for name in &report.unclassified {
         let marker = if name.contains(".BalanceDefs.") {
-            "non-gear balance defs (mission/pickup items)"
+            "non-gear (mission pickups, heads/skins — no rarity by nature)"
         } else if name.contains("Unique") {
-            "Unique weapons/items (awaiting the override list)"
+            "gear: unique — no exact/unique name join in Borderlens (see the generator report)"
         } else if name.contains("ClassMods") {
-            "class mods"
+            "gear: class mods with no name match"
         } else if name.contains("A_Weapons") || name.contains("A_Item") {
-            "gear without a rarity marker in its name"
+            "gear: no tier marker in the name and no name join"
         } else {
-            "other"
+            "material/vehicle/ammo balances (not items)"
         };
         groups.entry(marker).or_default().push(name);
     }

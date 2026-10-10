@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "_notes": [
+    "Explicit, human-reviewed aliases for the exact-name join between a balance",
+    "leaf and a Borderlens display name. One line per case, each with a reason.",
+    "No fuzzy matching anywhere: a name that is not listed here or exactly equal",
+    "to the balance leaf token stays Unknown and is reported by gen-rarity.py."
+  ],
+  "aliases": [
+    {
+      "borderlens": "Hive",
+      "leaf": "TheHive",
+      "reason": "Borderlens lists the item as 'Hive'; the balance leaf carries the definite article (RL_Maliwan_3_TheHive)."
+    },
+    {
+      "borderlens": "The Bee",
+      "leaf": "TheBee",
+      "reason": "Both carry the article; listed so the exact-token rule is visible and testable."
+    }
+  ]
+}
