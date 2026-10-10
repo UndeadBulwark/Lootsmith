@@ -10,6 +10,8 @@ pub struct Gallery {
     scale: f32,
     applied: bool,
     dither: Option<egui::TextureHandle>,
+    /// Where the dither swatch was painted (for the swatch test).
+    pub dither_swatch: Rect,
 }
 
 pub fn build(ui: &mut egui::Ui, g: &mut Gallery) {
@@ -107,6 +109,7 @@ pub fn build(ui: &mut egui::Ui, g: &mut Gallery) {
     );
     // The dither is deliberately subtle; show it at 2x so the checker reads.
     let dither_rect = Rect::from_min_size(pos2(x, y + 22.0), vec2(160.0, 48.0));
+    g.dither_swatch = dither_rect;
     let hatch_rect = Rect::from_min_size(pos2(x + 180.0, y + 22.0), vec2(160.0, 48.0));
     painter.rect_filled(dither_rect, 0.0, p.bg);
     paint_dither_2x(&painter, dither_rect, p);
@@ -166,6 +169,7 @@ pub fn harness(theme: Theme, scale: f32, size: Vec2) -> Harness<'static, Gallery
             scale,
             applied: false,
             dither: None,
+            dither_swatch: Rect::NOTHING,
         },
     )
 }

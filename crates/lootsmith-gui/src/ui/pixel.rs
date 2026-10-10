@@ -299,6 +299,18 @@ mod tests {
         assert!((snap(14.0, 1.5) * 1.5 - 21.0).abs() < 1e-3); // diamond
     }
 
+    /// The dither tile is an 8x8 two-colour checker.
+    #[test]
+    fn dither_tile_is_an_8px_checker() {
+        for p in [&crate::theme::DARK, &crate::theme::LIGHT] {
+            let img = dither_tile(p);
+            assert_eq!(img.size, [8, 8]);
+            assert_eq!(img.pixels[0], p.tex);
+            assert_eq!(img.pixels[1], p.bg);
+            assert_eq!(img.pixels[8], p.bg);
+            assert_eq!(img.pixels[9], p.tex);
+        }
+    }
     /// `notched_rect` returns 12 points with corners stepped at the given size.
     #[test]
     fn notched_rect_is_a_twelve_point_stepped_polygon() {
