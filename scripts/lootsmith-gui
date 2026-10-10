@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Launch Lootsmith. Builds the release binary on first run.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BIN="$ROOT/target/release/lootsmith-gui"
+if [ ! -x "$BIN" ]; then
+  echo "Building Lootsmith (first run)…" >&2
+  (cd "$ROOT" && cargo build --release -p lootsmith-gui)
+fi
+exec "$BIN" "$@"

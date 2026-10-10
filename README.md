@@ -83,11 +83,39 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
 
 ```sh
 cargo run -p lootsmith-gui
+# or open a specific save:
+cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
+    --dumps "/path/Asset Library Manager.json"
 ```
 
-A minimal `egui` window: type a save path, **Load**, edit the common scalars,
-see the item list, and **Save** (writes in place, creating a `.bak` backup).
-The Asset Library path field enables item names.
+A native window: **Browse…** for the save and the Asset Library, edit the common
+scalars, see the item list, and **Save** (in place, creating a `.bak`) or
+**Save As**. The Asset Library path enables item names.
+
+### Desktop launcher (interim)
+
+`scripts/lootsmith-gui` builds the release binary on first run and launches it.
+A menu entry is installed at `~/.local/share/applications/lootsmith.desktop`
+(with an icon), so Lootsmith can be opened from the application menu; opening a
+`.sav` with it passes the file via `%f`.
+
+### Driving it for debugging
+
+`scripts/gui-drive.sh` launches the GUI on X11 (Xwayland), finds its window, and
+screenshots it, so it can be driven with `xdotool`:
+
+```sh
+scripts/gui-drive.sh --open tests/fixtures/pc_Save0001.sav --dumps "$DUMPS"
+# -> pid=… window=… shot=/tmp/opencode/lootsmith-shot.png
+```
+
+A headless self-test (load → edit → save → reload → verify, no window):
+
+```sh
+cargo run -p lootsmith-gui -- --selftest --open tests/fixtures/pc_Save0001.sav
+```
+
+Logs go to `~/.cache/lootsmith/gui.log`.
 
 ## Tests
 
