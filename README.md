@@ -10,16 +10,17 @@ currency, skills, and progression. It ships as a library (`lootsmith-core`), a
 CLI (`lootsmith-cli`), and (later) an `egui` desktop app (`lootsmith-gui`),
 with `lootsmith` as a facade crate.
 
-Status: **Phase 0/1 — container unwrap implemented and validated against a real
-PC save.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
+Status: **core + CLI complete and validated against a real PC save; the GUI is a
+working editor (General, Character, Currency, Backpack, Bank) with more parity
+tabs to come.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
 
 ## Workspace layout
 
 | Crate | Purpose |
 |---|---|
 | `lootsmith-core` | Container, bit/Huffman codecs, protobuf codec, item codec, game data |
-| `lootsmith-cli` | `inspect`, `verify`, `dump` |
-| `lootsmith-gui` | `egui` desktop front end (stub) |
+| `lootsmith-cli` | `inspect`, `verify`, `dump`, `items`, `edit` |
+| `lootsmith-gui` | `egui` desktop front end (library + binary) |
 | `lootsmith` | Facade re-exporting `lootsmith-core` |
 
 ## Save format (verified against upstream `SaveFile.cs`)
@@ -57,7 +58,11 @@ cargo run -p lootsmith-cli -- inspect /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- verify  /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- dump    /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --dumps "/path/Asset Library Manager.json"
+cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --container bank
 ```
+
+`items` lists the backpack (fields 53/54) and the bank (field 41); pass
+`--container bag|bank` to filter (default `all`).
 
 Edit and write (in place with a `.bak` backup, or with `--out`):
 
@@ -79,6 +84,9 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
     --dumps "/path/Asset Library Manager.json" --out /path/to/edited.sav
 ```
 
+`--item N` indexes the backpack (fields 53 then 54); add `--container bank` to
+address a bank entry (field 41) instead.
+
 ## GUI
 
 ```sh
@@ -88,9 +96,12 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
     --dumps "/path/Asset Library Manager.json"
 ```
 
-A native window: **Browse…** for the save and the Asset Library, edit the common
-scalars, see the item list, and **Save** (in place, creating a `.bak`) or
-**Save As**. The Asset Library path enables item names.
+A native window with tabs for **General**, **Character**, **Currency**,
+**Backpack**, and **Bank**. Edit the common scalars; see the item list with
+per-item quantity/equipped and per-weapon quick slot; select an entry to edit its
+parts by name, change a stack quantity, **Move to bank** / **Move to backpack**,
+or **Remove**; then **Save** (in place, creating a `.bak`) or **Save As**. The
+Asset Library path enables item names.
 
 ### Desktop launcher (interim)
 
