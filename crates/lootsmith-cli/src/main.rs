@@ -16,6 +16,9 @@ fn usage() -> ExitCode {
          lootsmith verify  <file.sav> [--platform <id>]\n  \
          lootsmith dump    <file.sav> [--platform <id>]\n  \
          lootsmith saves   [--platform <id>]\n  \
+         lootsmith new     --out OUT [--class NAME] [--platform <id>]\n  \
+         lootsmith json    <file.sav> [--out FILE] [--platform <id>]\n  \
+         lootsmith unjson  <file.json> --out OUT [--platform <id>]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith skills  <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
@@ -31,6 +34,8 @@ fn usage() -> ExitCode {
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
+         --class accepts a full class id or: soldier/axton, siren/maya, mercenary/salvador/gunzerker,\n\
+         assassin/zer0/zero, lilac/krieg/psycho, tulip/gaige/mechromancer.\n\
          --stations <Travel Stations.json> resolves teleporter names (or set LOOTSMITH_TRAVEL_STATIONS).\n\
          --customizations <Customizations.json> resolves vehicle skin names (or set LOOTSMITH_CUSTOMIZATIONS).\n\
          --missions-json <Missions.json> resolves mission names (or set LOOTSMITH_MISSIONS).\n\
@@ -73,6 +78,7 @@ struct Args {
     mission_playthrough: Option<usize>,
     mission_index: Option<usize>,
     mission_status: Option<String>,
+    class: Option<String>,
     scope: Scope,
 }
 
@@ -98,7 +104,7 @@ impl Scope {
 fn parse_args() -> Option<Args> {
     let mut it = std::env::args().skip(1);
     let command = it.next()?;
-    let file = if command == "saves" {
+    let file = if matches!(command.as_str(), "saves" | "new") {
         String::new()
     } else {
         it.next()?
@@ -136,6 +142,7 @@ fn parse_args() -> Option<Args> {
         mission_playthrough: None,
         mission_index: None,
         mission_status: None,
+        class: None,
         scope: Scope::All,
     };
     while let Some(arg) = it.next() {
@@ -173,6 +180,7 @@ fn parse_args() -> Option<Args> {
             "--mission-playthrough" => args.mission_playthrough = Some(it.next()?.parse().ok()?),
             "--mission-index" => args.mission_index = Some(it.next()?.parse().ok()?),
             "--mission-status" => args.mission_status = Some(it.next()?),
+            "--class" => args.class = Some(it.next()?),
             _ => return None,
         }
     }
@@ -193,6 +201,27 @@ fn load_manager(dumps: &Option<String>) -> Option<AssetLibraryManager> {
             None
         }
     }
+}
+
+/// Resolve a class argument to its full id: short names, full ids both work.
+/// Note the ids: Lilac = Krieg (Psycho), Tulip = Gaige (Mechromancer).
+fn resolve_class(name: &str) -> String {
+    match name.to_ascii_lowercase().as_str() {
+        "soldier" | "axton" | "commando" => "GD_Soldier.Character.CharClass_Soldier",
+        "siren" | "maya" => "GD_Siren.Character.CharClass_Siren",
+        "mercenary" | "salvador" | "sal" | "gunzerker" => {
+            "GD_Mercenary.Character.CharClass_Mercenary"
+        }
+        "assassin" | "zer0" | "zero" => "GD_Assassin.Character.CharClass_Assassin",
+        "lilac" | "krieg" | "psycho" => {
+            "GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass"
+        }
+        "tulip" | "gaige" | "mechromancer" => {
+            "GD_Tulip_Mechromancer.Character.CharClass_Mechromancer"
+        }
+        _ => name,
+    }
+    .to_string()
 }
 
 fn usage_for_family(family: &str) -> Option<&'static str> {
@@ -280,6 +309,77 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
+    if args.command == "new" {
+        let Some(out) = args.out.clone() else {
+            eprintln!("error: new requires --out <file.sav>");
+            return ExitCode::from(2);
+        };
+        let class = args
+            .class
+            .as_deref()
+            .map(resolve_class)
+            .unwrap_or_else(|| "GD_Soldier.Character.CharClass_Soldier".to_string());
+        let mut save = lootsmith_core::savegame::SaveGame::blank(&class);
+        save.refresh_guid();
+        let bytes = match container::serialize(&save.to_bytes(), args.platform) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        match std::fs::write(&out, &bytes) {
+            Ok(()) => println!(
+                "wrote blank {} save ({}): {} bytes → {}",
+                args.platform.id(),
+                class,
+                bytes.len(),
+                out
+            ),
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+
+    if args.command == "unjson" {
+        let Some(out) = args.out.clone() else {
+            eprintln!("error: unjson requires --out <file.sav>");
+            return ExitCode::from(2);
+        };
+        let text = match std::fs::read_to_string(&args.file) {
+            Ok(text) => text,
+            Err(e) => {
+                eprintln!("error: cannot read {}: {e}", args.file);
+                return ExitCode::FAILURE;
+            }
+        };
+        let save = match lootsmith_core::savejson::save_from_json(&text) {
+            Ok(save) => save,
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let bytes = match container::serialize(&save.to_bytes(), args.platform) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        match std::fs::write(&out, &bytes) {
+            Ok(()) => println!("wrote {} ({} bytes)", out, bytes.len()),
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+
     let data = match std::fs::read(&args.file) {
         Ok(d) => d,
         Err(e) => {
@@ -337,6 +437,26 @@ fn main() -> ExitCode {
                 );
                 ExitCode::FAILURE
             }
+        }
+        "json" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let text = lootsmith_core::savejson::save_to_json(&save_game);
+            if let Some(out) = &args.out {
+                if std::fs::write(out, text).is_err() {
+                    eprintln!("error: cannot write {out}");
+                    return ExitCode::FAILURE;
+                }
+                println!("wrote {out}");
+            } else {
+                println!("{text}");
+            }
+            ExitCode::SUCCESS
         }
         "dump" => {
             let save_game = match save.save_game() {

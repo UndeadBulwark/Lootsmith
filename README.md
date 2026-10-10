@@ -67,6 +67,21 @@ cargo run -p lootsmith-cli -- vehicles /path/to/Save0001.sav --customizations "/
 cargo run -p lootsmith-cli -- missions /path/to/Save0001.sav --missions-json "/path/Missions.json"
 ```
 
+Start a fresh save, and convert saves to/from wire-faithful JSON:
+
+```sh
+cargo run -p lootsmith-cli -- new --class soldier --out /path/to/NewSave.sav
+cargo run -p lootsmith-cli -- json   /path/to/Save0001.sav --out /path/to/save.json
+cargo run -p lootsmith-cli -- unjson /path/to/save.json --out /path/to/rebuilt.sav
+```
+
+`new` writes a blank, spec-driven level-1 save for the chosen class
+(soldier/axton, siren/maya, mercenary/salvador, assassin/zer0, lilac/krieg/
+psycho, tulip/gaige/mechromancer; full class ids also accepted) — blank saves
+are experimental, in-game verification recommended. `json` dumps every top-level
+field preserving order, duplicates and wire types (nested messages, base64
+blobs); `unjson` rebuilds a save byte-identically.
+
 `saves` lists the Borderlands 2 saves found on this machine (native Linux port,
 Steam/Proton prefixes, and Wine/Lutris/custom prefixes).
 
@@ -86,10 +101,9 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
     --level 61 --currency 1234567 --golden-keys 42 --out /path/to/edited.sav
 ```
 
-Every command defaults to the PC platform (`--platform pc`); other platforms are
-accepted but only PC is tested today. `--dumps` (or `LOOTSMITH_ASSET_LIBRARY`)
-points at the Gibbed `Asset Library Manager.json` so asset indices resolve to
-names; without it the CLI prints raw indices.
+Every command defaults to the PC platform (`--platform pc`). `--dumps` (or
+`LOOTSMITH_ASSET_LIBRARY`) points at the Gibbed `Asset Library Manager.json` so
+asset indices resolve to names; without it the CLI prints raw indices.
 
 Edit a weapon part by name:
 
@@ -145,18 +159,25 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 ```
 
 A native window with a toolbar (**Open / Find saves / Save / Save As / Reload /
-Game data**, with `Ctrl+O/S/Shift+S/R`), a light/dark theme toggle, and a status
-bar. Lootsmith **finds your saves automatically** — native Aspyr, Steam/Proton
-(appid 49520, all Steam roots incl. Flatpak), and generic Wine/Lutris/custom
-prefixes like a ZLuda prefix under `$HOME` — and on first run opens the newest one.
-**Find saves** lets you pick from what it found. Pick the **game-data folder**
-once (the directory holding `Asset Library Manager.json`) and the Asset Library,
-Travel Stations, Customizations and Missions tables are all loaded from it, so
-names resolve everywhere.
+New… / Import… / platform / Game data**, with `Ctrl+O/S/Shift+S/R`), a
+light/dark theme toggle, and a status bar. Lootsmith **finds your saves
+automatically** — native Aspyr, Steam/Proton (appid 49520, all Steam roots incl.
+Flatpak), and generic Wine/Lutris/custom prefixes like a ZLuda prefix under
+`$HOME` — and on first run opens the newest one. **Find saves** lets you pick
+from what it found. Pick the **game-data folder** once (the directory holding
+`Asset Library Manager.json`) and the Asset Library, Travel Stations,
+Customizations and Missions tables are all loaded from it, so names resolve
+everywhere. The **platform combo** next to Save As… writes PC/PS3/X360/… container
+formats for porting saves between platforms.
 
-Tabs: **General**, **Character** (name, level, head & skin), **Currency**,
-**Skills**, **Fast Travel**, **Vehicles**, **Missions**, **Backpack**, **Bank**, and
-**Raw** (edit any scalar top-level field). The **Skills** tab is a full skill-tree
+Tabs: **General**, **Character** (name, level, head & skin), **Currency**
+(named money/eridium/seraph/torgue), **Skills**, **Fast Travel**, **Vehicles**,
+**Missions**, **Backpack**, **Bank**, and **Raw** (edit any scalar top-level
+field). The **General** tab has Max / OP-max level buttons (72 / 80). **New…**
+creates a fresh character save — clone-and-reset (reliable) or a spec-driven
+blank save (experimental); **Import…** copies chosen sections (skills, missions,
+challenges, fast travel, vehicles, DLC data, bank slots) from another save into
+the open one. The **Skills** tab is a full skill-tree
 calculator (like bl2skills.com): per-class trees with tiers, icons and max ranks,
 left-click to add a rank and right-click to remove, tier gating at 5 points per
 tier, and live spent/available counts. The Backpack/Bank tabs create blank

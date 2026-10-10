@@ -495,3 +495,92 @@ fn removes_an_entry() {
     assert_eq!(h.state().backpack.len(), before - 1);
     assert_eq!(h.state().selected, None);
 }
+
+#[test]
+fn new_blank_save_is_fresh_and_writable() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+    app.new_class = 0; // sorted ids: GD_Assassin first → Zer0
+    app.new_blank_save();
+
+    let state = &app;
+    assert!(state.save_game.is_some());
+    assert_eq!(state.form.level, 1);
+    assert_eq!(state.form.general_skill_points, 3);
+    assert!(state.backpack.is_empty() && state.bank.is_empty());
+    assert!(state.dirty, "a new save is unsaved until Save As…");
+    assert!(state.status.contains("Zer0") || state.status.contains("Assassin"));
+
+    let out = std::env::temp_dir().join("lootsmith-test-blank.sav");
+    app.save_to(out.to_str().unwrap());
+    let reopened = reopen(&out);
+    let save = reopened.save_game().expect("parse blank save");
+    assert_eq!(
+        save.player_class().as_deref(),
+        Some("GD_Assassin.Character.CharClass_Assassin")
+    );
+    assert_eq!(save.exp_level(), Some(1));
+    assert_eq!(save.currency_on_hand(), [0, 0, 0, 0]);
+    let _ = std::fs::remove_file(&out);
+}
+
+#[test]
+fn new_clone_save_resets_progress() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut app = LootsmithApp::new(Some(save), Some(dumps));
+    app.load();
+    assert_eq!(app.form.level, 72);
+    app.new_clone_save();
+
+    assert_eq!(app.form.level, 1);
+    assert_eq!(app.form.general_skill_points, 3);
+    assert!(app.backpack.is_empty() && app.bank.is_empty());
+    assert!(app.dirty);
+    let guid = app
+        .save_game
+        .as_ref()
+        .expect("cloned save")
+        .get_bytes(34)
+        .map(|b| b.to_vec());
+    assert!(guid.is_some());
+}
+
+#[test]
+fn import_sections_copies_travel_from_another_save() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    // Work on a copy so the fixture itself is never touched.
+    let copy = std::env::temp_dir().join("lootsmith-test-import.sav");
+    std::fs::copy(&save, &copy).expect("copy fixture");
+    let mut app = LootsmithApp::new(Some(copy.to_str().unwrap().to_string()), Some(dumps));
+    app.load();
+
+    let expected = app.travel.clone();
+    assert!(!expected.is_empty(), "fixture has visited teleporters");
+    let last = expected.last().cloned().unwrap();
+    app.save_game
+        .as_mut()
+        .expect("open save")
+        .remove_visited_teleporter(&last);
+    app.travel.retain(|t| *t != last);
+    assert_eq!(app.travel.len(), expected.len() - 1);
+
+    app.import_sel = lootsmith_gui::app::ImportSel {
+        travel: true,
+        ..lootsmith_gui::app::ImportSel::default()
+    };
+    app.import_path = copy.to_str().unwrap().to_string();
+    app.do_import();
+
+    assert_eq!(app.travel.len(), expected.len());
+    assert!(app.travel.contains(&last));
+    assert!(app.status.contains("fast travel"));
+    assert!(app.dirty);
+    let _ = std::fs::remove_file(&copy);
+}

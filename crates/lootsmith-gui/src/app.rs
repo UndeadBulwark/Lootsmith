@@ -416,6 +416,17 @@ fn skill_tile(ui: &mut egui::Ui, t: &TileState) -> egui::Response {
     }
 }
 
+/// Display label for a currency slot.
+fn currency_name(index: usize) -> String {
+    match index {
+        0 => "Money".to_string(),
+        1 => "Eridium".to_string(),
+        2 => "Seraph crystals".to_string(),
+        3 => "Torgue tokens".to_string(),
+        n => format!("Slot {n}"),
+    }
+}
+
 fn tab_key(tab: Tab) -> &'static str {
     match tab {
         Tab::General => "general",
@@ -455,8 +466,31 @@ enum Action {
     Save,
     SaveAs,
     Reload,
+    New,
+    Import,
     PickData,
     ToggleTheme,
+}
+
+/// Which auxiliary window is open.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+enum Modal {
+    #[default]
+    None,
+    NewSave,
+    Import,
+}
+
+/// Sections the Import dialog can copy from another save.
+#[derive(Default, Clone, Copy)]
+pub struct ImportSel {
+    pub skills: bool,
+    pub missions: bool,
+    pub challenges: bool,
+    pub travel: bool,
+    pub vehicles: bool,
+    pub dlc: bool,
+    pub bank_slots: bool,
 }
 
 /// A backpack/bank toolbar action.
@@ -595,6 +629,16 @@ pub struct LootsmithApp {
     /// Saves discovered on disk for the "Find saves" picker.
     pub saves: Vec<SaveCandidate>,
     pub show_saves: bool,
+    /// Container format (endian/compression) used when writing via Save As.
+    pub save_platform: Platform,
+    /// The `New…` / `Import…` window, when open.
+    modal: Modal,
+    /// New-save picker state: class index and blank-vs-clone choice.
+    pub new_class: usize,
+    pub new_blank: bool,
+    /// Import dialog state: other save's path and chosen sections.
+    pub import_path: String,
+    pub import_sel: ImportSel,
     loaded_once: bool,
     pub tab: Tab,
     /// Selected entry as (container, occurrence).
@@ -764,6 +808,12 @@ impl LootsmithApp {
             skill_icons: HashMap::new(),
             saves: Vec::new(),
             show_saves: false,
+            save_platform: Platform::PC,
+            modal: Modal::None,
+            new_class: 0,
+            new_blank: false,
+            import_path: String::new(),
+            import_sel: ImportSel::default(),
             loaded_once: false,
             tab: Tab::General,
             selected: None,
@@ -834,6 +884,17 @@ impl LootsmithApp {
                 return;
             }
         };
+        let status = format!(
+            "loaded {} ({} bytes, crc32 {})",
+            self.path,
+            data.len(),
+            if save.crc32_valid() { "ok" } else { "MISMATCH" }
+        );
+        self.accept_save(save_game, status);
+    }
+
+    /// Fill every view (form, rows, skills, …) from a parsed save.
+    fn accept_save(&mut self, save_game: SaveGame, status: String) {
         self.form = Form {
             character_name: save_game.character_name().unwrap_or_default(),
             head: save_game
@@ -869,12 +930,7 @@ impl LootsmithApp {
         self.save_game = Some(save_game);
         self.selected = None;
         self.item_edit = None;
-        self.status = format!(
-            "loaded {} ({} bytes, crc32 {})",
-            self.path,
-            data.len(),
-            if save.crc32_valid() { "ok" } else { "MISMATCH" }
-        );
+        self.status = status;
         self.refresh_rows();
         self.refresh_skills();
         self.refresh_travel();
@@ -1716,7 +1772,7 @@ impl LootsmithApp {
         if !self.form.currency.is_empty() {
             save_game.set_int_list_packed(6, &self.form.currency);
         }
-        match container::serialize(&save_game.to_bytes(), Platform::PC) {
+        match container::serialize(&save_game.to_bytes(), self.save_platform) {
             Ok(bytes) => Some(bytes),
             Err(e) => {
                 self.status = format!("serialize error: {e}");
@@ -1769,6 +1825,125 @@ impl LootsmithApp {
     pub fn save_to(&mut self, path: &str) {
         self.save_as = path.to_string();
         self.save_as();
+    }
+
+    // ---- new saves & section import ----
+
+    /// Start a fresh character by cloning the open save and resetting
+    /// progress for the chosen class. The save is only written when the user
+    /// uses Save As….
+    pub fn new_clone_save(&mut self) {
+        let Some(save_game) = self.save_game.clone() else {
+            self.modal = Modal::None;
+            self.status = "nothing to clone — open or locate a save first".into();
+            return;
+        };
+        let class = self.new_class_choice();
+        let mut save = save_game;
+        save.make_fresh_character(class);
+        let note = format!(
+            "new save — fresh {} cloned; use Save As… to write it",
+            crate::skills::class_display_name(class)
+        );
+        self.path.clear();
+        self.accept_save(save, note);
+        self.dirty = true;
+        self.modal = Modal::None;
+        self.tab = Tab::General;
+    }
+
+    /// Start an experimental from-scratch save (spec-driven blank). Only the
+    /// baseline fields are written; the game may be strict about this path,
+    /// so in-game verification is recommended.
+    pub fn new_blank_save(&mut self) {
+        let class = self.new_class_choice();
+        let save = SaveGame::blank(class);
+        let note = format!(
+            "new blank save ({} — experimental; verify in game); use Save As… to write it",
+            crate::skills::class_display_name(class)
+        );
+        self.path.clear();
+        self.accept_save(save, note);
+        self.dirty = true;
+        self.modal = Modal::None;
+        self.tab = Tab::General;
+    }
+
+    fn new_class_choice(&self) -> &'static str {
+        let classes = crate::skills::class_ids();
+        let idx = self.new_class.min(classes.len().saturating_sub(1));
+        classes[idx]
+    }
+
+    /// Copy the selected sections from another save into the open save.
+    pub fn do_import(&mut self) {
+        if self.import_path.trim().is_empty() {
+            self.status = "enter or browse the other save's path first".into();
+            return;
+        }
+        let data = match std::fs::read(self.import_path.trim()) {
+            Ok(data) => data,
+            Err(e) => {
+                self.status = format!("import read error: {e}");
+                return;
+            }
+        };
+        let other = match container::unpack(&data, Platform::PC)
+            .and_then(|file| file.save_game())
+        {
+            Ok(save) => save,
+            Err(e) => {
+                self.status = format!("import parse error: {e}");
+                return;
+            }
+        };
+        let sel = self.import_sel;
+        let mut numbers: Vec<u32> = Vec::new();
+        let mut groups: Vec<&str> = Vec::new();
+        if sel.skills {
+            numbers.push(8);
+            groups.push("skills");
+        }
+        if sel.missions {
+            numbers.push(18);
+            groups.push("missions");
+        }
+        if sel.challenges {
+            numbers.extend([38, 39, 40, 42]);
+            groups.push("challenges");
+        }
+        if sel.travel {
+            numbers.extend([16, 17]);
+            groups.push("fast travel");
+        }
+        if sel.vehicles {
+            numbers.extend([57, 58]);
+            groups.push("vehicles");
+        }
+        if sel.dlc {
+            numbers.push(27);
+            groups.push("DLC expansions");
+        }
+        if sel.bank_slots {
+            numbers.push(41);
+            groups.insert(0, "bank slots");
+        }
+        if numbers.is_empty() {
+            self.status = "select at least one section to import".into();
+            return;
+        }
+        let Some(save) = self.save_game.take() else {
+            return;
+        };
+        let mut save = save;
+        save.import_fields_from(&other, &numbers);
+        let name = std::path::Path::new(self.import_path.trim())
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| self.import_path.clone());
+        self.accept_save(save, format!("imported {} from {name}", groups.join(", ")));
+        self.dirty = true;
+        self.modal = Modal::None;
     }
 
     // ---- settings / theme / shortcuts ----
@@ -1876,6 +2051,13 @@ impl LootsmithApp {
             Action::Save => self.save_in_place(),
             Action::SaveAs => self.browse_save_as(),
             Action::Reload => self.load(),
+            Action::New => self.modal = Modal::NewSave,
+            Action::Import => {
+                self.modal = Modal::Import;
+                if self.import_path.trim().is_empty() {
+                    self.import_path = self.path.clone();
+                }
+            }
             Action::PickData => self.browse_dumps_dir(),
             Action::ToggleTheme => {
                 self.theme = match self.theme {
@@ -1998,6 +2180,40 @@ impl LootsmithApp {
                             action = Some(Action::Reload);
                         }
                     });
+                    toolbar_sep(ui);
+                    if ui
+                        .button("New…")
+                        .on_hover_text("Create a fresh character save (clone or blank)")
+                        .clicked()
+                    {
+                        action = Some(Action::New);
+                    }
+                    if ui
+                        .button("Import…")
+                        .on_hover_text("Copy sections (skills, missions, …) from another save")
+                        .clicked()
+                    {
+                        action = Some(Action::Import);
+                    }
+                    egui::ComboBox::from_id_salt("save_platform")
+                        .selected_text(self.save_platform.id().to_uppercase())
+                        .width(80.0)
+                        .show_ui(ui, |ui| {
+                            for platform in [
+                                Platform::PC,
+                                Platform::X360,
+                                Platform::PS3,
+                                Platform::PSVita,
+                                Platform::Shield,
+                                Platform::Switch,
+                            ] {
+                                ui.selectable_value(
+                                    &mut self.save_platform,
+                                    platform,
+                                    platform.id().to_uppercase(),
+                                );
+                            }
+                        });
                     toolbar_sep(ui);
                     if ui.button("Game data…").clicked() {
                         action = Some(Action::PickData);
@@ -2155,6 +2371,136 @@ impl LootsmithApp {
                 self.load();
             }
         }
+
+        if self.modal == Modal::NewSave {
+            let classes = crate::skills::class_ids();
+            let mut new_class = self.new_class;
+            let mut new_blank = self.new_blank;
+            let mut open = true;
+            let mut create = false;
+            let mut cancel = false;
+            egui::Window::new("New save")
+                .collapsible(false)
+                .resizable(false)
+                .open(&mut open)
+                .default_width(430.0)
+                .show(ui.ctx(), |ui| {
+                    ui.label("Create a fresh character. Nothing is written until you use Save As…");
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Class");
+                        egui::ComboBox::from_id_salt("new_class_choice")
+                            .selected_text(crate::skills::class_display_name(
+                                classes[new_class.min(classes.len() - 1)],
+                            ))
+                            .show_ui(ui, |ui| {
+                                for (i, id) in classes.iter().enumerate() {
+                                    ui.selectable_value(
+                                        &mut new_class,
+                                        i,
+                                        crate::skills::class_display_name(id),
+                                    );
+                                }
+                            });
+                    });
+                    ui.add_space(6.0);
+                    ui.radio_value(&mut new_blank, false, "Clone the open save, reset progress");
+                    ui.radio_value(&mut new_blank, true, "Blank save (spec-driven, experimental)");
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Create").clicked() {
+                            create = true;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            cancel = true;
+                        }
+                    });
+                });
+            if !open {
+                self.modal = Modal::None;
+            }
+            if let Some(blank) = {
+                self.new_class = new_class;
+                self.new_blank = new_blank;
+                let mut taken = None;
+                if cancel {
+                    taken = Some(false);
+                } else if create {
+                    taken = Some(new_blank);
+                }
+                taken
+            } {
+                if blank {
+                    self.new_blank_save();
+                } else {
+                    self.new_clone_save();
+                }
+            }
+        }
+
+        if self.modal == Modal::Import {
+            let mut path = self.import_path.clone();
+            let mut sel = self.import_sel;
+            let mut open = true;
+            let mut do_import = false;
+            let mut cancel = false;
+            egui::Window::new("Import sections")
+                .collapsible(false)
+                .resizable(false)
+                .open(&mut open)
+                .default_width(460.0)
+                .show(ui.ctx(), |ui| {
+                    ui.label("Copy sections from another save into the open save.");
+                    ui.add_space(6.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Save");
+                        ui.add_sized([360.0, 24.0], egui::TextEdit::singleline(&mut path));
+                    });
+                    ui.add_space(8.0);
+                    egui::Grid::new("import_sel")
+                        .num_columns(2)
+                        .spacing([16.0, 4.0])
+                        .show(ui, |ui| {
+                            for (flag, label) in [
+                                (&mut sel.skills, "Skills (SkillData)"),
+                                (&mut sel.missions, "Missions (playthroughs, statuses)"),
+                                (&mut sel.challenges, "Challenges"),
+                                (&mut sel.travel, "Fast travel stations"),
+                                (&mut sel.vehicles, "Vehicle customizations"),
+                                (&mut sel.dlc, "DLC expansion data"),
+                                (&mut sel.bank_slots, "Bank slots (contents)"),
+                            ] {
+                                ui.checkbox(flag, "");
+                                ui.label(label);
+                                ui.end_row();
+                            }
+                        });
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("Import")
+                            .on_hover_text("Replace the selected sections in the open save")
+                            .clicked()
+                        {
+                            do_import = true;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            cancel = true;
+                        }
+                    });
+                });
+            if !open {
+                self.modal = Modal::None;
+            }
+            if cancel {
+                self.modal = Modal::None;
+            }
+            if do_import {
+                self.import_path = path;
+                self.import_sel = sel;
+                self.do_import();
+            }
+        }
     }
 
     fn ui_general(&mut self, ui: &mut egui::Ui) {
@@ -2167,7 +2513,31 @@ impl LootsmithApp {
             .show(ui, |ui| {
                 let mut changed = false;
                 ui.label("Level");
-                changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
+                ui.horizontal(|ui| {
+                    changed |= ui
+                        .add(
+                            egui::DragValue::new(&mut self.form.level)
+                                .range(1..=80)
+                                .speed(0.2),
+                        )
+                        .changed();
+                    if ui
+                        .button("Max")
+                        .on_hover_text("Vanilla cap: level 72")
+                        .clicked()
+                    {
+                        self.form.level = 72;
+                        changed = true;
+                    }
+                    if ui
+                        .button("OP max")
+                        .on_hover_text("UCP/Overpower cap: level 80")
+                        .clicked()
+                    {
+                        self.form.level = 80;
+                        changed = true;
+                    }
+                });
                 ui.end_row();
                 ui.label("Experience");
                 changed |= ui.add(egui::DragValue::new(&mut self.form.exp_points)).changed();
@@ -2306,7 +2676,7 @@ impl LootsmithApp {
                     .spacing([16.0, 6.0])
                     .show(ui, |ui| {
                         for (i, value) in self.form.currency.iter_mut().enumerate() {
-                            ui.label(format!("Slot {i}"));
+                            ui.label(currency_name(i));
                             changed |= ui.add(egui::DragValue::new(value)).changed();
                             ui.end_row();
                         }

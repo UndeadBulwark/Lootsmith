@@ -16,6 +16,7 @@ pub mod missions;
 pub mod platform;
 pub mod proto;
 pub mod savegame;
+pub mod savejson;
 pub mod travel;
 
 pub use container::{pack_inner, serialize, unpack, wrap, SaveFile, BLOCK_SIZE};

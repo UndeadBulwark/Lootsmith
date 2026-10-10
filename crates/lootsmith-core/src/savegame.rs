@@ -709,6 +709,25 @@ pub const MISSION_STATUSES: &[&str] = &[
 ];
 
 /// The name of a `MissionStatus` value.
+/// 16 pseudo-random bytes for [`SaveGame::refresh_guid`]. Seeded from the
+/// clock with an xorshift step; a tiny non-cryptographic stream is fine for a
+/// save identifier.
+fn random_guid() -> [u8; 16] {
+    let mut seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x9E37_79B9_7F4A_7C15)
+        | 1;
+    let mut out = [0u8; 16];
+    for chunk in out.chunks_mut(8) {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        chunk.copy_from_slice(&seed.to_le_bytes()[..chunk.len()]);
+    }
+    out
+}
+
 pub fn mission_status_name(value: i32) -> &'static str {
     MISSION_STATUSES
         .get(value as usize)
@@ -1125,6 +1144,85 @@ impl SaveGame {
         }
     }
 
+    // ---- section import, fresh characters and blank saves ----
+
+    /// Replace all occurrences of the given top-level fields with `other`'s.
+    /// `other`'s fields are inserted at the position of the first existing
+    /// occurrence (appended when the save has none); everything else stays
+    /// byte-identical.
+    pub fn import_fields_from(&mut self, other: &SaveGame, numbers: &[u32]) {
+        for &number in numbers {
+            let incoming: Vec<Field> = other.message.get_all(number).cloned().collect();
+            let at = self
+                .message
+                .fields
+                .iter()
+                .position(|f| f.number == number)
+                .unwrap_or(self.message.fields.len());
+            self.message.remove_all(number);
+            for (offset, field) in incoming.into_iter().enumerate() {
+                self.message.fields.insert(at + offset, field);
+            }
+        }
+    }
+
+    /// Rotate the save GUID — a fresh identity for a cloned or blank save.
+    pub fn refresh_guid(&mut self) {
+        self.message
+            .set(Field::bytes(34, &random_guid()));
+    }
+
+    /// Reset character-specific progress so a cloned save behaves like a new
+    /// game: chosen class, level 1, exp 0, 3 skill points, zeroed currencies,
+    /// no items/weapons/bank. Missions, travel and challenges are left alone
+    /// so the save's structure stays recognisably valid to the game.
+    pub fn make_fresh_character(&mut self, player_class: &str) {
+        self.set_str(1, player_class);
+        self.set_i32(2, 1);
+        self.set_i32(3, 0);
+        self.set_i32(4, 3);
+        self.set_i32(5, 0);
+        self.set_int_list_packed(6, &[0, 0, 0, 0]);
+        self.set_i32(7, 0);
+        self.set_i32(48, 0);
+        self.set_i32(49, 0);
+        self.message.remove_all(12); // ItemData
+        self.message.remove_all(14); // WeaponData
+        self.message.remove_all(41); // BankSlots
+        self.message.remove_all(53); // PackedItemData
+        self.message.remove_all(54); // PackedWeaponData
+        self.refresh_guid();
+    }
+
+    /// A minimal, spec-driven blank save for `player_class` (level 1, fresh
+    /// character defaults). The game is stricter about a from-scratch save
+    /// than about a cloned [`SaveGame::make_fresh_character`] save, so treat
+    /// blank saves as experimental and verify in game.
+    pub fn blank(player_class: &str) -> SaveGame {
+        let mut save = SaveGame {
+            message: Message::default(),
+        };
+        save.set_str(1, player_class);
+        save.set_i32(2, 1); // ExpLevel
+        save.set_i32(3, 0); // ExpPoints
+        save.set_i32(4, 3); // GeneralSkillPoints
+        save.set_i32(5, 0); // SpecialistSkillPoints
+        save.set_int_list_packed(6, &[0, 0, 0, 0]); // money/eridium/seraph/torgue
+        save.set_i32(7, 0); // PlaythroughsCompleted
+        save.set_i32(20, 0); // SaveGameId
+        save.set_str(26, ""); // LastSavedDate
+        save.refresh_guid();
+        save.set_int_list_packed(36, &[0, 0, 0, 0]); // BlackMarketUpgrades
+        save.set_i32(37, 0); // ActiveMissionNumber
+        save.set_bool(50, false); // ShowNewPlaythroughNotification
+        save.set_bool(51, false); // ReceivedDefaultWeapon
+        save.set_i32(48, 0); // NumGoldenKeysNotified
+        save.set_i32(49, 0); // LastPlaythroughNumber
+        save.set_bool(55, false); // AwesomeSkillDisabled
+        save.set_i32(58, 0); // VehicleSteeringMode
+        save
+    }
+
     // ---- challenges & missions ----
 
     /// All `ChallengeData` entries (field 38), in order.
@@ -1255,5 +1353,82 @@ impl SaveGame {
             pt_seen += 1;
         }
         Err(Error::Proto(format!("no playthrough {playthrough}")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn import_fields_replaces_at_first_position() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_i32(2, 72);
+        save.message.push(Field::string(16, "keep-a"));
+
+        let mut other = SaveGame::blank("GD_Siren.Character.CharClass_Siren");
+        other.set_i32(2, 5);
+        other.message.push(Field::string(16, "from-a"));
+        other.message.push(Field::string(16, "from-b"));
+
+        save.import_fields_from(&other, &[2, 16]);
+
+        // Playerclass untouched by field-2 import.
+        assert_eq!(save.player_class(), Some("GD_Soldier.Character.CharClass_Soldier".into()));
+        assert_eq!(save.exp_level(), Some(5));
+        let teleporters: Vec<String> = save
+            .message
+            .get_all(16)
+            .filter_map(|f| f.as_str().map(|s| s.into_owned()))
+            .collect();
+        assert_eq!(teleporters, ["from-a", "from-b"]);
+        // Field order: the imported teleporters sit where the first one was.
+        let order: Vec<u32> = save.message.fields.iter().map(|f| f.number).collect();
+        let first = order.iter().position(|n| *n == 16).unwrap();
+        assert_eq!(order[first], 16);
+    }
+
+    #[test]
+    fn import_missing_field_clears_it() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.message.push(Field::string(16, "gone"));
+        let other = SaveGame::blank("GD_Siren.Character.CharClass_Siren");
+        save.import_fields_from(&other, &[16]);
+        assert_eq!(save.message.count(16), 0);
+    }
+
+    #[test]
+    fn blank_save_round_trips_through_container() {
+        let save = SaveGame::blank("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass");
+        assert_eq!(save.player_class(), Some("GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass".into()));
+        assert_eq!(save.exp_level(), Some(1));
+        assert_eq!(save.general_skill_points(), Some(3));
+        assert_eq!(save.currency_on_hand(), [0, 0, 0, 0]);
+        assert!(save.get_bytes(34).is_some_and(|g| g.len() == 16));
+    }
+
+    #[test]
+    fn fresh_character_resets_progress() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_i32(2, 72);
+        save.set_i32(3, 999_999);
+        save.set_i32(4, 100);
+        save.message.push(Field::bytes(53, &[1, 2, 3, 4]));
+        save.make_fresh_character("GD_Siren.Character.CharClass_Siren");
+        assert_eq!(save.player_class(), Some("GD_Siren.Character.CharClass_Siren".into()));
+        assert_eq!(save.exp_level(), Some(1));
+        assert_eq!(save.general_skill_points(), Some(3));
+        assert_eq!(save.message.count(53), 0);
+    }
+
+    #[test]
+    fn refresh_guid_changes_identity() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        let before = save.get_bytes(34).map(|b| b.to_vec()).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        save.refresh_guid();
+        let after = save.get_bytes(34).map(|b| b.to_vec()).unwrap();
+        assert_eq!(after.len(), 16);
+        assert_ne!(before, after);
     }
 }

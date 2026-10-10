@@ -64,6 +64,21 @@ pub fn for_player_class(player_class: &str) -> Option<&'static SkillClass> {
     data().classes.get(player_class)
 }
 
+/// Short display name for a player-class resource path (`Soldier`, `Psycho`).
+pub fn class_display_name(player_class: &str) -> String {
+    let class_tag = for_player_class(player_class)
+        .map(|c| c.class_name.as_str())
+        .unwrap_or("?");
+    class_tag.to_string()
+}
+
+/// All playable class ids, alphabetically, for the new-save picker.
+pub fn class_ids() -> Vec<&'static str> {
+    let mut ids: Vec<&'static str> = data().classes.keys().map(|s| s.as_str()).collect();
+    ids.sort();
+    ids
+}
+
 /// Raw PNG bytes for a bundled skill icon.
 pub fn icon_bytes(filename: &str) -> Option<&'static [u8]> {
     ICONS.get_file(filename).map(|file| file.contents())
