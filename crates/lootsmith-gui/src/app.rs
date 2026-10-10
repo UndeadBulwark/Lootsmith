@@ -5,7 +5,8 @@
 
 use eframe::egui;
 use lootsmith_core::{
-    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Platform, SaveGame,
+    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container, PackedEntry,
+    Platform, SaveGame,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,7 +16,8 @@ pub enum Tab {
     General,
     Character,
     Currency,
-    Items,
+    Backpack,
+    Bank,
 }
 
 #[derive(Clone)]
@@ -57,10 +59,29 @@ pub struct ReadInfo {
     pub last_saved: String,
 }
 
-pub struct ItemEdit {
-    field_number: u32,
+/// One selectable row in the backpack/bank list.
+#[derive(Clone, Debug)]
+pub struct Row {
+    pub container: Container,
+    pub occurrence: usize,
+    pub text: String,
+    pub quantity: i32,
+    pub equipped: bool,
+    pub mark: i32,
+    pub quick_slot: i32,
+    pub is_weapon: bool,
+    /// The blob is a blank placeholder (unique id 0).
+    pub empty: bool,
+}
+
+struct ItemEdit {
+    container: Container,
     occurrence: usize,
     decoded: items::PackedData,
+    quantity: i32,
+    equipped: bool,
+    orig_quantity: i32,
+    orig_equipped: bool,
     dirty: bool,
 }
 
@@ -71,12 +92,14 @@ pub struct LootsmithApp {
     pub save_game: Option<SaveGame>,
     pub form: Form,
     pub read_info: ReadInfo,
-    pub items: Vec<String>,
+    pub backpack: Vec<Row>,
+    pub bank: Vec<Row>,
     pub status: String,
     pub save_as: String,
     loaded_once: bool,
     pub tab: Tab,
-    pub selected_item: Option<usize>,
+    /// Selected entry as (container, occurrence).
+    pub selected: Option<(Container, usize)>,
     item_edit: Option<ItemEdit>,
     choices: HashMap<AssetGroup, Vec<String>>,
 }
@@ -120,6 +143,86 @@ pub fn slots_for(is_weapon: bool) -> &'static [(&'static str, &'static str)] {
     }
 }
 
+fn resolve_balance(
+    manager: &Option<Arc<AssetLibraryManager>>,
+    decoded: &items::PackedData,
+) -> String {
+    let set = decoded.asset_library_set_id;
+    let r = match &decoded.slot {
+        items::PackedSlot::Weapon(w) => w.balance,
+        items::PackedSlot::Item(i) => i.balance,
+    };
+    match manager {
+        Some(m) => m
+            .lookup_asset(
+                AssetGroup::BalanceDefs,
+                set,
+                r.asset_index,
+                r.sublibrary_index,
+                r.use_set_id,
+            )
+            .unwrap_or_else(|_| format!("#{}/{}", r.asset_index, r.sublibrary_index)),
+        None => format!("#{}/{}", r.asset_index, r.sublibrary_index),
+    }
+}
+
+fn row_for(
+    entry: &PackedEntry,
+    display: usize,
+    manager: &Option<Arc<AssetLibraryManager>>,
+    configs: &AssetLibraryConfigs,
+) -> Row {
+    match items::unpack(&entry.serial, configs) {
+        Ok(decoded) => {
+            let kind = match entry.container {
+                Container::BackpackItem => "item",
+                Container::BackpackWeapon => "weapon",
+                Container::Bank => {
+                    if decoded.is_weapon {
+                        "bank weapon"
+                    } else {
+                        "bank item"
+                    }
+                }
+            };
+            let meta = match entry.container {
+                Container::BackpackItem => {
+                    format!(" qty={} equipped={}", entry.quantity, entry.equipped)
+                }
+                Container::BackpackWeapon => format!(" quick={}", entry.quick_slot),
+                Container::Bank => String::new(),
+            };
+            let mark = if decoded.unique_id == 0 { " (empty)" } else { "" };
+            Row {
+                container: entry.container,
+                occurrence: entry.occurrence,
+                text: format!(
+                    "{kind} #{display} id={} balance={}{meta}{mark}",
+                    decoded.unique_id,
+                    resolve_balance(manager, &decoded),
+                ),
+                quantity: entry.quantity,
+                equipped: entry.equipped,
+                mark: entry.mark,
+                quick_slot: entry.quick_slot,
+                is_weapon: decoded.is_weapon,
+                empty: decoded.unique_id == 0,
+            }
+        }
+        Err(e) => Row {
+            container: entry.container,
+            occurrence: entry.occurrence,
+            text: format!("#{display} decode error: {e}"),
+            quantity: entry.quantity,
+            equipped: entry.equipped,
+            mark: entry.mark,
+            quick_slot: entry.quick_slot,
+            is_weapon: matches!(entry.container, Container::BackpackWeapon),
+            empty: false,
+        },
+    }
+}
+
 impl LootsmithApp {
     pub fn new(open: Option<String>, dumps: Option<String>) -> Self {
         let mut app = Self {
@@ -129,12 +232,13 @@ impl LootsmithApp {
             save_game: None,
             form: Form::default(),
             read_info: ReadInfo::default(),
-            items: Vec::new(),
+            backpack: Vec::new(),
+            bank: Vec::new(),
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             loaded_once: false,
             tab: Tab::General,
-            selected_item: None,
+            selected: None,
             item_edit: None,
             choices: HashMap::new(),
         };
@@ -152,12 +256,21 @@ impl LootsmithApp {
         self.save_game.is_some()
     }
 
-    pub fn item_serial(&self, index: usize) -> Option<Vec<u8>> {
+    /// The `InventorySerialNumber` bytes of one entry.
+    pub fn item_serial(&self, container: Container, occurrence: usize) -> Option<Vec<u8>> {
         self.save_game
             .as_ref()?
-            .packed_entries()
-            .get(index)
+            .entries_in(container)
+            .get(occurrence)
             .map(|e| e.serial.clone())
+    }
+
+    /// Rows shown by a tab (backpack covers items + weapons).
+    pub fn rows(&self, tab: Tab) -> &[Row] {
+        match tab {
+            Tab::Bank => &self.bank,
+            _ => &self.backpack,
+        }
     }
 
     fn configs(&self) -> AssetLibraryConfigs {
@@ -215,7 +328,7 @@ impl LootsmithApp {
             last_saved: save_game.last_saved_date().unwrap_or_default(),
         };
         self.save_game = Some(save_game);
-        self.selected_item = None;
+        self.selected = None;
         self.item_edit = None;
         self.status = format!(
             "loaded {} ({} bytes, crc32 {})",
@@ -223,7 +336,7 @@ impl LootsmithApp {
             data.len(),
             if save.crc32_valid() { "ok" } else { "MISMATCH" }
         );
-        self.refresh_items();
+        self.refresh_rows();
     }
 
     pub fn load_dumps(&mut self) {
@@ -246,63 +359,41 @@ impl LootsmithApp {
                 self.status = format!("asset library error: {e}");
             }
         }
-        self.refresh_items();
+        self.refresh_rows();
     }
 
-    fn refresh_items(&mut self) {
-        let mut lines = Vec::new();
+    fn refresh_rows(&mut self) {
+        let configs = self.configs();
+        let manager = self.manager.clone();
+        let mut backpack = Vec::new();
+        let mut bank = Vec::new();
         if let Some(save_game) = &self.save_game {
-            let configs = self.configs();
-            for (index, entry) in save_game.packed_entries().iter().enumerate() {
-                match items::unpack(&entry.serial, &configs) {
-                    Ok(decoded) => {
-                        let kind = if decoded.is_weapon { "weapon" } else { "item" };
-                        let balance = match (&self.manager, &decoded.slot) {
-                            (Some(m), items::PackedSlot::Weapon(w)) => m.lookup_asset(
-                                AssetGroup::BalanceDefs,
-                                decoded.asset_library_set_id,
-                                w.balance.asset_index,
-                                w.balance.sublibrary_index,
-                                w.balance.use_set_id,
-                            ),
-                            (Some(m), items::PackedSlot::Item(i)) => m.lookup_asset(
-                                AssetGroup::BalanceDefs,
-                                decoded.asset_library_set_id,
-                                i.balance.asset_index,
-                                i.balance.sublibrary_index,
-                                i.balance.use_set_id,
-                            ),
-                            _ => Ok(format!("({} bytes)", entry.serial.len())),
-                        }
-                        .unwrap_or_else(|e| format!("<{e}>"));
-                        lines.push(format!(
-                            "#{} {kind} id={} balance={balance}",
-                            index + 1,
-                            decoded.unique_id
-                        ));
-                    }
-                    Err(e) => lines.push(format!("#{} decode error: {e}", index + 1)),
-                }
+            for (i, entry) in save_game.packed_entries().iter().enumerate() {
+                backpack.push(row_for(entry, i + 1, &manager, &configs));
+            }
+            for (i, entry) in save_game.bank_entries().iter().enumerate() {
+                bank.push(row_for(entry, i + 1, &manager, &configs));
             }
         }
-        self.items = lines;
+        self.backpack = backpack;
+        self.bank = bank;
     }
 
-    pub fn select_item(&mut self, index: usize) {
-        self.selected_item = Some(index);
+    pub fn select_entry(&mut self, container: Container, occurrence: usize) {
+        self.selected = Some((container, occurrence));
         self.item_edit = None;
         self.choices.clear();
         let Some(manager) = self.manager.clone() else {
             self.status = "Load an Asset Library to edit item parts by name.".into();
             return;
         };
-        let entries = {
+        let entry = {
             let Some(save_game) = &self.save_game else {
                 return;
             };
-            save_game.packed_entries()
+            save_game.entries_in(container).into_iter().nth(occurrence)
         };
-        let Some(entry) = entries.get(index) else {
+        let Some(entry) = entry else {
             return;
         };
         let decoded = match items::unpack(&entry.serial, &manager.configs) {
@@ -332,9 +423,13 @@ impl LootsmithApp {
             self.choices.insert(*group, manager.choices(*group, set));
         }
         self.item_edit = Some(ItemEdit {
-            field_number: entry.field_number,
-            occurrence: entry.occurrence,
+            container,
+            occurrence,
             decoded,
+            quantity: entry.quantity,
+            equipped: entry.equipped,
+            orig_quantity: entry.quantity,
+            orig_equipped: entry.equipped,
             dirty: false,
         });
     }
@@ -354,6 +449,16 @@ impl LootsmithApp {
         Ok(())
     }
 
+    /// Set the stack quantity of the selected backpack item (programmatic).
+    pub fn set_selected_quantity(&mut self, quantity: i32) -> Result<(), String> {
+        let Some(edit) = self.item_edit.as_mut() else {
+            return Err("no item selected".into());
+        };
+        edit.quantity = quantity;
+        edit.dirty = true;
+        Ok(())
+    }
+
     /// The currently selected item re-encoded with its pending edits.
     pub fn selected_item_serial(&self) -> Option<Vec<u8>> {
         let manager = self.manager.as_ref()?;
@@ -365,6 +470,10 @@ impl LootsmithApp {
         let Some(edit) = self.item_edit.take() else {
             return;
         };
+        if !edit.dirty {
+            self.item_edit = Some(edit);
+            return;
+        }
         let Some(manager) = self.manager.clone() else {
             self.item_edit = Some(edit);
             return;
@@ -380,15 +489,74 @@ impl LootsmithApp {
         let Some(save_game) = self.save_game.as_mut() else {
             return;
         };
-        if let Err(e) = save_game.replace_serial(edit.field_number, edit.occurrence, &serial) {
+        if let Err(e) = save_game.replace_serial(edit.container.field_number(), edit.occurrence, &serial)
+        {
             self.status = format!("update error: {e}");
             return;
         }
+        if edit.container == Container::BackpackItem {
+            if edit.quantity != edit.orig_quantity {
+                let _ = save_game.set_entry_quantity(edit.container, edit.occurrence, edit.quantity);
+            }
+            if edit.equipped != edit.orig_equipped {
+                let _ = save_game.set_entry_equipped(edit.container, edit.occurrence, edit.equipped);
+            }
+        }
         self.status = "item updated (remember to Save)".into();
-        let index = self.selected_item;
-        self.refresh_items();
-        if let Some(i) = index {
-            self.select_item(i);
+        let selected = self.selected;
+        self.refresh_rows();
+        if let Some((container, occurrence)) = selected {
+            self.select_entry(container, occurrence);
+        }
+    }
+
+    /// Move the selected entry to another container (bank <-> backpack).
+    pub fn move_selected_to(&mut self, to: Container) {
+        let Some((from, occurrence)) = self.selected else {
+            return;
+        };
+        if from == to {
+            return;
+        }
+        let result = {
+            let Some(save_game) = self.save_game.as_mut() else {
+                return;
+            };
+            save_game.move_entry(from, occurrence, to)
+        };
+        match result {
+            Ok(new_occurrence) => {
+                self.tab = match to {
+                    Container::Bank => Tab::Bank,
+                    _ => Tab::Backpack,
+                };
+                self.refresh_rows();
+                self.select_entry(to, new_occurrence);
+                self.status = format!("moved to {}", to.label());
+            }
+            Err(e) => self.status = format!("move error: {e}"),
+        }
+    }
+
+    /// Remove the selected entry from its container.
+    pub fn remove_selected(&mut self) {
+        let Some((container, occurrence)) = self.selected else {
+            return;
+        };
+        let result = {
+            let Some(save_game) = self.save_game.as_mut() else {
+                return;
+            };
+            save_game.remove_entry(container, occurrence)
+        };
+        match result {
+            Ok(()) => {
+                self.selected = None;
+                self.item_edit = None;
+                self.refresh_rows();
+                self.status = format!("removed {} #{}", container.label(), occurrence + 1);
+            }
+            Err(e) => self.status = format!("remove error: {e}"),
         }
     }
 
@@ -532,7 +700,8 @@ impl LootsmithApp {
                 ui.selectable_value(&mut self.tab, Tab::General, "General");
                 ui.selectable_value(&mut self.tab, Tab::Character, "Character");
                 ui.selectable_value(&mut self.tab, Tab::Currency, "Currency");
-                ui.selectable_value(&mut self.tab, Tab::Items, "Items");
+                ui.selectable_value(&mut self.tab, Tab::Backpack, "Backpack");
+                ui.selectable_value(&mut self.tab, Tab::Bank, "Bank");
             });
             ui.separator();
 
@@ -540,7 +709,8 @@ impl LootsmithApp {
                 Tab::General => self.ui_general(ui),
                 Tab::Character => self.ui_character(ui),
                 Tab::Currency => self.ui_currency(ui),
-                Tab::Items => self.ui_items(ui),
+                Tab::Backpack => self.ui_container(ui, false),
+                Tab::Bank => self.ui_container(ui, true),
             }
         });
     }
@@ -614,33 +784,68 @@ impl LootsmithApp {
         self.ui_save_buttons(ui);
     }
 
-    fn ui_items(&mut self, ui: &mut egui::Ui) {
-        let mut clicked = None;
+    fn ui_container(&mut self, ui: &mut egui::Ui, bank: bool) {
+        let rows = if bank {
+            self.bank.clone()
+        } else {
+            self.backpack.clone()
+        };
+        let selected = self.selected;
+        let mut clicked: Option<(Container, usize)> = None;
         egui::ScrollArea::vertical()
-            .id_salt("items_list")
-            .max_height(180.0)
+            .id_salt(if bank { "bank_list" } else { "backpack_list" })
+            .max_height(200.0)
             .show(ui, |ui| {
-                for (i, line) in self.items.iter().enumerate() {
-                    let selected = self.selected_item == Some(i);
-                    if ui.selectable_label(selected, line).clicked() {
-                        clicked = Some(i);
+                if rows.is_empty() {
+                    ui.label(if bank { "(bank is empty)" } else { "(backpack is empty)" });
+                }
+                for row in &rows {
+                    let is_selected = selected == Some((row.container, row.occurrence));
+                    if ui.selectable_label(is_selected, &row.text).clicked() {
+                        clicked = Some((row.container, row.occurrence));
                     }
                 }
             });
-        if let Some(i) = clicked {
-            self.select_item(i);
+        if let Some((container, occurrence)) = clicked {
+            self.select_entry(container, occurrence);
         }
 
         ui.separator();
         if self.manager.is_none() {
             ui.label("Load an Asset Library to edit item parts by name.");
+            self.ui_save_buttons(ui);
             return;
         }
 
         let manager = self.manager.clone();
         let mut edit_opt = self.item_edit.take();
         let mut apply = false;
+        let mut move_to: Option<Container> = None;
+        let mut remove = false;
         if let (Some(manager), Some(edit)) = (manager, edit_opt.as_mut()) {
+            let display = rows
+                .iter()
+                .position(|r| r.container == edit.container && r.occurrence == edit.occurrence)
+                .map(|i| i + 1);
+            ui.horizontal(|ui| {
+                let title = match display {
+                    Some(n) => format!("{} #{n}", edit.container.label()),
+                    None => edit.container.label().to_string(),
+                };
+                ui.strong(title);
+                ui.label(format!("id={}", edit.decoded.unique_id));
+            });
+            if edit.container == Container::BackpackItem {
+                ui.horizontal(|ui| {
+                    ui.label("Quantity");
+                    if ui.add(egui::DragValue::new(&mut edit.quantity)).changed() {
+                        edit.dirty = true;
+                    }
+                    if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
+                        edit.dirty = true;
+                    }
+                });
+            }
             let is_weapon = edit.decoded.is_weapon;
             let set = edit.decoded.asset_library_set_id;
             for (slot, label) in slots_for(is_weapon) {
@@ -674,15 +879,39 @@ impl LootsmithApp {
                 });
             }
             ui.separator();
-            ui.add_enabled_ui(edit.dirty, |ui| {
-                if ui.button("Apply item changes").clicked() {
-                    apply = true;
+            ui.horizontal(|ui| {
+                ui.add_enabled_ui(edit.dirty, |ui| {
+                    if ui.button("Apply item changes").clicked() {
+                        apply = true;
+                    }
+                });
+                if edit.container == Container::Bank {
+                    let target = if is_weapon {
+                        Container::BackpackWeapon
+                    } else {
+                        Container::BackpackItem
+                    };
+                    if ui.button("Move to backpack").clicked() {
+                        move_to = Some(target);
+                    }
+                } else if ui.button("Move to bank").clicked() {
+                    move_to = Some(Container::Bank);
+                }
+                if ui.button("Remove").clicked() {
+                    remove = true;
                 }
             });
         }
         self.item_edit = edit_opt;
         if apply {
             self.apply_item();
+        }
+        if let Some(to) = move_to {
+            self.apply_item();
+            self.move_selected_to(to);
+        }
+        if remove {
+            self.remove_selected();
         }
         ui.separator();
         self.ui_save_buttons(ui);

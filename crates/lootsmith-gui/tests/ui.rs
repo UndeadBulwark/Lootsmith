@@ -3,9 +3,14 @@
 //! These manipulate the UI by widget label — no window, no coordinates, no
 //! focus — and assert on the application state.
 
+use egui::Vec2;
 use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
+use lootsmith_core::Container;
 use lootsmith_gui::app::{LootsmithApp, Tab};
+
+/// Unique id of the first backpack weapon (Dahl pistol) in the fixture.
+const DAHL_PISTOL_ID: &str = "id=1572495195";
 
 fn fixtures() -> Option<(String, String)> {
     let save = format!(
@@ -26,8 +31,18 @@ fn fixtures() -> Option<(String, String)> {
 }
 
 fn harness(save: String, dumps: String) -> Harness<'static, LootsmithApp> {
-    let app = LootsmithApp::new(Some(save), Some(dumps));
-    Harness::new_ui_state(|ui, app: &mut LootsmithApp| app.build(ui), app)
+    // A tall window so the item editor's buttons stay on-screen for pointer clicks.
+    Harness::builder()
+        .with_size(Vec2::new(1100.0, 1000.0))
+        .build_ui_state(
+            |ui, app: &mut LootsmithApp| app.build(ui),
+            LootsmithApp::new(Some(save), Some(dumps)),
+        )
+}
+
+fn reopen(path: &std::path::Path) -> lootsmith_core::SaveFile {
+    let bytes = std::fs::read(path).expect("read saved file");
+    lootsmith_core::container::unpack(&bytes, lootsmith_core::Platform::PC).expect("reopen")
 }
 
 #[test]
@@ -39,41 +54,38 @@ fn loads_and_switches_tabs_by_label() {
     let mut h = harness(save, dumps);
     h.run();
     assert!(h.state().is_loaded(), "save should load on the first frame");
-    assert!(!h.state().items.is_empty(), "items should be listed");
+    assert_eq!(h.state().backpack.len(), 14, "5 items + 9 weapons");
+    assert!(h.state().bank.is_empty(), "fixture bank is empty");
 
-    h.get_by_label("Character").click();
-    h.run();
-    assert_eq!(h.state().tab, Tab::Character);
-
-    h.get_by_label("Items").click();
-    h.run();
-    assert_eq!(h.state().tab, Tab::Items);
-
-    h.get_by_label("Currency").click();
-    h.run();
-    assert_eq!(h.state().tab, Tab::Currency);
-
-    h.get_by_label("General").click();
-    h.run();
-    assert_eq!(h.state().tab, Tab::General);
+    for (label, tab) in [
+        ("Character", Tab::Character),
+        ("Backpack", Tab::Backpack),
+        ("Bank", Tab::Bank),
+        ("Currency", Tab::Currency),
+        ("General", Tab::General),
+    ] {
+        h.get_by_label(label).click();
+        h.run();
+        assert_eq!(h.state().tab, tab, "clicking {label} should switch tab");
+    }
 }
 
 #[test]
-fn selects_an_item_row_by_label() {
+fn selects_a_backpack_row_by_label() {
     let Some((save, dumps)) = fixtures() else {
         return;
     };
     let mut h = harness(save, dumps);
     h.run();
-    h.get_by_label("Items").click();
+    h.get_by_label("Backpack").click();
     h.run();
 
-    // The first weapon in the fixture is row #6.
-    h.get_by_label_contains("#6 weapon").click();
+    h.get_by_label_contains(DAHL_PISTOL_ID).click();
     h.run();
-    assert!(
-        h.state().selected_item.is_some(),
-        "clicking an item row should select it"
+    assert_eq!(
+        h.state().selected,
+        Some((Container::BackpackWeapon, 0)),
+        "clicking a row should select that entry"
     );
 }
 
@@ -85,9 +97,12 @@ fn edits_a_weapon_part_and_saves() {
     let mut h = harness(save, dumps);
     h.run();
 
-    h.state_mut().select_item(5); // index 5 == row #6 (first weapon)
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
-    let before = h.state().item_serial(5).expect("serial");
+    let before = h
+        .state()
+        .item_serial(Container::BackpackWeapon, 0)
+        .expect("serial");
 
     h.state_mut()
         .set_selected_part(
@@ -98,16 +113,69 @@ fn edits_a_weapon_part_and_saves() {
     h.state_mut().apply_item();
     h.run();
 
-    let after = h.state().item_serial(5).expect("serial");
+    let after = h
+        .state()
+        .item_serial(Container::BackpackWeapon, 0)
+        .expect("serial");
     assert_ne!(before, after, "the edited serial should differ");
 
-    // Write and verify with the core library.
     let out = std::env::temp_dir().join("lootsmith-ui-test.sav");
     h.state_mut().save_to(out.to_str().unwrap());
-    let bytes = std::fs::read(&out).expect("read saved file");
-    let reopened = lootsmith_core::container::unpack(&bytes, lootsmith_core::Platform::PC)
-        .expect("reopen");
+    let reopened = reopen(&out);
     assert!(reopened.crc32_valid());
     assert!(reopened.proto_stable());
     assert!(reopened.huffman_stable());
+}
+
+#[test]
+fn moves_a_weapon_to_the_bank_and_back() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    h.get_by_label("Backpack").click();
+    h.run();
+    h.get_by_label_contains(DAHL_PISTOL_ID).click();
+    h.run();
+    assert_eq!(h.state().selected, Some((Container::BackpackWeapon, 0)));
+
+    h.get_by_label("Move to bank").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Bank, "moving switches to the Bank tab");
+    assert_eq!(h.state().bank.len(), 1);
+    assert_eq!(h.state().backpack.len(), 13);
+    assert_eq!(h.state().selected, Some((Container::Bank, 0)));
+
+    let out = std::env::temp_dir().join("lootsmith-ui-bank.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = reopen(&out);
+    assert!(reopened.crc32_valid() && reopened.proto_stable());
+    let sg = reopened.save_game().expect("reparse");
+    assert_eq!(sg.bank_entries().len(), 1, "bank item should persist");
+
+    h.get_by_label("Move to backpack").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Backpack);
+    assert!(h.state().bank.is_empty());
+    assert_eq!(h.state().backpack.len(), 14);
+}
+
+#[test]
+fn removes_an_entry() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    h.get_by_label("Backpack").click();
+    h.run();
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    let before = h.state().backpack.len();
+
+    h.get_by_label("Remove").click();
+    h.run();
+    assert_eq!(h.state().backpack.len(), before - 1);
+    assert_eq!(h.state().selected, None);
 }

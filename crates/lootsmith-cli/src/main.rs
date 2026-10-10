@@ -1,8 +1,7 @@
 //! Lootsmith CLI: `inspect`, `verify`, and `dump`.
 
 use lootsmith_core::{
-    container, items, proto::Message, AssetGroup, AssetLibraryConfigs, AssetLibraryManager,
-    Platform,
+    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container, Platform,
 };
 use std::process::ExitCode;
 
@@ -14,12 +13,13 @@ fn usage() -> ExitCode {
          lootsmith inspect <file.sav> [--platform <id>]\n  \
          lootsmith verify  <file.sav> [--platform <id>]\n  \
          lootsmith dump    <file.sav> [--platform <id>]\n  \
-         lootsmith items   <file.sav> [--platform <id>]\n  \
+         lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n  \
-         lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE\n\
+         lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE [--container bag|bank]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
+         --container selects the backpack (default) or the bank/stash for --item.\n\
          edit writes in place with a <file>.bak backup unless --out is given."
     );
     ExitCode::from(2)
@@ -43,6 +43,26 @@ struct Args {
     item: Option<usize>,
     part: Option<String>,
     set: Option<String>,
+    scope: Scope,
+}
+
+/// Which container(s) an item command operates on.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    All,
+    Backpack,
+    Bank,
+}
+
+impl Scope {
+    fn parse(value: &str) -> Option<Scope> {
+        match value {
+            "all" => Some(Scope::All),
+            "backpack" | "backpack-items" | "pack" | "bag" | "items" => Some(Scope::Backpack),
+            "bank" | "stash" => Some(Scope::Bank),
+            _ => None,
+        }
+    }
 }
 
 fn parse_args() -> Option<Args> {
@@ -65,6 +85,7 @@ fn parse_args() -> Option<Args> {
         item: None,
         part: None,
         set: None,
+        scope: Scope::All,
     };
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -72,6 +93,7 @@ fn parse_args() -> Option<Args> {
             "--dumps" | "-d" => args.dumps = Some(it.next()?),
             "--out" | "-o" => args.out = Some(it.next()?),
             "--no-backup" => args.backup = false,
+            "--container" | "-c" => args.scope = Scope::parse(&it.next()?)?,
             "--level" => args.level = Some(it.next()?.parse().ok()?),
             "--exp-points" => args.exp_points = Some(it.next()?.parse().ok()?),
             "--general-skill-points" => args.general_skill_points = Some(it.next()?.parse().ok()?),
@@ -245,10 +267,10 @@ fn main() -> ExitCode {
                 }
             };
 
-            let top = match Message::parse(&save.proto) {
-                Ok(m) => m,
+            let save_game = match save.save_game() {
+                Ok(s) => s,
                 Err(e) => {
-                    eprintln!("error: {e}");
+                    eprintln!("error: cannot parse protobuf: {e}");
                     return ExitCode::FAILURE;
                 }
             };
@@ -259,68 +281,81 @@ fn main() -> ExitCode {
             }
 
             let mut count = 0usize;
-            for (field, kind) in [(53u32, "item"), (54u32, "weapon")] {
-                for entry in top.get_all(field) {
-                    let sub = match entry.as_message() {
-                        Ok(Some(m)) => m,
-                        _ => continue,
-                    };
-                    let Some(serial) = sub.get(1).and_then(|f| f.as_bytes()) else {
-                        continue;
-                    };
-                    let quantity = sub.get(2).and_then(|f| f.as_i32());
-                    let equipped = sub.get(3).and_then(|f| f.as_bool());
-                    count += 1;
-                    match items::unpack(serial, &configs) {
-                        Ok(decoded) => {
-                            let set = decoded.asset_library_set_id;
-                            match &decoded.slot {
-                                items::PackedSlot::Weapon(w) => {
-                                    println!(
-                                        "{kind:>6} #{count} id={} balance={} mfr={} grade={} stage={}",
-                                        decoded.unique_id,
-                                        resolve(AssetGroup::BalanceDefs, set, w.balance),
-                                        resolve(AssetGroup::Manufacturers, set, w.manufacturer),
-                                        w.manufacturer_grade_index,
-                                        w.game_stage
-                                    );
-                                    println!(
-                                        "        type={} body={} grip={} barrel={} sight={} stock={} \
-                                         elemental={} acc1={} acc2={} material={} prefix={} title={}",
-                                        resolve(AssetGroup::WeaponTypes, set, w.weapon_type),
-                                        resolve(AssetGroup::WeaponParts, set, w.body_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.grip_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.barrel_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.sight_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.stock_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.elemental_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.accessory1_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.accessory2_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.material_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.prefix_part),
-                                        resolve(AssetGroup::WeaponParts, set, w.title_part),
-                                    );
-                                }
-                                items::PackedSlot::Item(it) => {
-                                    println!(
-                                        "{kind:>6} #{count} id={} qty={:?} equipped={:?} \
-                                         balance={} mfr={} grade={} stage={}",
-                                        decoded.unique_id,
-                                        quantity,
-                                        equipped,
-                                        resolve(AssetGroup::BalanceDefs, set, it.balance),
-                                        resolve(AssetGroup::Manufacturers, set, it.manufacturer),
-                                        it.manufacturer_grade_index,
-                                        it.game_stage
-                                    );
-                                }
+            let mut backpack = 0usize;
+            let mut bank = 0usize;
+            for entry in save_game.entries() {
+                let is_bank = entry.container == Container::Bank;
+                match (args.scope, is_bank) {
+                    (Scope::Backpack, true) | (Scope::Bank, false) => continue,
+                    _ => {}
+                }
+                if is_bank {
+                    bank += 1;
+                } else {
+                    backpack += 1;
+                }
+                count += 1;
+
+                let kind = match entry.container {
+                    Container::BackpackItem => "item",
+                    Container::BackpackWeapon => "weapon",
+                    Container::Bank => "bank",
+                };
+                let meta = match entry.container {
+                    Container::BackpackItem => {
+                        format!(" qty={} equipped={}", entry.quantity, entry.equipped)
+                    }
+                    Container::BackpackWeapon => format!(" quick={}", entry.quick_slot),
+                    Container::Bank => String::new(),
+                };
+                match items::unpack(&entry.serial, &configs) {
+                    Ok(decoded) => {
+                        let set = decoded.asset_library_set_id;
+                        match &decoded.slot {
+                            items::PackedSlot::Weapon(w) => {
+                                println!(
+                                    "{kind:>6} #{count} id={} balance={} mfr={} grade={} \
+                                     stage={}{meta}",
+                                    decoded.unique_id,
+                                    resolve(AssetGroup::BalanceDefs, set, w.balance),
+                                    resolve(AssetGroup::Manufacturers, set, w.manufacturer),
+                                    w.manufacturer_grade_index,
+                                    w.game_stage,
+                                );
+                                println!(
+                                    "        type={} body={} grip={} barrel={} sight={} stock={} \
+                                     elemental={} acc1={} acc2={} material={} prefix={} title={}",
+                                    resolve(AssetGroup::WeaponTypes, set, w.weapon_type),
+                                    resolve(AssetGroup::WeaponParts, set, w.body_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.grip_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.barrel_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.sight_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.stock_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.elemental_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.accessory1_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.accessory2_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.material_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.prefix_part),
+                                    resolve(AssetGroup::WeaponParts, set, w.title_part),
+                                );
+                            }
+                            items::PackedSlot::Item(it) => {
+                                println!(
+                                    "{kind:>6} #{count} id={} balance={} mfr={} grade={} \
+                                     stage={}{meta}",
+                                    decoded.unique_id,
+                                    resolve(AssetGroup::BalanceDefs, set, it.balance),
+                                    resolve(AssetGroup::Manufacturers, set, it.manufacturer),
+                                    it.manufacturer_grade_index,
+                                    it.game_stage,
+                                );
                             }
                         }
-                        Err(e) => println!("{kind:>6} #{count} decode error: {e}"),
                     }
+                    Err(e) => println!("{kind:>6} #{count} decode error: {e}"),
                 }
             }
-            println!("total: {count} packed items/weapons");
+            println!("total: {count} packed blobs (backpack {backpack}, bank {bank})");
             ExitCode::SUCCESS
         }
         "edit" => {
@@ -381,7 +416,10 @@ fn main() -> ExitCode {
                     );
                     return ExitCode::FAILURE;
                 };
-                let entries = save_game.packed_entries();
+                let entries = match args.scope {
+                    Scope::Bank => save_game.bank_entries(),
+                    _ => save_game.packed_entries(),
+                };
                 if index == 0 || index > entries.len() {
                     eprintln!(
                         "error: item index {index} out of range (1..{})",
@@ -417,7 +455,11 @@ fn main() -> ExitCode {
                     eprintln!("error: {e}");
                     return ExitCode::FAILURE;
                 }
-                println!("item #{index}: set {part} = {name} ({})", group.key());
+                println!(
+                    "{} #{index}: set {part} = {name} ({})",
+                    entry.container.label(),
+                    group.key()
+                );
                 changes += 1;
             }
 

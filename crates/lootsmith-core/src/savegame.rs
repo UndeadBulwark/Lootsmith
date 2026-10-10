@@ -558,34 +558,124 @@ fn render_field(field: &Field, kind: Option<Kind>) -> String {
     }
 }
 
-/// A packed item/weapon entry: its top-level field number, its occurrence index
-/// within that field, and its `InventorySerialNumber` bytes.
+/// Which top-level list a packed blob lives in.
+///
+/// `PackedItemData`/`PackedWeaponData` (fields 53/54) are the backpack;
+/// `BankSlot` (field 41) is the shared stash. All three hold an
+/// `InventorySerialNumber` blob, so an entry's real kind (item vs weapon) comes
+/// from decoding the blob, not from the container.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Container {
+    /// Field 53, `PackedItemData` — backpack items (quantity/equipped/mark).
+    BackpackItem,
+    /// Field 54, `PackedWeaponData` — backpack weapons (quick slot/mark).
+    BackpackWeapon,
+    /// Field 41, `BankSlot` — the shared stash (serial only).
+    Bank,
+}
+
+impl Container {
+    /// Containers in the order reported by [`SaveGame::entries`].
+    pub const ALL: [Container; 3] = [
+        Container::BackpackItem,
+        Container::BackpackWeapon,
+        Container::Bank,
+    ];
+
+    /// The top-level field number this container lives in.
+    pub fn field_number(self) -> u32 {
+        match self {
+            Container::BackpackItem => 53,
+            Container::BackpackWeapon => 54,
+            Container::Bank => 41,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Container::BackpackItem => "backpack item",
+            Container::BackpackWeapon => "backpack weapon",
+            Container::Bank => "bank",
+        }
+    }
+}
+
+/// A packed item/weapon entry: which list it lives in, its occurrence index
+/// within that list, its `InventorySerialNumber` bytes, and — for backpack
+/// entries — the surrounding metadata fields.
 #[derive(Clone, Debug)]
 pub struct PackedEntry {
+    pub container: Container,
     pub field_number: u32,
     pub occurrence: usize,
     pub serial: Vec<u8>,
+    /// `PackedItemData.Quantity` (field 2); 1 for weapons/bank.
+    pub quantity: i32,
+    /// `PackedItemData.Equipped` (field 3); false for weapons/bank.
+    pub equipped: bool,
+    /// `PackedWeaponData.QuickSlot` (field 2); -1 for items/bank.
+    pub quick_slot: i32,
+    /// `PlayerMark` (item field 4 / weapon field 3); 0 when absent.
+    pub mark: i32,
 }
 
 impl SaveGame {
-    /// Enumerate packed items (field 53) then weapons (field 54) in order.
-    pub fn packed_entries(&self) -> Vec<PackedEntry> {
+    /// Packed blobs in one container, in order.
+    pub fn entries_in(&self, container: Container) -> Vec<PackedEntry> {
+        let field_number = container.field_number();
         let mut out = Vec::new();
-        for field_number in [53u32, 54u32] {
-            for (occurrence, field) in self.message.get_all(field_number).enumerate() {
-                if let Some(bytes) = field.as_bytes() {
-                    if let Ok(sub) = Message::parse(bytes) {
-                        if let Some(serial) = sub.get(1).and_then(|f| f.as_bytes()) {
-                            out.push(PackedEntry {
-                                field_number,
-                                occurrence,
-                                serial: serial.to_vec(),
-                            });
-                        }
-                    }
-                }
-            }
+        for (occurrence, field) in self.message.get_all(field_number).enumerate() {
+            let Ok(Some(sub)) = field.as_message() else {
+                continue;
+            };
+            let Some(serial) = sub.get(1).and_then(|f| f.as_bytes()) else {
+                continue;
+            };
+            let (quantity, equipped, quick_slot, mark) = match container {
+                Container::BackpackItem => (
+                    sub.get(2).and_then(|f| f.as_i32()).unwrap_or(1),
+                    sub.get(3).and_then(|f| f.as_bool()).unwrap_or(false),
+                    -1,
+                    sub.get(4).and_then(|f| f.as_i32()).unwrap_or(0),
+                ),
+                Container::BackpackWeapon => (
+                    1,
+                    false,
+                    sub.get(2).and_then(|f| f.as_i32()).unwrap_or(-1),
+                    sub.get(3).and_then(|f| f.as_i32()).unwrap_or(0),
+                ),
+                Container::Bank => (1, false, -1, 0),
+            };
+            out.push(PackedEntry {
+                container,
+                field_number,
+                occurrence,
+                serial: serial.to_vec(),
+                quantity,
+                equipped,
+                quick_slot,
+                mark,
+            });
         }
+        out
+    }
+
+    /// Backpack blobs: items (field 53) then weapons (field 54).
+    pub fn packed_entries(&self) -> Vec<PackedEntry> {
+        let mut out = self.entries_in(Container::BackpackItem);
+        out.extend(self.entries_in(Container::BackpackWeapon));
+        out
+    }
+
+    /// Bank blobs (field 41).
+    pub fn bank_entries(&self) -> Vec<PackedEntry> {
+        self.entries_in(Container::Bank)
+    }
+
+    /// Every packed blob: backpack (items, weapons) then bank.
+    pub fn entries(&self) -> Vec<PackedEntry> {
+        let mut out = self.packed_entries();
+        out.extend(self.bank_entries());
         out
     }
 
@@ -597,6 +687,19 @@ impl SaveGame {
         occurrence: usize,
         new_serial: &[u8],
     ) -> crate::error::Result<()> {
+        self.mutate_entry(field_number, occurrence, |sub| {
+            sub.set(Field::bytes(1, new_serial));
+        })
+    }
+
+    /// Apply `f` to one entry's sub-message (matched by top-level field number
+    /// and occurrence), rebuilding only that entry's bytes.
+    pub fn mutate_entry<F: FnOnce(&mut Message)>(
+        &mut self,
+        field_number: u32,
+        occurrence: usize,
+        f: F,
+    ) -> crate::error::Result<()> {
         let mut seen = 0usize;
         for field in &mut self.message.fields {
             if field.number != field_number {
@@ -606,11 +709,13 @@ impl SaveGame {
                 let sub_bytes = field
                     .as_bytes()
                     .ok_or_else(|| {
-                        crate::error::Error::Proto("packed entry is not length-delimited".into())
+                        crate::error::Error::Proto(
+                            "packed entry is not length-delimited".into(),
+                        )
                     })?
                     .to_vec();
                 let mut sub = Message::parse(&sub_bytes)?;
-                sub.set(Field::bytes(1, new_serial));
+                f(&mut sub);
                 *field = Field::bytes(field_number, &sub.to_bytes());
                 return Ok(());
             }
@@ -619,5 +724,95 @@ impl SaveGame {
         Err(crate::error::Error::Proto(format!(
             "no packed entry {occurrence} in field {field_number}"
         )))
+    }
+
+    /// Append a new entry (serial only) to `container`. Returns its occurrence.
+    pub fn append_entry(
+        &mut self,
+        container: Container,
+        serial: &[u8],
+    ) -> crate::error::Result<usize> {
+        let mut sub = Message::default();
+        sub.push(Field::bytes(1, serial));
+        self.message
+            .push(Field::bytes(container.field_number(), &sub.to_bytes()));
+        Ok(self.message.count(container.field_number()) - 1)
+    }
+
+    /// Remove one entry from `container`. Later entries shift down.
+    pub fn remove_entry(
+        &mut self,
+        container: Container,
+        occurrence: usize,
+    ) -> crate::error::Result<()> {
+        let field_number = container.field_number();
+        let mut seen = 0usize;
+        let mut target = None;
+        for (i, field) in self.message.fields.iter().enumerate() {
+            if field.number != field_number {
+                continue;
+            }
+            if seen == occurrence {
+                target = Some(i);
+                break;
+            }
+            seen += 1;
+        }
+        match target {
+            Some(i) => {
+                self.message.fields.remove(i);
+                Ok(())
+            }
+            None => Err(crate::error::Error::Proto(format!(
+                "no {} entry {occurrence}",
+                container.label()
+            ))),
+        }
+    }
+
+    /// Move one entry from `from` to the end of `to`. Returns the new
+    /// occurrence in `to`.
+    pub fn move_entry(
+        &mut self,
+        from: Container,
+        occurrence: usize,
+        to: Container,
+    ) -> crate::error::Result<usize> {
+        if from == to {
+            return Ok(occurrence);
+        }
+        let serial = self
+            .entries_in(from)
+            .get(occurrence)
+            .map(|e| e.serial.clone())
+            .ok_or_else(|| {
+                crate::error::Error::Proto(format!("no {} entry {occurrence}", from.label()))
+            })?;
+        self.remove_entry(from, occurrence)?;
+        self.append_entry(to, &serial)
+    }
+
+    /// Set `PackedItemData.Quantity` (field 2) on a backpack item.
+    pub fn set_entry_quantity(
+        &mut self,
+        container: Container,
+        occurrence: usize,
+        quantity: i32,
+    ) -> crate::error::Result<()> {
+        self.mutate_entry(container.field_number(), occurrence, |sub| {
+            sub.set(Field::varint(2, quantity as u32 as u64));
+        })
+    }
+
+    /// Set `PackedItemData.Equipped` (field 3) on a backpack item.
+    pub fn set_entry_equipped(
+        &mut self,
+        container: Container,
+        occurrence: usize,
+        equipped: bool,
+    ) -> crate::error::Result<()> {
+        self.mutate_entry(container.field_number(), occurrence, |sub| {
+            sub.set(Field::varint(3, u64::from(equipped)));
+        })
     }
 }
