@@ -31,7 +31,7 @@ fn loads_the_synthetic_save_and_switches_tabs() {
     for (label, tab) in [
         ("Character", Tab::Character),
         ("Currency", Tab::Currency),
-        ("Ammo", Tab::Ammo),
+        ("Ammo & SDUs", Tab::Ammo),
         ("World", Tab::World),
         ("Skills", Tab::Skills),
         ("Fast Travel", Tab::Travel),
@@ -467,7 +467,7 @@ fn import_sections_copies_travel_from_another_save() {
 fn ammo_and_sdu_tabs_write_through_to_disk() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Ammo").click();
+    h.get_by_label("Ammo & SDUs").click();
     h.run();
     assert_eq!(h.state().ammo.len(), 3);
 
@@ -590,6 +590,8 @@ fn ui_scale_control_selects_150_percent() {
     let mut h = harness();
     h.run();
     assert_eq!(h.state().ui_scale, 1.0);
+    h.get_by_label("Menu").click();
+    h.run();
     h.get_by_label("150%").click();
     h.run();
     assert_eq!(h.state().ui_scale, 1.5);
@@ -600,6 +602,8 @@ fn ui_scale_control_selects_200_percent() {
     let mut h = harness();
     h.run();
     assert_eq!(h.state().ui_scale, 1.0);
+    h.get_by_label("Menu").click();
+    h.run();
     h.get_by_label("200%").click();
     h.run();
     assert_eq!(h.state().ui_scale, 2.0);

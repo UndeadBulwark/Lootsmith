@@ -27,7 +27,13 @@ fn switched(save: &str, theme: Theme, scale: f32, click: &str) -> RgbaImage {
     h.state_mut().set_theme(theme);
     h.state_mut().set_ui_scale(scale);
     h.run();
+    // The theme and scale controls live in the settings dialog.
+    h.get_by_label("Menu").click();
+    h.run();
     h.get_by_label(click).click();
+    h.run();
+    // The dialog that hosted the control must not appear in the compared frame.
+    h.state_mut().show_settings = false;
     h.run();
     // Move the pointer off the button so it is not drawn hovered.
     h.remove_cursor();

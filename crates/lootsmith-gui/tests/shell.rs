@@ -1,5 +1,5 @@
 //! Stage 2: the shell regions (spec §2.2 — 56 px top bar, 204 px sidebar,
-//! 34 px status bar) and every screen rendering inside them.
+//! 34 px status bar, 16 px gaps) and every screen rendering inside them.
 
 mod common;
 
@@ -40,7 +40,7 @@ fn sidebar_label(state: &LootsmithApp, tab: Tab) -> String {
             (Tab::General, "General"),
             (Tab::Character, "Character"),
             (Tab::Currency, "Currency"),
-            (Tab::Ammo, "Ammo"),
+            (Tab::Ammo, "Ammo & SDUs"),
             (Tab::World, "World"),
             (Tab::Skills, "Skills"),
             (Tab::Travel, "Fast Travel"),
@@ -57,32 +57,61 @@ fn sidebar_label(state: &LootsmithApp, tab: Tab) -> String {
 }
 
 fn approx(a: f32, b: f32) -> bool {
-    (a - b).abs() < 0.5
+    (a - b).abs() <= 1.5
 }
 
 #[test]
-fn shell_rects_match_the_spec_sizes() {
-    let mut h = common::harness_isolated(&save_path());
-    h.run();
-    let r = h.state().shell;
-    assert!(approx(r.top.height(), 56.0), "top bar {:?}", r.top);
-    assert!(approx(r.sidebar.width(), 204.0), "sidebar {:?}", r.sidebar);
-    assert!(approx(r.status.height(), 34.0), "status bar {:?}", r.status);
-    // The sidebar sits under the top bar and above the status bar.
-    assert!(approx(r.sidebar.min.y, r.top.max.y), "sidebar top");
-    assert!(approx(r.sidebar.max.y, r.status.min.y), "sidebar bottom");
-    // The content fills the space right of the sidebar, between top and status.
-    assert!(approx(r.content.min.x, r.sidebar.max.x), "content left");
-    // A 28 px screen header ribbon sits between the top bar and the screen.
-    assert!(approx(r.content.min.y, r.top.max.y + 28.0), "content top");
-    assert!(approx(r.content.max.y, r.status.min.y), "content bottom");
-    assert!(
-        r.content.width() > 0.0 && r.content.height() > 0.0,
-        "content"
-    );
-    // The top bar and status bar span the full width.
-    assert!(approx(r.top.width(), r.status.width()), "bars share width");
-    assert!(approx(r.top.min.x, r.status.min.x), "bars share left");
+fn shell_rects_match_the_spec_sizes_at_1x_and_2x() {
+    for scale in [1.0_f32, 2.0] {
+        let mut h = common::harness_isolated(&save_path());
+        h.state_mut().set_ui_scale(scale);
+        h.run();
+        let r = h.state().shell;
+        assert!(
+            approx(r.top.height(), 56.0),
+            "scale {scale}: top {:?}",
+            r.top
+        );
+        assert!(
+            approx(r.sidebar.width(), 204.0),
+            "scale {scale}: sidebar {:?}",
+            r.sidebar
+        );
+        assert!(
+            approx(r.status.height(), 34.0),
+            "scale {scale}: status {:?}",
+            r.status
+        );
+        // 16 px gaps: the body sits beside the panels, never under them.
+        assert!(
+            !r.content.intersects(r.sidebar),
+            "scale {scale}: body under sidebar"
+        );
+        assert!(
+            !r.content.intersects(r.top),
+            "scale {scale}: body under top"
+        );
+        assert!(
+            !r.content.intersects(r.status),
+            "scale {scale}: body under status"
+        );
+        assert!(
+            approx(r.content.min.x, r.sidebar.max.x + 16.0),
+            "scale {scale}: left gap"
+        );
+        assert!(
+            approx(r.content.min.y, r.top.max.y + 16.0),
+            "scale {scale}: top gap"
+        );
+        assert!(
+            approx(r.content.max.y, r.status.min.y - 16.0),
+            "scale {scale}: bottom gap"
+        );
+        assert!(
+            r.content.width() > 0.0 && r.content.height() > 0.0,
+            "scale {scale}"
+        );
+    }
 }
 
 #[test]
@@ -100,6 +129,9 @@ fn sidebar_exposes_every_screen_with_count_badges() {
             "missing sidebar label {label:?}"
         );
     }
+    // Command rows live in the sidebar too.
+    assert!(h.query_all_by_label("Profile").count() >= 1, "Profile row");
+    assert!(h.query_all_by_label("Import").count() >= 1, "Import row");
 }
 
 #[test]

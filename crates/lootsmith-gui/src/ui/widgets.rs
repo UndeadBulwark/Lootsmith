@@ -323,13 +323,9 @@ pub fn chip(ui: &egui::Ui, rect: Rect, text: &str, color: Color32) -> Response {
         p.pan,
         Stroke::new(1.0, color),
     ));
-    ui.painter().text(
-        rect.center(),
-        egui::Align2::CENTER_CENTER,
-        text,
-        FontId::proportional(13.0),
-        color,
-    );
+    let galley = ui.painter().layout_job(job_with_nums(text, color, 13.0));
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, color);
     let response = respond(ui, rect, &format!("chip-{text}"), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
     response
