@@ -64,11 +64,15 @@ fn main() -> ExitCode {
         return run_selftest(args.open.as_deref());
     }
 
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([1180.0, 820.0])
+        .with_min_inner_size([760.0, 520.0])
+        .with_title("Lootsmith");
+    if let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../assets/lootsmith.png")) {
+        viewport = viewport.with_icon(icon);
+    }
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1180.0, 820.0])
-            .with_min_inner_size([760.0, 520.0])
-            .with_title("Lootsmith"),
+        viewport,
         persist_window: true,
         ..Default::default()
     };
