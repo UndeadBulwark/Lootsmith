@@ -200,7 +200,7 @@ fn skill_tile(
     unlocked: bool,
     accent: egui::Color32,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(66.0, 66.0), egui::Sense::click());
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(74.0, 74.0), egui::Sense::click());
     let hovered = response.hovered();
     let painter = ui.painter_at(rect);
     let full = max > 1 && grade >= max;
@@ -243,7 +243,7 @@ fn skill_tile(
     if let Some(texture) = texture {
         let icon = egui::Rect::from_center_size(
             rect.center() - egui::vec2(0.0, 4.0),
-            egui::vec2(44.0, 44.0),
+            egui::vec2(50.0, 50.0),
         );
         let icon_tint = if unlocked {
             egui::Color32::WHITE
@@ -2268,10 +2268,6 @@ impl LootsmithApp {
         // Header.
         ui.add_space(6.0);
         ui.horizontal(|ui| {
-            if let Some(texture) = &portrait {
-                ui.add(egui::Image::new(texture).max_height(132.0));
-                ui.add_space(12.0);
-            }
             ui.vertical(|ui| {
                 ui.label(
                     egui::RichText::new("BORDERLANDS 2 SKILL CALCULATOR")
@@ -2314,12 +2310,20 @@ impl LootsmithApp {
             .id_salt("skill_trees")
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                let width = (ui.available_width() - 6.0).max(240.0);
-                ui.allocate_ui_with_layout(
-                    egui::vec2(width, 0.0),
-                    egui::Layout::top_down(egui::Align::Min),
-                    |ui| {
-                        ui.columns(3, |cols| {
+                ui.horizontal_top(|ui| {
+                    if let Some(texture) = &portrait {
+                        ui.add(
+                            egui::Image::new(texture)
+                                .max_height(430.0)
+                                .max_width(300.0),
+                        );
+                        ui.add_space(16.0);
+                    }
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(840.0, ui.available_height()),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
+                            ui.columns(3, |cols| {
                             for (ti, tree) in class.trees.iter().enumerate() {
                                 let col = &mut cols[ti];
                                 let accent = crate::skills::tree_accent(&tree.color);
@@ -2336,6 +2340,8 @@ impl LootsmithApp {
                                     .corner_radius(egui::CornerRadius::same(8))
                                     .inner_margin(egui::Margin::same(8))
                                     .show(col, |ui| {
+                                        ui.set_min_width(256.0);
+                                        ui.set_min_height(440.0);
                                         let (bar, _) = ui.allocate_exact_size(
                                             egui::vec2(ui.available_width(), 3.0),
                                             egui::Sense::hover(),
@@ -2389,7 +2395,9 @@ impl LootsmithApp {
                                             });
                                             ui.add_space(8.0);
                                         }
-                                        ui.add_space(2.0);
+                                        // Push the name/total footer to the bottom of the plate.
+                                        let remaining = (ui.available_height() - 26.0).max(0.0);
+                                        ui.add_space(remaining);
                                         ui.horizontal(|ui| {
                                             ui.label(
                                                 egui::RichText::new(tree.name.to_uppercase())
@@ -2412,9 +2420,10 @@ impl LootsmithApp {
                                     });
                                 col.add_space(8.0);
                             }
-                        });
-                    },
-                );
+                            });
+                        },
+                    );
+                });
 
                 // Save skills not matched to a tree node (e.g. the action skill).
                 let matched: std::collections::HashSet<usize> = class
