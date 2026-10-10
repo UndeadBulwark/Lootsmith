@@ -22,3 +22,22 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+
+  release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release binaries
+        run: cargo build --release -p lootsmith-gui -p lootsmith-cli
+      - name: Package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tar -czf "lootsmith-${version}-linux-x64.tar.gz" \
+            -C target/release lootsmith-gui lootsmith
+          tar -tzf "lootsmith-${version}-linux-x64.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-tarball
+          path: lootsmith-*-linux-x64.tar.gz
