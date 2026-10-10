@@ -217,3 +217,286 @@ pub fn num_scope<R>(ui: &mut egui::Ui, size: f32, add: impl FnOnce(&mut egui::Ui
     })
     .inner
 }
+
+// ---------------------------------------------------------------------------
+// Homestead widget set (spec §2.7). The shell lays out rects; each widget paints
+// itself and returns an accessible `Response`.
+// ---------------------------------------------------------------------------
+
+use crate::theme::Palette;
+use egui::{pos2, Color32, FontId, Rect, Response, Sense, Stroke, WidgetInfo, WidgetType};
+
+fn palette(ui: &egui::Ui) -> Palette {
+    *crate::theme::active(ui.ctx())
+}
+
+fn ppp(ui: &egui::Ui) -> f32 {
+    ui.ctx().pixels_per_point()
+}
+
+fn respond(ui: &egui::Ui, rect: Rect, tag: &str, sense: Sense) -> Response {
+    ui.interact(rect, ui.id().with(tag), sense)
+}
+
+/// A notched panel: `pan` fill, `wd` border, dashed `brd` stitch, content inset.
+pub fn panel<R>(ui: &mut egui::Ui, rect: Rect, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    let p = palette(ui);
+    crate::ui::pixel::panel(ui.painter(), rect, ppp(ui), &p);
+    let inner = rect.shrink(14.0);
+    ui.scope_builder(egui::UiBuilder::new().max_rect(inner), add)
+        .inner
+}
+
+/// A plank bar (top/status bars): `wd` fill, seams, gold rule.
+pub fn plank_bar(ui: &egui::Ui, rect: Rect, horizontal: bool) {
+    let p = palette(ui);
+    crate::ui::pixel::plank_bar(ui.painter(), rect, ppp(ui), &p, horizontal);
+}
+
+/// A 3 px dotted trail divider.
+pub fn trail_divider(ui: &egui::Ui, from: egui::Pos2, to: egui::Pos2) {
+    let p = palette(ui);
+    crate::ui::pixel::trail_divider(ui.painter(), from, to, ppp(ui), &p);
+}
+
+/// A banner ribbon with `onr` text.
+pub fn ribbon(ui: &egui::Ui, rect: Rect, text: &str) -> Response {
+    let p = palette(ui);
+    crate::ui::pixel::ribbon(
+        ui.painter(),
+        rect,
+        ppp(ui),
+        &p,
+        text,
+        FontId::proportional(15.0),
+    );
+    let response = respond(ui, rect, &format!("ribbon-{text}"), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
+    response
+}
+
+/// Button style.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ButtonKind {
+    Normal,
+    Primary,
+    Danger,
+}
+
+/// A notched button (`Normal` pan, `Primary` acc, `Danger` destructive text).
+pub fn button(ui: &egui::Ui, rect: Rect, label: &str, kind: ButtonKind) -> Response {
+    let p = palette(ui);
+    let (fill, border, text) = match kind {
+        ButtonKind::Normal => (p.pan, p.wd, p.fg),
+        ButtonKind::Primary => (p.acc, p.gold, p.on),
+        ButtonKind::Danger => (p.pan, p.wd, p.dng),
+    };
+    let points = crate::ui::pixel::notched_rect(rect, 4.0, ppp(ui));
+    ui.painter().add(egui::Shape::convex_polygon(
+        points,
+        fill,
+        Stroke::new(2.0, border),
+    ));
+    ui.painter().text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        label,
+        FontId::proportional(15.0),
+        text,
+    );
+    let response = respond(ui, rect, &format!("button-{label}"), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    response
+}
+
+/// A small status/label chip.
+pub fn chip(ui: &egui::Ui, rect: Rect, text: &str, color: Color32) -> Response {
+    let p = palette(ui);
+    let points = crate::ui::pixel::notched_rect(rect, 3.0, ppp(ui));
+    ui.painter().add(egui::Shape::convex_polygon(
+        points,
+        p.pan,
+        Stroke::new(1.0, color),
+    ));
+    ui.painter().text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        text,
+        FontId::proportional(13.0),
+        color,
+    );
+    let response = respond(ui, rect, &format!("chip-{text}"), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
+    response
+}
+
+/// A rarity diamond (14 px) with the mandatory outline.
+pub fn gem_rarity(ui: &egui::Ui, center: egui::Pos2, fill: Color32) {
+    let p = palette(ui);
+    crate::ui::pixel::diamond(ui.painter(), center, 14.0, fill, ppp(ui), &p);
+}
+
+/// A stat block: a small caption above a large VT323 value.
+pub fn stat_block(ui: &egui::Ui, rect: Rect, label: &str, value: &str) {
+    let p = palette(ui);
+    ui.painter().text(
+        rect.left_top() + egui::vec2(0.0, 2.0),
+        egui::Align2::LEFT_TOP,
+        label,
+        FontId::proportional(13.0),
+        p.gold,
+    );
+    ui.painter().text(
+        rect.left_bottom() - egui::vec2(0.0, 2.0),
+        egui::Align2::LEFT_BOTTOM,
+        value,
+        num_font(20.0),
+        p.fg,
+    );
+}
+
+/// A part row: a label on the left and (in the shell) a dropdown on the right.
+pub fn part_row(ui: &egui::Ui, rect: Rect, label: &str, value: &str) -> Response {
+    let p = palette(ui);
+    ui.painter().text(
+        rect.left_center(),
+        egui::Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(14.0),
+        p.dim,
+    );
+    ui.painter().text(
+        rect.right_center() - egui::vec2(20.0, 0.0),
+        egui::Align2::RIGHT_CENTER,
+        value,
+        FontId::proportional(14.0),
+        p.fg,
+    );
+    crate::ui::pixel::trail_divider(
+        ui.painter(),
+        pos2(rect.left(), rect.bottom()),
+        pos2(rect.right(), rect.bottom()),
+        ppp(ui),
+        &p,
+    );
+    let response = respond(ui, rect, &format!("part-{label}"), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, label));
+    response
+}
+
+/// A single-line text field with a hint (identifier fields use VT323).
+pub fn text_field(
+    ui: &mut egui::Ui,
+    id: &str,
+    text: &mut String,
+    hint: &str,
+    width: f32,
+) -> Response {
+    let response = ui.add_sized(
+        [width, 24.0],
+        egui::TextEdit::singleline(text).id_salt(id).hint_text(hint),
+    );
+    response
+}
+
+/// A numeric field (VT323) with an accessible label.
+pub fn number_field(ui: &mut egui::Ui, id: &str, value: &mut i32, width: f32) -> Response {
+    let response = num_scope(ui, 15.0, |ui| {
+        ui.add_sized([width, 24.0], egui::DragValue::new(value).speed(0.2))
+    });
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::DragValue, true, id));
+    response
+}
+
+/// A search field (label font, per spec §2.4).
+pub fn search_field(ui: &mut egui::Ui, id: &str, text: &mut String, width: f32) -> Response {
+    ui.add_sized(
+        [width, 24.0],
+        egui::TextEdit::singleline(text)
+            .id_salt(id)
+            .hint_text("filter items…"),
+    )
+}
+
+/// A notched dropdown. Returns the newly chosen index, if any.
+pub fn dropdown(ui: &mut egui::Ui, id: &str, current: &str, options: &[String]) -> Option<usize> {
+    let p = palette(ui);
+    let mut chosen = None;
+    egui::ComboBox::from_id_salt(id)
+        .selected_text(text_with_nums(current, p.fg, 15.0))
+        .width(270.0)
+        .show_ui(ui, |ui| {
+            for (i, option) in options.iter().enumerate() {
+                if ui.selectable_label(option == current, option).clicked() {
+                    chosen = Some(i);
+                }
+            }
+        });
+    chosen
+}
+
+/// A sidebar navigation row with an active block and an optional count badge.
+pub fn nav_row(
+    ui: &egui::Ui,
+    rect: Rect,
+    label: &str,
+    active: bool,
+    count: Option<usize>,
+) -> Response {
+    let p = palette(ui);
+    let response = respond(ui, rect, &format!("nav-{label}"), Sense::click());
+    let hovered = response.hovered();
+    if active {
+        ui.painter().rect_filled(rect, 0.0, p.acc);
+    }
+    let color = if active { p.on } else { p.fg };
+    ui.painter().text(
+        rect.left_center() + egui::vec2(10.0, 0.0),
+        egui::Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(15.0),
+        color,
+    );
+    if let Some(n) = count {
+        ui.painter().text(
+            rect.right_center() - egui::vec2(10.0, 0.0),
+            egui::Align2::RIGHT_CENTER,
+            n.to_string(),
+            num_font(15.0),
+            color,
+        );
+    }
+    let _ = hovered;
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, active, label));
+    response
+}
+
+/// A status plank chip: a glyph plus text, ok or missing.
+pub fn status_chip(ui: &egui::Ui, rect: Rect, text: &str, ok: bool) -> Response {
+    let p = palette(ui);
+    let points = crate::ui::pixel::notched_rect(rect, 3.0, ppp(ui));
+    ui.painter().add(egui::Shape::convex_polygon(
+        points,
+        p.pan,
+        Stroke::new(1.0, p.wd),
+    ));
+    let glyph = if ok { Glyph::Check } else { Glyph::Cross };
+    let color = if ok { p.gold } else { p.dng };
+    paint_glyph(
+        ui.painter(),
+        pos2(rect.left() + 12.0, rect.center().y),
+        glyph,
+        color,
+        0.9,
+    );
+    ui.painter().text(
+        pos2(rect.left() + 24.0, rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        text,
+        FontId::proportional(14.0),
+        p.fg,
+    );
+    let response = respond(ui, rect, &format!("status-{text}"), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
+    response
+}
