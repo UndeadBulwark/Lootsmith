@@ -12,7 +12,8 @@ with `lootsmith` as a facade crate.
 
 Status: **core + CLI complete and validated against a real PC save; the GUI is a
 full editor (General, Character, Currency, Skills, Fast Travel, Vehicles, Missions,
-Backpack, Bank).** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
+Backpack, Bank, Raw) with toolbar, item codes and a themed shell.** See
+`../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
 
 ## Workspace layout
 
@@ -134,22 +135,24 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
 
 ```sh
 cargo run -p lootsmith-gui
-# or open a specific save:
+# or open a specific save / game-data folder:
 cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
-    --dumps "/path/Asset Library Manager.json"
+    --dumps "/path/to/gibbed-dumps"
 ```
 
-A native window with tabs for **General**, **Character**, **Currency**,
-**Skills**, **Fast Travel**, **Vehicles**, **Missions**, **Backpack**, and **Bank**.
-Edit the common scalars; raise or lower skill ranks; add, remove, and pick the
-last fast-travel station (resolved through `Travel Stations.json`); choose vehicle
-skins per family and the steering mode (skins resolved through
-`Customizations.json`); set the plot/active mission number and per-mission status
-and browse challenges (`Missions.json`); the four data files are auto-loaded next
-to the Asset Library. See the item list with per-item quantity/equipped and
-per-weapon quick slot; select an entry to edit its parts by name, change a stack
-quantity, **Move to bank** / **Move to backpack**, or **Remove**; then **Save** (in
-place, creating a `.bak`) or **Save As**. The Asset Library path enables item names.
+A native window with a toolbar (**Open / Save / Save As / Reload / Game data**,
+with `Ctrl+O/S/Shift+S/R`), a light/dark theme toggle, and a status bar. Pick the
+**game-data folder** once (the directory holding `Asset Library Manager.json`) and
+the Asset Library, Travel Stations, Customizations and Missions tables are all
+loaded from it, so names resolve everywhere.
+
+Tabs: **General**, **Character** (name, level, head & skin), **Currency**,
+**Skills**, **Fast Travel**, **Vehicles**, **Missions**, **Backpack**, **Bank**, and
+**Raw** (edit any scalar top-level field). The Backpack/Bank tabs create blank
+weapons/items, duplicate, **copy/paste `BL2(...)` item codes**, sync item levels,
+set a stack quantity/mark/quick-slot, edit every part, move bank↔backpack, and
+remove. Changes mark the document as unsaved; Save writes in place with a `.bak`.
+Settings (paths, theme, tab) persist between runs.
 
 ### Desktop launcher (interim)
 
