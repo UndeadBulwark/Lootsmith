@@ -236,6 +236,24 @@ pub fn contrast(a: egui::Color32, b: egui::Color32) -> f32 {
     (hi + 0.05) / (lo + 0.05)
 }
 
+/// Colours used for **text** in either palette (for the rendered-contrast gate).
+pub fn palette_text_colors() -> Vec<egui::Color32> {
+    let mut v = Vec::new();
+    for p in [&DARK, &LIGHT] {
+        v.extend([p.fg, p.dim, p.gold, p.on, p.onw, p.onr, p.dng]);
+    }
+    v
+}
+
+/// Colours used as **fills** in either palette (for the rendered-contrast gate).
+pub fn palette_fill_colors() -> Vec<egui::Color32> {
+    let mut v = Vec::new();
+    for p in [&DARK, &LIGHT] {
+        v.extend([p.bg, p.pan, p.acc, p.wd, p.wd2, p.rib, p.tex]);
+    }
+    v
+}
+
 /// The palette lives in the `Context` (spec: helpers paint with the installed
 /// palette). Storing it in `ctx.data` keeps two contexts — e.g. two test
 /// harnesses running in parallel — from ever sharing or racing on a palette.
@@ -270,7 +288,9 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     visuals.hyperlink_color = p.gold;
     visuals.selection.bg_fill = p.acc;
     visuals.selection.stroke = egui::Stroke::new(1.0, p.on);
-    visuals.override_text_color = Some(p.fg);
+    // NB: no `override_text_color` — it would force every plain-string atom to
+    // `fg`, including selected widgets' text, which must be `on` on `acc`.
+    // Labels get `fg` from `widgets.*.fg_stroke` instead.
 
     visuals.panel_fill = p.bg;
     visuals.window_fill = p.pan;
@@ -281,7 +301,8 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     visuals.extreme_bg_color = p.bg;
     visuals.hyperlink_color = p.acc;
     visuals.selection.bg_fill = p.acc;
-    visuals.selection.stroke = egui::Stroke::new(1.0, p.acc);
+    // Selected text sits on `acc`, so it must use `on` (spec §2.2), never `fg`.
+    visuals.selection.stroke = egui::Stroke::new(1.0, p.on);
 
     let w = &mut visuals.widgets;
     w.noninteractive.bg_fill = p.pan;
@@ -305,7 +326,7 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     w.active.bg_fill = p.acc;
     w.active.weak_bg_fill = p.acc;
     w.active.bg_stroke = egui::Stroke::new(1.0, p.acc);
-    w.active.fg_stroke = egui::Stroke::new(1.0, p.fg);
+    w.active.fg_stroke = egui::Stroke::new(1.0, p.on);
     w.active.corner_radius = egui::CornerRadius::same(6);
 
     w.open.bg_fill = p.pan;

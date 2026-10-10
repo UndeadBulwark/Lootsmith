@@ -2092,12 +2092,10 @@ impl LootsmithApp {
                         {
                             action = Some(Action::ToggleTheme);
                         }
-                        ui.label(
-                            egui::RichText::new("Scale")
-                                .color(Tokens::TEXT_DIM)
-                                .size(11.5),
-                        );
-                        for value in Self::UI_SCALES {
+                        // Right-to-left layout: add the scale buttons in
+                        // descending order so they read 100 / 150 / 200 left to
+                        // right, then the label.
+                        for value in Self::UI_SCALES.iter().rev() {
                             let text = format!("{}%", (value * 100.0).round() as i32);
                             if ui
                                 .selectable_label(
@@ -2107,9 +2105,14 @@ impl LootsmithApp {
                                 .on_hover_text("UI scale (whole pixels)")
                                 .clicked()
                             {
-                                self.ui_scale = value;
+                                self.ui_scale = *value;
                             }
                         }
+                        ui.label(
+                            egui::RichText::new("Scale")
+                                .color(Tokens::TEXT_DIM)
+                                .size(11.5),
+                        );
                         ui.add_space(4.0);
                         if self.dirty {
                             ui.colored_label(Tokens::ACCENT, "● unsaved");
