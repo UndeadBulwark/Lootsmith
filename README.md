@@ -11,8 +11,9 @@ CLI (`lootsmith-cli`), and (later) an `egui` desktop app (`lootsmith-gui`),
 with `lootsmith` as a facade crate.
 
 Status: **core + CLI complete and validated against a real PC save; the GUI is a
-working editor (General, Character, Currency, Skills, Backpack, Bank) with more
-parity tabs to come.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
+working editor (General, Character, Currency, Skills, Fast Travel, Backpack, Bank)
+with more parity tabs to come.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the
+full plan.
 
 ## Workspace layout
 
@@ -60,11 +61,13 @@ cargo run -p lootsmith-cli -- dump    /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --dumps "/path/Asset Library Manager.json"
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --container bank
 cargo run -p lootsmith-cli -- skills  /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- travel  /path/to/Save0001.sav --stations "/path/Travel Stations.json"
 ```
 
 `items` lists the backpack (fields 53/54) and the bank (field 41); pass
 `--container bag|bank` to filter (default `all`). `skills` lists the skill tree
-(`SkillData`, field 8) with each node's grade and points.
+(`SkillData`, field 8) with each node's grade and points. `travel` lists the
+visited fast-travel stations (fields 16/17), resolved through `Travel Stations.json`.
 
 Edit and write (in place with a `.bak` backup, or with `--out`):
 
@@ -96,6 +99,13 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
     --skill 4 --grade 5 --points 5 --out /path/to/edited.sav
 ```
 
+Add, remove, or change the last visited fast-travel station:
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
+    --travel-add Xmas --travel-last Xmas --out /path/to/edited.sav
+```
+
 ## GUI
 
 ```sh
@@ -106,11 +116,13 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 ```
 
 A native window with tabs for **General**, **Character**, **Currency**,
-**Skills**, **Backpack**, and **Bank**. Edit the common scalars; raise or lower
-skill ranks; see the item list with per-item quantity/equipped and per-weapon
-quick slot; select an entry to edit its parts by name, change a stack quantity,
-**Move to bank** / **Move to backpack**, or **Remove**; then **Save** (in place,
-creating a `.bak`) or **Save As**. The Asset Library path enables item names.
+**Skills**, **Fast Travel**, **Backpack**, and **Bank**. Edit the common scalars;
+raise or lower skill ranks; add, remove, and pick the last fast-travel station
+(resolved through `Travel Stations.json`, auto-loaded next to the Asset Library);
+see the item list with per-item quantity/equipped and per-weapon quick slot;
+select an entry to edit its parts by name, change a stack quantity, **Move to
+bank** / **Move to backpack**, or **Remove**; then **Save** (in place, creating a
+`.bak`) or **Save As**. The Asset Library path enables item names.
 
 ### Desktop launcher (interim)
 
