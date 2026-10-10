@@ -11,6 +11,7 @@ pub mod error;
 pub mod gameinfo;
 pub mod huffman;
 pub mod items;
+pub mod missions;
 pub mod platform;
 pub mod proto;
 pub mod savegame;
@@ -21,6 +22,10 @@ pub use customizations::{Customization, Customizations};
 pub use error::{Error, Result};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
+pub use missions::{Mission, Missions};
 pub use platform::{CompressionScheme, Endian, Platform};
-pub use savegame::{Container, PackedEntry, SaveGame, Skill, VehicleCustomization, VEHICLE_FAMILIES};
+pub use savegame::{
+    mission_status_name, Challenge, Container, MissionEntry, MissionPlaythrough, PackedEntry,
+    SaveGame, Skill, VehicleCustomization, VEHICLE_FAMILIES, MISSION_STATUSES,
+};
 pub use travel::{TravelStation, TravelStations};

@@ -63,6 +63,7 @@ fn loads_and_switches_tabs_by_label() {
         ("Skills", Tab::Skills),
         ("Fast Travel", Tab::Travel),
         ("Vehicles", Tab::Vehicles),
+        ("Missions", Tab::Missions),
         ("Backpack", Tab::Backpack),
         ("Bank", Tab::Bank),
         ("General", Tab::General),
@@ -295,6 +296,43 @@ fn edits_vehicles_and_saves() {
     );
     assert_eq!(vehicles[0].customizations[0], key);
     assert_eq!(sg.vehicle_steering_mode(), Some(0));
+}
+
+#[test]
+fn edits_missions_and_saves() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+
+    h.get_by_label("Missions").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Missions);
+    assert_eq!(h.state().plot_mission, 18);
+    assert_eq!(h.state().active_mission, 18);
+    assert_eq!(h.state().mission_rows.len(), 19);
+    assert_eq!(h.state().challenges.len(), 132);
+    assert!(
+        h.state().missions_data.is_some(),
+        "Missions.json should load from the dumps directory"
+    );
+
+    // Mark the active mission Complete and bump the plot mission, as the UI would.
+    h.state_mut().mission_rows[18].status = 4;
+    h.state_mut().plot_mission = 19;
+    h.run();
+    assert!(h.state().missions_dirty());
+    h.get_by_label("Apply mission changes").click();
+    h.run();
+
+    let out = std::env::temp_dir().join("lootsmith-ui-missions.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = reopen(&out);
+    assert!(reopened.crc32_valid() && reopened.proto_stable());
+    let sg = reopened.save_game().expect("reparse");
+    assert_eq!(sg.plot_mission_number(), Some(19));
+    assert_eq!(sg.mission_playthroughs()[0].missions[18].status, 4);
 }
 
 #[test]

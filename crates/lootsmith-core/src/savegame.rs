@@ -5,7 +5,7 @@
 //! [`Message`] keeps raw bytes, so untouched fields re-emit exactly; setters
 //! replace a single field with a canonical encoding.
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::proto::{Field, Message};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -635,8 +635,7 @@ pub struct VehicleCustomization {
 
 /// The vehicle families the game recognises, as `(usage, family_resource)`.
 /// `usage` is the key into `Customizations.json` used to offer skin choices.
-pub const VEHICLE_FAMILIES: &[(&str, &str)] = &[
-    (
+pub const VEHICLE_FAMILIES: &[(&str, &str)] = &[    (
         "Runner",
         "GD_Globals.VehicleSpawnStation.VehicleFamily_Runner",
     ),
@@ -653,6 +652,55 @@ pub const VEHICLE_FAMILIES: &[(&str, &str)] = &[
         "GD_SagePackageDef.Vehicles.VehicleFamily_FanBoat",
     ),
 ];
+
+/// `MissionStatus` names, indexed by the value stored in the save.
+pub const MISSION_STATUSES: &[&str] = &[
+    "NotStarted",
+    "Active",
+    "RequiredObjectivesComplete",
+    "ReadyToTurnIn",
+    "Complete",
+    "Failed",
+];
+
+/// The name of a `MissionStatus` value.
+pub fn mission_status_name(value: i32) -> &'static str {
+    MISSION_STATUSES
+        .get(value as usize)
+        .copied()
+        .unwrap_or("?")
+}
+
+/// A `ChallengeData` entry (field 38).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Challenge {
+    pub challenge: String,
+    pub is_from_dlc: bool,
+    pub dlc_package_id: i32,
+}
+
+/// A `MissionData` entry inside a playthrough.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MissionEntry {
+    pub mission: String,
+    pub status: i32,
+    pub is_from_dlc: bool,
+    pub dlc_package_id: i32,
+    pub active_objective_set_index: i32,
+    pub needs_rewards: bool,
+    pub heard_kickoff: bool,
+    pub game_stage: i32,
+}
+
+/// A `MissionPlaythroughData` entry (field 18).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MissionPlaythrough {
+    pub playthrough_number: Option<i32>,
+    pub active_mission: String,
+    pub missions: Vec<MissionEntry>,
+    pub pending_rewards: usize,
+    pub filtered_missions: Vec<String>,
+}
 
 /// Which top-level list a packed blob lives in.
 ///
@@ -990,5 +1038,137 @@ impl SaveGame {
             }
             self.message.push(Field::bytes(57, &sub.to_bytes()));
         }
+    }
+
+    // ---- challenges & missions ----
+
+    /// All `ChallengeData` entries (field 38), in order.
+    pub fn challenges(&self) -> Vec<Challenge> {
+        self.message
+            .get_all(38)
+            .filter_map(|field| field.as_message().ok().flatten())
+            .map(|sub| Challenge {
+                challenge: sub
+                    .get(1)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                is_from_dlc: sub.get(2).and_then(|f| f.as_bool()).unwrap_or(false),
+                dlc_package_id: sub.get(3).and_then(|f| f.as_i32()).unwrap_or(0),
+            })
+            .collect()
+    }
+
+    pub fn num_challenge_prestiges(&self) -> Option<i32> {
+        self.get_i32(42)
+    }
+
+    pub fn plot_mission_number(&self) -> Option<i32> {
+        self.get_i32(21)
+    }
+
+    pub fn set_plot_mission_number(&mut self, value: i32) {
+        self.set_i32(21, value);
+    }
+
+    pub fn active_mission_number(&self) -> Option<i32> {
+        self.get_i32(37)
+    }
+
+    pub fn set_active_mission_number(&mut self, value: i32) {
+        self.set_i32(37, value);
+    }
+
+    /// All `MissionPlaythroughData` entries (field 18), with their missions.
+    pub fn mission_playthroughs(&self) -> Vec<MissionPlaythrough> {
+        self.message
+            .get_all(18)
+            .filter_map(|field| field.as_message().ok().flatten())
+            .map(|pt| MissionPlaythrough {
+                playthrough_number: pt.get(1).and_then(|f| f.as_i32()),
+                active_mission: pt
+                    .get(2)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                missions: pt
+                    .get_all(3)
+                    .filter_map(|f| f.as_message().ok().flatten())
+                    .map(|md| MissionEntry {
+                        mission: md
+                            .get(1)
+                            .and_then(|f| f.as_str())
+                            .map(|s| s.into_owned())
+                            .unwrap_or_default(),
+                        status: md.get(2).and_then(|f| f.as_i32()).unwrap_or(0),
+                        is_from_dlc: md.get(3).and_then(|f| f.as_bool()).unwrap_or(false),
+                        dlc_package_id: md.get(4).and_then(|f| f.as_i32()).unwrap_or(0),
+                        active_objective_set_index: md.get(6).and_then(|f| f.as_i32()).unwrap_or(0),
+                        needs_rewards: md.get(8).and_then(|f| f.as_bool()).unwrap_or(false),
+                        heard_kickoff: md.get(10).and_then(|f| f.as_bool()).unwrap_or(false),
+                        game_stage: md.get(11).and_then(|f| f.as_i32()).unwrap_or(0),
+                    })
+                    .collect(),
+                pending_rewards: pt.count(4),
+                filtered_missions: pt
+                    .get_all(5)
+                    .filter_map(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .collect(),
+            })
+            .collect()
+    }
+
+    /// Set `MissionData.Status` (field 2) on mission `mission` of playthrough
+    /// `playthrough`.
+    pub fn set_mission_status(
+        &mut self,
+        playthrough: usize,
+        mission: usize,
+        status: i32,
+    ) -> Result<()> {
+        let mut pt_seen = 0usize;
+        for field in &mut self.message.fields {
+            if field.number != 18 {
+                continue;
+            }
+            if pt_seen == playthrough {
+                let pt_bytes = field
+                    .as_bytes()
+                    .ok_or_else(|| Error::Proto("playthrough is not length-delimited".into()))?
+                    .to_vec();
+                let mut pt = Message::parse(&pt_bytes)?;
+                let mut md_seen = 0usize;
+                let mut found = false;
+                for md_field in &mut pt.fields {
+                    if md_field.number != 3 {
+                        continue;
+                    }
+                    if md_seen == mission {
+                        let md_bytes = md_field
+                            .as_bytes()
+                            .ok_or_else(|| {
+                                Error::Proto("mission entry is not length-delimited".into())
+                            })?
+                            .to_vec();
+                        let mut md = Message::parse(&md_bytes)?;
+                        md.set(Field::varint(2, status as u32 as u64));
+                        *md_field = Field::bytes(3, &md.to_bytes());
+                        found = true;
+                        break;
+                    }
+                    md_seen += 1;
+                }
+                if !found {
+                    return Err(Error::Proto(format!(
+                        "no mission {mission} in playthrough {playthrough}"
+                    )));
+                }
+                *field = Field::bytes(18, &pt.to_bytes());
+                return Ok(());
+            }
+            pt_seen += 1;
+        }
+        Err(Error::Proto(format!("no playthrough {playthrough}")))
     }
 }

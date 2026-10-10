@@ -1,8 +1,9 @@
 //! Lootsmith CLI: `inspect`, `verify`, and `dump`.
 
 use lootsmith_core::{
-    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container,
-    Customizations, Platform, TravelStations, VEHICLE_FAMILIES,
+    container, items, mission_status_name, AssetGroup, AssetLibraryConfigs, AssetLibraryManager,
+    Container, Customizations, Missions, Platform, TravelStations, MISSION_STATUSES,
+    VEHICLE_FAMILIES,
 };
 use std::process::ExitCode;
 
@@ -18,16 +19,20 @@ fn usage() -> ExitCode {
          lootsmith skills  <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
          lootsmith vehicles <file.sav> [--customizations FILE]\n  \
+         lootsmith missions <file.sav> [--missions-json FILE]\n  \
          lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE [--container bag|bank]\n  \
          lootsmith edit    <file.sav> --skill N [--grade G] [--points P] [--out OUT]\n  \
          lootsmith edit    <file.sav> [--travel-add NAME] [--travel-remove NAME] [--travel-last NAME] [--out OUT]\n  \
-         lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n\
+         lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n  \
+         lootsmith edit    <file.sav> [--plot-mission N] [--active-mission N] [--out OUT]\n  \
+         lootsmith edit    <file.sav> --mission-playthrough P --mission-index I --mission-status NAME [--out OUT]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
          --stations <Travel Stations.json> resolves teleporter names (or set LOOTSMITH_TRAVEL_STATIONS).\n\
          --customizations <Customizations.json> resolves vehicle skin names (or set LOOTSMITH_CUSTOMIZATIONS).\n\
+         --missions-json <Missions.json> resolves mission names (or set LOOTSMITH_MISSIONS).\n\
          --container selects the backpack (default) or the bank/stash for --item.\n\
          edit writes in place with a <file>.bak backup unless --out is given."
     );
@@ -57,10 +62,16 @@ struct Args {
     points: Option<i32>,
     stations: Option<String>,
     customizations: Option<String>,
+    missions_json: Option<String>,
     travel_add: Option<String>,
     travel_remove: Option<String>,
     travel_last: Option<String>,
     steering_mode: Option<i32>,
+    plot_mission: Option<i32>,
+    active_mission: Option<i32>,
+    mission_playthrough: Option<usize>,
+    mission_index: Option<usize>,
+    mission_status: Option<String>,
     scope: Scope,
 }
 
@@ -108,10 +119,16 @@ fn parse_args() -> Option<Args> {
         points: None,
         stations: None,
         customizations: None,
+        missions_json: None,
         travel_add: None,
         travel_remove: None,
         travel_last: None,
         steering_mode: None,
+        plot_mission: None,
+        active_mission: None,
+        mission_playthrough: None,
+        mission_index: None,
+        mission_status: None,
         scope: Scope::All,
     };
     while let Some(arg) = it.next() {
@@ -139,10 +156,16 @@ fn parse_args() -> Option<Args> {
             "--points" => args.points = Some(it.next()?.parse().ok()?),
             "--stations" => args.stations = Some(it.next()?),
             "--customizations" => args.customizations = Some(it.next()?),
+            "--missions-json" => args.missions_json = Some(it.next()?),
             "--travel-add" => args.travel_add = Some(it.next()?),
             "--travel-remove" => args.travel_remove = Some(it.next()?),
             "--travel-last" => args.travel_last = Some(it.next()?),
             "--steering-mode" => args.steering_mode = Some(it.next()?.parse().ok()?),
+            "--plot-mission" => args.plot_mission = Some(it.next()?.parse().ok()?),
+            "--active-mission" => args.active_mission = Some(it.next()?.parse().ok()?),
+            "--mission-playthrough" => args.mission_playthrough = Some(it.next()?.parse().ok()?),
+            "--mission-index" => args.mission_index = Some(it.next()?.parse().ok()?),
+            "--mission-status" => args.mission_status = Some(it.next()?),
             _ => return None,
         }
     }
@@ -190,6 +213,40 @@ fn load_customizations(args: &Args) -> Option<Customizations> {
             if let Ok(customizations) = Customizations::from_path(&candidate) {
                 eprintln!("loaded customizations from {}", candidate.display());
                 return Some(customizations);
+            }
+        }
+    }
+    None
+}
+
+fn parse_status(value: &str) -> Option<i32> {
+    if let Ok(number) = value.parse::<i32>() {
+        return Some(number);
+    }
+    MISSION_STATUSES
+        .iter()
+        .position(|name| name.eq_ignore_ascii_case(value))
+        .map(|i| i as i32)
+}
+
+fn load_missions(args: &Args) -> Option<Missions> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+    if let Some(path) = &args.missions_json {
+        candidates.push(std::path::PathBuf::from(path));
+    }
+    if let Ok(env) = std::env::var("LOOTSMITH_MISSIONS") {
+        candidates.push(std::path::PathBuf::from(env));
+    }
+    if let Some(dumps) = &args.dumps {
+        if let Some(dir) = std::path::Path::new(dumps).parent() {
+            candidates.push(dir.join("Missions.json"));
+        }
+    }
+    for candidate in candidates {
+        if candidate.exists() {
+            if let Ok(missions) = Missions::from_path(&candidate) {
+                eprintln!("loaded missions from {}", candidate.display());
+                return Some(missions);
             }
         }
     }
@@ -517,6 +574,69 @@ fn main() -> ExitCode {
             println!("total: {} vehicle families set", vehicles.len());
             ExitCode::SUCCESS
         }
+        "missions" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let missions = load_missions(&args);
+            let label = |key: &str| match &missions {
+                Some(m) => m.label_for(key),
+                None => key.to_string(),
+            };
+            let name_for = |number: i32| match &missions {
+                Some(m) => m
+                    .label_for_number(number)
+                    .unwrap_or_else(|| format!("(unknown {number})")),
+                None => number.to_string(),
+            };
+            println!(
+                "plot mission:   {}",
+                save_game
+                    .plot_mission_number()
+                    .map(name_for)
+                    .unwrap_or_else(|| "(none)".to_string())
+            );
+            println!(
+                "active mission: {}",
+                save_game
+                    .active_mission_number()
+                    .map(name_for)
+                    .unwrap_or_else(|| "(none)".to_string())
+            );
+            let playthroughs = save_game.mission_playthroughs();
+            for (pi, pt) in playthroughs.iter().enumerate() {
+                println!(
+                    "playthrough {pi} (number {:?}) active={} pending={} filtered={}",
+                    pt.playthrough_number,
+                    label(&pt.active_mission),
+                    pt.pending_rewards,
+                    pt.filtered_missions.len()
+                );
+                for (mi, mission) in pt.missions.iter().enumerate() {
+                    println!(
+                        "    [{mi:>3}] {:<26} {}",
+                        mission_status_name(mission.status),
+                        label(&mission.mission)
+                    );
+                }
+            }
+            let challenges = save_game.challenges();
+            println!("challenges: {}", challenges.len());
+            for (i, challenge) in challenges.iter().enumerate() {
+                let dlc = if challenge.is_from_dlc {
+                    format!(" (dlc {})", challenge.dlc_package_id)
+                } else {
+                    String::new()
+                };
+                println!("    [{i:>3}] {}{dlc}", challenge.challenge);
+            }
+            println!("prestiges: {:?}", save_game.num_challenge_prestiges());
+            ExitCode::SUCCESS
+        }
         "edit" => {
             let mut save_game = match save.save_game() {
                 Ok(s) => s,
@@ -678,6 +798,37 @@ fn main() -> ExitCode {
             if let Some(mode) = args.steering_mode {
                 save_game.set_vehicle_steering_mode(mode);
                 println!("vehicle steering mode = {mode}");
+                changes += 1;
+            }
+            if let Some(value) = args.plot_mission {
+                save_game.set_plot_mission_number(value);
+                println!("plot mission = {value}");
+                changes += 1;
+            }
+            if let Some(value) = args.active_mission {
+                save_game.set_active_mission_number(value);
+                println!("active mission = {value}");
+                changes += 1;
+            }
+            if let (Some(playthrough), Some(index), Some(status_name)) = (
+                args.mission_playthrough,
+                args.mission_index,
+                args.mission_status.clone(),
+            ) {
+                let Some(status) = parse_status(&status_name) else {
+                    eprintln!(
+                        "error: unknown mission status '{status_name}' (expected one of {MISSION_STATUSES:?})"
+                    );
+                    return ExitCode::FAILURE;
+                };
+                if let Err(e) = save_game.set_mission_status(playthrough, index, status) {
+                    eprintln!("error: {e}");
+                    return ExitCode::FAILURE;
+                }
+                println!(
+                    "playthrough {playthrough} mission {index}: status = {} ({status})",
+                    mission_status_name(status)
+                );
                 changes += 1;
             }
 
