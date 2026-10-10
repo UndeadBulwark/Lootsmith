@@ -10,7 +10,18 @@ use lootsmith_core::{
     VehicleCustomization, MISSION_STATUSES, VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
+
+/// Borderlands-ish accent colour.
+const ACCENT: egui::Color32 = egui::Color32::from_rgb(247, 156, 43);
+
+/// UI colour theme.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Theme {
+    Dark,
+    Light,
+}
 
 #[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum Tab {
@@ -123,6 +134,47 @@ fn short_skill(name: &str) -> String {
     }
 }
 
+fn tab_key(tab: Tab) -> &'static str {
+    match tab {
+        Tab::General => "general",
+        Tab::Character => "character",
+        Tab::Currency => "currency",
+        Tab::Skills => "skills",
+        Tab::Travel => "travel",
+        Tab::Vehicles => "vehicles",
+        Tab::Missions => "missions",
+        Tab::Backpack => "backpack",
+        Tab::Bank => "bank",
+    }
+}
+
+fn tab_from_key(key: &str) -> Option<Tab> {
+    match key {
+        "general" => Some(Tab::General),
+        "character" => Some(Tab::Character),
+        "currency" => Some(Tab::Currency),
+        "skills" => Some(Tab::Skills),
+        "travel" => Some(Tab::Travel),
+        "vehicles" => Some(Tab::Vehicles),
+        "missions" => Some(Tab::Missions),
+        "backpack" => Some(Tab::Backpack),
+        "bank" => Some(Tab::Bank),
+        _ => None,
+    }
+}
+
+/// A toolbar/shortcut action, dispatched after the panel closure.
+#[derive(Clone, Copy)]
+enum Action {
+    Open,
+    Save,
+    SaveAs,
+    Reload,
+    LoadData,
+    PickData,
+    ToggleTheme,
+}
+
 struct ItemEdit {
     container: Container,
     occurrence: usize,
@@ -160,6 +212,10 @@ pub struct LootsmithApp {
     pub active_mission: i32,
     pub challenges: Vec<String>,
     pub missions_data: Option<Arc<Missions>>,
+    pub theme: Theme,
+    theme_applied: bool,
+    /// There are edits in memory that have not been written to disk.
+    pub dirty: bool,
     pub status: String,
     pub save_as: String,
     loaded_once: bool,
@@ -314,6 +370,9 @@ impl LootsmithApp {
             active_mission: 0,
             challenges: Vec::new(),
             missions_data: None,
+            theme: Theme::Dark,
+            theme_applied: false,
+            dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             loaded_once: false,
@@ -421,22 +480,46 @@ impl LootsmithApp {
         self.refresh_travel();
         self.refresh_vehicles();
         self.refresh_missions();
+        self.dirty = false;
     }
 
+    /// The directory holding the dumps files (Asset Library Manager, Travel
+    /// Stations, Customizations, Missions).
+    fn dumps_dir(&self) -> Option<PathBuf> {
+        let raw = self.dumps.trim();
+        if raw.is_empty() {
+            return None;
+        }
+        let path = PathBuf::from(raw);
+        if path.is_dir() {
+            Some(path)
+        } else {
+            path.parent().map(|p| p.to_path_buf())
+        }
+    }
+
+    /// Load the asset library and the companion dumps. `self.dumps` may be
+    /// either a directory or the `Asset Library Manager.json` file.
     pub fn load_dumps(&mut self) {
-        let path = if self.dumps.trim().is_empty() {
+        let raw = if self.dumps.trim().is_empty() {
             std::env::var("LOOTSMITH_ASSET_LIBRARY").unwrap_or_default()
         } else {
             self.dumps.clone()
         };
-        if path.trim().is_empty() {
+        if raw.trim().is_empty() {
             self.manager = None;
             return;
         }
-        match AssetLibraryManager::from_path(std::path::Path::new(path.trim())) {
+        let path = PathBuf::from(raw.trim());
+        let library = if path.is_dir() {
+            path.join("Asset Library Manager.json")
+        } else {
+            path
+        };
+        match AssetLibraryManager::from_path(&library) {
             Ok(m) => {
                 self.manager = Some(Arc::new(m));
-                self.status = format!("loaded asset library from {path}");
+                self.status = format!("loaded asset library from {}", library.display());
             }
             Err(e) => {
                 self.manager = None;
@@ -589,6 +672,7 @@ impl LootsmithApp {
                 let _ = save_game.set_entry_equipped(edit.container, edit.occurrence, edit.equipped);
             }
         }
+        self.dirty = true;
         self.status = "item updated (remember to Save)".into();
         let selected = self.selected;
         self.refresh_rows();
@@ -619,6 +703,7 @@ impl LootsmithApp {
                 };
                 self.refresh_rows();
                 self.select_entry(to, new_occurrence);
+                self.dirty = true;
                 self.status = format!("moved to {}", to.label());
             }
             Err(e) => self.status = format!("move error: {e}"),
@@ -641,6 +726,7 @@ impl LootsmithApp {
                 self.selected = None;
                 self.item_edit = None;
                 self.refresh_rows();
+                self.dirty = true;
                 self.status = format!("removed {} #{}", container.label(), occurrence + 1);
             }
             Err(e) => self.status = format!("remove error: {e}"),
@@ -693,6 +779,9 @@ impl LootsmithApp {
                 changed += 1;
             }
         }
+        if changed > 0 {
+            self.dirty = true;
+        }
         self.status = if changed == 0 {
             "no skill changes".into()
         } else {
@@ -715,7 +804,7 @@ impl LootsmithApp {
         if let Ok(env) = std::env::var("LOOTSMITH_TRAVEL_STATIONS") {
             candidates.push(std::path::PathBuf::from(env));
         }
-        if let Some(dir) = std::path::Path::new(self.dumps.trim()).parent() {
+        if let Some(dir) = self.dumps_dir() {
             candidates.push(dir.join("Travel Stations.json"));
         }
         for candidate in candidates {
@@ -756,6 +845,9 @@ impl LootsmithApp {
             return;
         };
         let added = save_game.add_visited_teleporter(name);
+        if added {
+            self.dirty = true;
+        }
         self.status = if added {
             format!("added teleporter {name}")
         } else {
@@ -772,6 +864,9 @@ impl LootsmithApp {
             return;
         };
         let removed = save_game.remove_visited_teleporter(&name);
+        if removed {
+            self.dirty = true;
+        }
         self.status = if removed {
             format!("removed teleporter {name}")
         } else {
@@ -785,6 +880,7 @@ impl LootsmithApp {
             return;
         };
         save_game.set_last_visited_teleporter(name);
+        self.dirty = true;
         self.status = format!("last visited = {name}");
         self.refresh_travel();
     }
@@ -794,7 +890,7 @@ impl LootsmithApp {
         if let Ok(env) = std::env::var("LOOTSMITH_CUSTOMIZATIONS") {
             candidates.push(std::path::PathBuf::from(env));
         }
-        if let Some(dir) = std::path::Path::new(self.dumps.trim()).parent() {
+        if let Some(dir) = self.dumps_dir() {
             candidates.push(dir.join("Customizations.json"));
         }
         for candidate in candidates {
@@ -871,6 +967,7 @@ impl LootsmithApp {
         };
         save_game.set_vehicles(&list);
         save_game.set_vehicle_steering_mode(self.steering_mode);
+        self.dirty = true;
         self.status = format!("vehicle settings applied ({} family set(s))", list.len());
         self.refresh_vehicles();
     }
@@ -880,7 +977,7 @@ impl LootsmithApp {
         if let Ok(env) = std::env::var("LOOTSMITH_MISSIONS") {
             candidates.push(std::path::PathBuf::from(env));
         }
-        if let Some(dir) = std::path::Path::new(self.dumps.trim()).parent() {
+        if let Some(dir) = self.dumps_dir() {
             candidates.push(dir.join("Missions.json"));
         }
         for candidate in candidates {
@@ -955,6 +1052,7 @@ impl LootsmithApp {
                 changed += 1;
             }
         }
+        self.dirty = true;
         self.status = format!("missions applied ({changed} status change(s))");
     }
 
@@ -1017,6 +1115,7 @@ impl LootsmithApp {
             self.status = format!("write error: {e}");
             return;
         }
+        self.dirty = false;
         self.status = format!("saved {} bytes to {target}", bytes.len());
     }
 
@@ -1024,6 +1123,166 @@ impl LootsmithApp {
     pub fn save_to(&mut self, path: &str) {
         self.save_as = path.to_string();
         self.save_as();
+    }
+
+    // ---- settings / theme / shortcuts ----
+
+    /// Serialize the persisted settings (paths, theme, tab) as JSON.
+    pub fn settings_json(&self) -> String {
+        #[derive(serde::Serialize)]
+        struct Settings<'a> {
+            save: &'a str,
+            data: &'a str,
+            theme: &'a str,
+            tab: &'a str,
+        }
+        let theme = match self.theme {
+            Theme::Dark => "dark",
+            Theme::Light => "light",
+        };
+        serde_json::to_string(&Settings {
+            save: self.path.trim(),
+            data: self.dumps.trim(),
+            theme,
+            tab: tab_key(self.tab),
+        })
+        .unwrap_or_default()
+    }
+
+    /// Restore persisted settings. Paths only fill in what is not already set.
+    pub fn load_settings_json(&mut self, text: &str) {
+        #[derive(serde::Deserialize)]
+        struct Settings {
+            #[serde(default)]
+            save: String,
+            #[serde(default)]
+            data: String,
+            #[serde(default)]
+            theme: String,
+            #[serde(default)]
+            tab: String,
+        }
+        let Ok(settings) = serde_json::from_str::<Settings>(text) else {
+            return;
+        };
+        if self.path.trim().is_empty() {
+            self.path = settings.save;
+        }
+        if self.dumps.trim().is_empty() {
+            self.dumps = settings.data;
+        }
+        self.theme = if settings.theme == "light" {
+            Theme::Light
+        } else {
+            Theme::Dark
+        };
+        self.theme_applied = false;
+        if let Some(tab) = tab_from_key(&settings.tab) {
+            self.tab = tab;
+        }
+        if !self.dumps.trim().is_empty() {
+            self.load_dumps();
+        }
+    }
+
+    fn apply_theme(&mut self, ctx: &egui::Context) {
+        if self.theme_applied {
+            return;
+        }
+        self.theme_applied = true;
+        let mut visuals = match self.theme {
+            Theme::Dark => egui::Visuals::dark(),
+            Theme::Light => egui::Visuals::light(),
+        };
+        visuals.selection.bg_fill = ACCENT;
+        visuals.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(28, 24, 18));
+        visuals.hyperlink_color = ACCENT;
+        visuals.widgets.active.bg_fill = ACCENT;
+        visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, ACCENT);
+        ctx.set_visuals(visuals);
+        ctx.all_styles_mut(|style| {
+            style.spacing.item_spacing = egui::vec2(8.0, 6.0);
+            style.spacing.button_padding = egui::vec2(8.0, 4.0);
+            style.spacing.interact_size.y = 22.0;
+        });
+    }
+
+    fn handle_shortcuts(&mut self, ctx: &egui::Context) {
+        let (save_as, save, open, reload) = ctx.input_mut(|input| {
+            use egui::{Key, KeyboardShortcut, Modifiers};
+            (
+                input.consume_shortcut(&KeyboardShortcut::new(
+                    Modifiers::CTRL | Modifiers::SHIFT,
+                    Key::S,
+                )),
+                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::S)),
+                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::O)),
+                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::R)),
+            )
+        });
+        if save_as {
+            self.browse_save_as();
+        }
+        if save {
+            self.save_in_place();
+        }
+        if open {
+            self.browse_save();
+        }
+        if reload {
+            self.load();
+        }
+    }
+
+    fn dispatch(&mut self, action: Action) {
+        match action {
+            Action::Open => self.browse_save(),
+            Action::Save => self.save_in_place(),
+            Action::SaveAs => self.browse_save_as(),
+            Action::Reload => self.load(),
+            Action::LoadData => {
+                if !self.dumps.trim().is_empty() {
+                    self.load_dumps();
+                }
+            }
+            Action::PickData => self.browse_dumps_dir(),
+            Action::ToggleTheme => {
+                self.theme = match self.theme {
+                    Theme::Dark => Theme::Light,
+                    Theme::Light => Theme::Dark,
+                };
+                self.theme_applied = false;
+            }
+        }
+    }
+
+    fn browse_save_as(&mut self) {
+        let name = if self.path.trim().is_empty() {
+            "Save0001.sav".to_string()
+        } else {
+            PathBuf::from(self.path.trim())
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Save0001.sav".to_string())
+        };
+        if let Some(path) = rfd::FileDialog::new()
+            .set_title("Save As")
+            .set_file_name(name)
+            .add_filter("Borderlands 2 save", &["sav"])
+            .save_file()
+        {
+            self.save_to(&path.display().to_string());
+        }
+    }
+
+    fn browse_dumps_dir(&mut self) {
+        if let Some(dir) = rfd::FileDialog::new()
+            .set_title("Select the folder containing Asset Library Manager.json")
+            .pick_folder()
+        {
+            self.dumps = dir.display().to_string();
+            self.load_dumps();
+        }
     }
 
     fn browse_save(&mut self) {
@@ -1038,19 +1297,12 @@ impl LootsmithApp {
         }
     }
 
-    fn browse_dumps(&mut self) {
-        if let Some(path) = rfd::FileDialog::new()
-            .set_title("Open Asset Library Manager.json")
-            .add_filter("JSON", &["json"])
-            .pick_file()
-        {
-            self.dumps = path.display().to_string();
-            self.load_dumps();
-        }
-    }
-
     /// Build the full UI. Called by both the native app and the test harness.
     pub fn build(&mut self, ui: &mut egui::Ui) {
+        let ctx = ui.ctx().clone();
+        self.apply_theme(&ctx);
+        self.handle_shortcuts(&ctx);
+
         if !self.loaded_once {
             self.loaded_once = true;
             if !self.path.trim().is_empty() {
@@ -1058,52 +1310,119 @@ impl LootsmithApp {
             }
         }
 
-        egui::Panel::top("inputs").show(ui, |ui| {
-            egui::Grid::new("paths").num_columns(4).show(ui, |ui| {
-                ui.label("Save file");
-                ui.text_edit_singleline(&mut self.path);
-                if ui.button("Browse…").clicked() {
-                    self.browse_save();
+        let mut action: Option<Action> = None;
+        egui::Panel::top("toolbar").show(ui, |ui| {
+            ui.add_space(4.0);
+            ui.horizontal(|ui| {
+                if ui.button("Open…").clicked() {
+                    action = Some(Action::Open);
                 }
-                if ui.button("Load").clicked() {
-                    self.load();
+                ui.add_enabled_ui(self.save_game.is_some(), |ui| {
+                    if ui.button("Save").clicked() {
+                        action = Some(Action::Save);
+                    }
+                    if ui.button("Save As…").clicked() {
+                        action = Some(Action::SaveAs);
+                    }
+                    if ui.button("Reload").clicked() {
+                        action = Some(Action::Reload);
+                    }
+                });
+                ui.separator();
+                if ui.button("Game data…").clicked() {
+                    action = Some(Action::PickData);
                 }
-                ui.end_row();
-
-                ui.label("Asset Library");
-                ui.text_edit_singleline(&mut self.dumps);
-                if ui.button("Browse…").clicked() {
-                    self.browse_dumps();
+                match (&self.manager, &self.save_game) {
+                    (Some(_), _) => {
+                        ui.colored_label(ACCENT, "game data: loaded");
+                    }
+                    (None, _) => {
+                        ui.colored_label(
+                            egui::Color32::from_rgb(214, 122, 60),
+                            "no game data — item parts show raw ids",
+                        );
+                    }
                 }
-                if ui.button("Load dumps").clicked() {
-                    self.load_dumps();
-                }
-                ui.end_row();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let label = if self.theme == Theme::Dark { "☀" } else { "☾" };
+                    if ui.button(label).on_hover_text("Toggle light/dark").clicked() {
+                        action = Some(Action::ToggleTheme);
+                    }
+                    if self.dirty {
+                        ui.colored_label(ACCENT, "● unsaved");
+                    }
+                });
             });
+            ui.add_space(3.0);
+            egui::Grid::new("paths")
+                .num_columns(3)
+                .spacing([10.0, 5.0])
+                .show(ui, |ui| {
+                    ui.label("Save file");
+                    ui.add_sized(
+                        [480.0, 22.0],
+                        egui::TextEdit::singleline(&mut self.path)
+                            .hint_text("/path/to/Save0001.sav"),
+                    );
+                    if ui.button("Load").clicked() {
+                        action = Some(Action::Reload);
+                    }
+                    ui.end_row();
+
+                    ui.label("Game data");
+                    ui.add_sized(
+                        [480.0, 22.0],
+                        egui::TextEdit::singleline(&mut self.dumps)
+                            .hint_text("folder containing Asset Library Manager.json"),
+                    );
+                    if ui.button("Load data").clicked() {
+                        action = Some(Action::LoadData);
+                    }
+                    ui.end_row();
+                });
+            ui.add_space(4.0);
         });
+        if let Some(action) = action {
+            self.dispatch(action);
+        }
 
         egui::Panel::bottom("status").show(ui, |ui| {
-            ui.label(format!("Status: {}", self.status));
+            ui.add_space(2.0);
+            ui.horizontal(|ui| {
+                ui.label(format!("Status: {}", self.status));
+            });
+            ui.add_space(2.0);
         });
 
         egui::CentralPanel::default().show(ui, |ui| {
             if self.save_game.is_none() {
-                ui.heading("Lootsmith");
-                ui.label("Open a Borderlands 2 save to begin.");
-                ui.label("Tip: load the Asset Library JSON so items show real names.");
+                ui.vertical_centered(|ui| {
+                    ui.add_space(48.0);
+                    ui.heading("Lootsmith");
+                    ui.add_space(4.0);
+                    ui.label("A cross-platform Borderlands 2 save editor.");
+                    ui.add_space(12.0);
+                    ui.label("Open a save with the toolbar, then pick your game-data folder so");
+                    ui.label("item parts, missions, and travel stations resolve to real names.");
+                });
                 return;
             }
 
+            ui.add_space(2.0);
             ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.tab, Tab::General, "General");
-                ui.selectable_value(&mut self.tab, Tab::Character, "Character");
-                ui.selectable_value(&mut self.tab, Tab::Currency, "Currency");
-                ui.selectable_value(&mut self.tab, Tab::Skills, "Skills");
-                ui.selectable_value(&mut self.tab, Tab::Travel, "Fast Travel");
-                ui.selectable_value(&mut self.tab, Tab::Vehicles, "Vehicles");
-                ui.selectable_value(&mut self.tab, Tab::Missions, "Missions");
-                ui.selectable_value(&mut self.tab, Tab::Backpack, "Backpack");
-                ui.selectable_value(&mut self.tab, Tab::Bank, "Bank");
+                for (tab, label) in [
+                    (Tab::General, "General"),
+                    (Tab::Character, "Character"),
+                    (Tab::Currency, "Currency"),
+                    (Tab::Skills, "Skills"),
+                    (Tab::Travel, "Fast Travel"),
+                    (Tab::Vehicles, "Vehicles"),
+                    (Tab::Missions, "Missions"),
+                    (Tab::Backpack, "Backpack"),
+                    (Tab::Bank, "Bank"),
+                ] {
+                    ui.selectable_value(&mut self.tab, tab, label);
+                }
             });
             ui.separator();
 
@@ -1122,36 +1441,58 @@ impl LootsmithApp {
     }
 
     fn ui_general(&mut self, ui: &mut egui::Ui) {
-        egui::Grid::new("general").num_columns(2).show(ui, |ui| {
-            ui.label("Level");
-            ui.add(egui::DragValue::new(&mut self.form.level));
-            ui.end_row();
-            ui.label("Experience");
-            ui.add(egui::DragValue::new(&mut self.form.exp_points));
-            ui.end_row();
-            ui.label("General skill points");
-            ui.add(egui::DragValue::new(&mut self.form.general_skill_points));
-            ui.end_row();
-            ui.label("Specialist skill points");
-            ui.add(egui::DragValue::new(&mut self.form.specialist_skill_points));
-            ui.end_row();
-            ui.label("Playthroughs");
-            ui.add(egui::DragValue::new(&mut self.form.playthroughs));
-            ui.end_row();
-            ui.label("Total play time (s)");
-            ui.add(egui::DragValue::new(&mut self.form.total_play_time));
-            ui.end_row();
-            ui.label("Badass mode");
-            ui.checkbox(&mut self.form.badass, "");
-            ui.end_row();
-            ui.label("Golden keys");
-            ui.add(egui::DragValue::new(&mut self.form.golden_keys));
-            ui.end_row();
-            ui.label("Bank slots");
-            ui.add(egui::DragValue::new(&mut self.form.bank_slots));
-            ui.end_row();
-        });
-        ui.separator();
+        ui.add_space(4.0);
+        ui.heading("General");
+        ui.add_space(4.0);
+        egui::Grid::new("general")
+            .num_columns(2)
+            .spacing([16.0, 6.0])
+            .show(ui, |ui| {
+                let mut changed = false;
+                ui.label("Level");
+                changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
+                ui.end_row();
+                ui.label("Experience");
+                changed |= ui.add(egui::DragValue::new(&mut self.form.exp_points)).changed();
+                ui.end_row();
+                ui.label("General skill points");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.general_skill_points))
+                    .changed();
+                ui.end_row();
+                ui.label("Specialist skill points");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.specialist_skill_points))
+                    .changed();
+                ui.end_row();
+                ui.label("Playthroughs");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.playthroughs))
+                    .changed();
+                ui.end_row();
+                ui.label("Total play time (s)");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.total_play_time))
+                    .changed();
+                ui.end_row();
+                ui.label("Badass mode");
+                changed |= ui.checkbox(&mut self.form.badass, "").changed();
+                ui.end_row();
+                ui.label("Golden keys");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.golden_keys))
+                    .changed();
+                ui.end_row();
+                ui.label("Bank slots");
+                changed |= ui
+                    .add(egui::DragValue::new(&mut self.form.bank_slots))
+                    .changed();
+                ui.end_row();
+                if changed {
+                    self.dirty = true;
+                }
+            });
+        ui.add_space(8.0);
         self.ui_save_buttons(ui);
     }
 
@@ -1173,20 +1514,31 @@ impl LootsmithApp {
     }
 
     fn ui_currency(&mut self, ui: &mut egui::Ui) {
-        ui.label("Currency slots (index 0 is money):");
+        ui.add_space(4.0);
+        ui.heading("Currency");
+        ui.add_space(2.0);
+        ui.label("Index 0 is money. Other slots are eridium, seraph crystals, Torgue tokens, ...");
+        ui.add_space(4.0);
+        let mut changed = false;
         egui::ScrollArea::vertical()
             .id_salt("currency")
-            .max_height(360.0)
+            .max_height(420.0)
             .show(ui, |ui| {
-                egui::Grid::new("currency_grid").num_columns(2).show(ui, |ui| {
-                    for (i, value) in self.form.currency.iter_mut().enumerate() {
-                        ui.label(format!("Slot {i}"));
-                        ui.add(egui::DragValue::new(value));
-                        ui.end_row();
-                    }
-                });
+                egui::Grid::new("currency_grid")
+                    .num_columns(2)
+                    .spacing([16.0, 6.0])
+                    .show(ui, |ui| {
+                        for (i, value) in self.form.currency.iter_mut().enumerate() {
+                            ui.label(format!("Slot {i}"));
+                            changed |= ui.add(egui::DragValue::new(value)).changed();
+                            ui.end_row();
+                        }
+                    });
             });
-        ui.separator();
+        if changed {
+            self.dirty = true;
+        }
+        ui.add_space(8.0);
         self.ui_save_buttons(ui);
     }
 
@@ -1608,6 +1960,10 @@ impl LootsmithApp {
 }
 
 impl eframe::App for LootsmithApp {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        storage.set_string("lootsmith", self.settings_json());
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.build(ui);
     }

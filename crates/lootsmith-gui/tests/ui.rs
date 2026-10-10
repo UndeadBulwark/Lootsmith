@@ -7,7 +7,7 @@ use egui::Vec2;
 use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
 use lootsmith_core::Container;
-use lootsmith_gui::app::{LootsmithApp, Tab};
+use lootsmith_gui::app::{LootsmithApp, Tab, Theme};
 
 /// Unique id of the first backpack weapon (Dahl pistol) in the fixture.
 const DAHL_PISTOL_ID: &str = "id=1572495195";
@@ -333,6 +333,40 @@ fn edits_missions_and_saves() {
     let sg = reopened.save_game().expect("reparse");
     assert_eq!(sg.plot_mission_number(), Some(19));
     assert_eq!(sg.mission_playthroughs()[0].missions[18].status, 4);
+}
+
+#[test]
+fn settings_round_trip() {
+    let mut app = LootsmithApp::new(None, None);
+    app.path = "/tmp/some/Save0007.sav".to_string();
+    app.dumps = "/tmp/some/dumps".to_string();
+    app.theme = Theme::Light;
+    app.tab = Tab::Missions;
+
+    let json = app.settings_json();
+    let mut restored = LootsmithApp::new(None, None);
+    restored.load_settings_json(&json);
+    assert_eq!(restored.path, "/tmp/some/Save0007.sav");
+    assert_eq!(restored.dumps, "/tmp/some/dumps");
+    assert_eq!(restored.theme, Theme::Light);
+    assert_eq!(restored.tab, Tab::Missions);
+}
+
+#[test]
+fn dirty_tracking() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    assert!(!h.state().dirty, "freshly loaded save is not dirty");
+
+    h.state_mut().add_teleporter("Xmas");
+    assert!(h.state().dirty, "an edit marks the document dirty");
+
+    let out = std::env::temp_dir().join("lootsmith-ui-dirty.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    assert!(!h.state().dirty, "saving clears the dirty flag");
 }
 
 #[test]

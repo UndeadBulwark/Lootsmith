@@ -66,15 +66,40 @@ fn main() -> ExitCode {
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1020.0, 720.0])
+            .with_inner_size([1180.0, 820.0])
+            .with_min_inner_size([760.0, 520.0])
             .with_title("Lootsmith"),
+        persist_window: true,
         ..Default::default()
     };
-    let mut app = LootsmithApp::new(args.open, args.dumps);
-    if let Some(stations) = args.stations {
-        app.set_stations_path(stations);
-    }
-    match eframe::run_native("Lootsmith", options, Box::new(move |_cc| Ok(Box::new(app)))) {
+    let open = args.open.clone();
+    let dumps = args.dumps.clone();
+    let stations = args.stations.clone();
+    match eframe::run_native(
+        "Lootsmith",
+        options,
+        Box::new(move |cc| {
+            let mut app = LootsmithApp::new(None, None);
+            if let Some(storage) = cc.storage {
+                if let Some(data) = storage.get_string("lootsmith") {
+                    app.load_settings_json(&data);
+                }
+            }
+            // Command-line arguments win over persisted settings.
+            if let Some(open) = &open {
+                app.path = open.clone();
+                app.load();
+            }
+            if let Some(dumps) = &dumps {
+                app.dumps = dumps.clone();
+                app.load_dumps();
+            }
+            if let Some(stations) = &stations {
+                app.set_stations_path(stations.clone());
+            }
+            Ok(Box::new(app))
+        }),
+    ) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             log_line(&format!("eframe error: {e}"));
