@@ -25,6 +25,7 @@ pub enum Error {
         actual: usize,
     },
     Huffman(String),
+    Proto(String),
     EndOfStream,
     UnsupportedPlatform,
     Xbox360ConFile,
@@ -52,6 +53,7 @@ impl fmt::Display for Error {
                 write!(f, "size mismatch: expected {expected} bytes, got {actual}")
             }
             Error::Huffman(m) => write!(f, "huffman codec error: {m}"),
+            Error::Proto(m) => write!(f, "protobuf error: {m}"),
             Error::EndOfStream => write!(f, "unexpected end of bit stream"),
             Error::UnsupportedPlatform => write!(f, "unsupported platform"),
             Error::Xbox360ConFile => write!(

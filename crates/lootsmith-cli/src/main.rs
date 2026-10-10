@@ -109,9 +109,36 @@ fn main() -> ExitCode {
             }
         }
         "dump" => {
-            println!("version {}", save.version);
-            println!("crc32 {:#010x}", save.crc32);
-            println!("proto_size {}", save.proto.len());
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            println!("# {} — {}", args.file, save.platform.id());
+            println!(
+                "player_class={:?} level={:?} exp={:?} skill_points={:?}/{:?} playthroughs={:?}",
+                save_game.player_class(),
+                save_game.exp_level(),
+                save_game.exp_points(),
+                save_game.general_skill_points(),
+                save_game.specialist_skill_points(),
+                save_game.playthroughs_completed(),
+            );
+            println!(
+                "currency={:?} save_id={:?} play_time={:?}s last_saved={:?} golden_keys={:?} bank={:?}",
+                save_game.currency_on_hand(),
+                save_game.save_game_id(),
+                save_game.total_play_time(),
+                save_game.last_saved_date(),
+                save_game.num_golden_keys_notified(),
+                save_game.max_bank_slots(),
+            );
+            println!("--- fields ---");
+            for line in save_game.describe() {
+                println!("{line}");
+            }
             ExitCode::SUCCESS
         }
         _ => usage(),

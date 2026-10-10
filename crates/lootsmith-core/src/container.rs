@@ -17,6 +17,7 @@
 use crate::crc32::crc32;
 use crate::huffman;
 use crate::platform::{CompressionScheme, Endian, Platform};
+use crate::savegame::SaveGame;
 use crate::{Error, Result};
 
 /// Block size used by the outer block table (`SaveFile.BlockSize`).
@@ -56,6 +57,21 @@ impl SaveFile {
                 .unwrap_or(false),
             Err(_) => false,
         }
+    }
+
+    /// Whether the protobuf payload survives a parse/re-emit byte-for-byte.
+    /// This is the primary fidelity gate (the reference checks the same thing
+    /// via `IgnoreReencodeMismatch`).
+    pub fn proto_stable(&self) -> bool {
+        match crate::proto::Message::parse(&self.proto) {
+            Ok(message) => message.to_bytes() == self.proto,
+            Err(_) => false,
+        }
+    }
+
+    /// Parse the protobuf payload as a typed `WillowTwoPlayerSaveGame`.
+    pub fn save_game(&self) -> Result<SaveGame> {
+        SaveGame::parse(&self.proto)
     }
 }
 
