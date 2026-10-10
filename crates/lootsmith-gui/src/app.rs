@@ -377,7 +377,7 @@ pub struct LootsmithApp {
     /// `ctx.set_pixels_per_point`.
     pub ui_scale: f32,
     /// Cached background dither texture, keyed by dark/light.
-    dither_tex: Option<(bool, egui::TextureHandle)>,
+    dither_tex: [Option<egui::TextureHandle>; 2],
     /// There are edits in memory that have not been written to disk.
     pub dirty: bool,
     pub status: String,
@@ -466,7 +466,7 @@ impl LootsmithApp {
             theme: Theme::Dark,
             theme_applied: false,
             ui_scale: 1.0,
-            dither_tex: None,
+            dither_tex: [None, None],
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
@@ -559,16 +559,23 @@ impl LootsmithApp {
     }
 
     /// The cached background dither texture for the active theme (spec §2.5).
+    /// The texture id is kept stable across a theme flip (updated in place), so
+    /// no frame renders with a stale dither.
     fn dither_handle(&mut self, ctx: &egui::Context, p: &theme::Palette) -> egui::TextureHandle {
-        let dark = self.theme == Theme::Dark;
-        if let Some((cached_dark, tex)) = &self.dither_tex {
-            if *cached_dark == dark {
-                return tex.clone();
+        let idx = if self.theme == Theme::Dark { 0 } else { 1 };
+        for (i, palette) in [&theme::DARK, &theme::LIGHT].into_iter().enumerate() {
+            if self.dither_tex[i].is_none() {
+                let name = if i == 0 {
+                    "lootsmith.dither.dark"
+                } else {
+                    "lootsmith.dither.light"
+                };
+                self.dither_tex[i] =
+                    Some(crate::ui::pixel::dither_texture_named(ctx, name, palette));
             }
         }
-        let tex = crate::ui::pixel::dither_texture(ctx, p);
-        self.dither_tex = Some((dark, tex.clone()));
-        tex
+        let _ = p;
+        self.dither_tex[idx].clone().expect("dither texture")
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -2193,6 +2200,10 @@ impl LootsmithApp {
             });
         if let Some(action) = action {
             self.dispatch(action);
+            // A dispatched action (theme toggle, scale, …) must be drawn on the
+            // next frame; without this the change can sit unrendered until the
+            // next input event.
+            ctx.request_repaint();
         }
 
         egui::Panel::bottom("status")

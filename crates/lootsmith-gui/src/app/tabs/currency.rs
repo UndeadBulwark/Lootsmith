@@ -10,7 +10,11 @@ impl LootsmithApp {
         ui.horizontal(|ui| {
             ui.heading("Currency");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.checkbox(&mut self.currency_show_unused, "show unused slots");
+                crate::ui::widgets::checkbox(
+                    ui,
+                    &mut self.currency_show_unused,
+                    "show unused slots",
+                );
             });
         });
         ui.add_space(2.0);

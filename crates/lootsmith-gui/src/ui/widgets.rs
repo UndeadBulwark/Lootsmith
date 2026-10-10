@@ -157,7 +157,46 @@ pub fn icon_button(
     let response = ui
         .add_sized([size, size], egui::Button::new(""))
         .on_hover_text(hover);
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, hover));
     crate::ui::pixel::icon(ui.painter(), response.rect.center(), kind, color, cut, 1.0);
+    response
+}
+
+/// A notched checkbox: a square with a 2 px `wd` border and a drawn tick when
+/// checked, plus an accessible label. Replaces the egui checkbox.
+pub fn checkbox(ui: &mut egui::Ui, checked: &mut bool, label: &str) -> egui::Response {
+    let p = *crate::theme::active(ui.ctx());
+    let box_size = 16.0;
+    let galley =
+        (!label.is_empty()).then(|| ui.painter().layout_job(job_with_nums(label, p.fg, 15.0)));
+    let text_w = galley.as_ref().map_or(0.0, |g| g.size().x + 6.0);
+    let text_h = galley.as_ref().map_or(0.0, |g| g.size().y);
+    let size = egui::vec2(box_size + text_w, box_size.max(text_h));
+    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::click());
+    if response.clicked() {
+        *checked = !*checked;
+        response.mark_changed();
+    }
+    let painter = ui.painter();
+    let bx = egui::Rect::from_min_size(rect.min, egui::vec2(box_size, box_size));
+    painter.add(egui::Shape::convex_polygon(
+        crate::ui::pixel::notched_rect(bx, 2.0, 1.0),
+        p.bg,
+        egui::Stroke::new(2.0, p.wd),
+    ));
+    if *checked {
+        paint_glyph(painter, bx.center(), Glyph::Check, p.fg, 0.9);
+    }
+    if let Some(galley) = galley {
+        painter.galley(
+            egui::pos2(bx.right() + 6.0, rect.center().y - galley.size().y / 2.0),
+            galley,
+            p.fg,
+        );
+    }
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(egui::WidgetType::Checkbox, true, *checked, label)
+    });
     response
 }
 

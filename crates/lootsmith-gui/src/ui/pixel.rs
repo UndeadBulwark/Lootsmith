@@ -249,16 +249,22 @@ pub fn dither_tile(p: &Palette) -> egui::ColorImage {
 
 /// Upload the dither tile with nearest filtering and repeat wrapping.
 pub fn dither_texture(ctx: &egui::Context, p: &Palette) -> egui::TextureHandle {
-    ctx.load_texture(
-        "lootsmith.dither",
-        dither_tile(p),
-        TextureOptions {
-            magnification: egui::TextureFilter::Nearest,
-            minification: egui::TextureFilter::Nearest,
-            wrap_mode: egui::TextureWrapMode::Repeat,
-            ..Default::default()
-        },
-    )
+    dither_texture_named(ctx, "lootsmith.dither", p)
+}
+
+/// [`dither_texture`] with an explicit name (so both themes can coexist).
+pub fn dither_texture_named(ctx: &egui::Context, name: &str, p: &Palette) -> egui::TextureHandle {
+    ctx.load_texture(name, dither_tile(p), dither_options())
+}
+
+/// The dither texture options (nearest, repeat).
+pub fn dither_options() -> TextureOptions {
+    TextureOptions {
+        magnification: egui::TextureFilter::Nearest,
+        minification: egui::TextureFilter::Nearest,
+        wrap_mode: egui::TextureWrapMode::Repeat,
+        ..Default::default()
+    }
 }
 
 /// Tile the dither texture across `rect` (one tile per 8x8 px).

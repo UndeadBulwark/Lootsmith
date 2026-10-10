@@ -64,7 +64,7 @@ impl LootsmithApp {
                                 });
                             }
                             RawEdit::Bool(v) => {
-                                changed |= ui.checkbox(v, "").changed();
+                                changed |= crate::ui::widgets::checkbox(ui, v, "").changed();
                             }
                             RawEdit::Str(v) => {
                                 changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {

@@ -73,7 +73,8 @@ impl LootsmithApp {
                     .changed();
                     ui.end_row();
                     ui.label("Badass mode");
-                    changed |= ui.checkbox(&mut self.form.badass, "").changed();
+                    changed |=
+                        crate::ui::widgets::checkbox(ui, &mut self.form.badass, "").changed();
                     ui.end_row();
                     ui.label("Golden keys");
                     changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {

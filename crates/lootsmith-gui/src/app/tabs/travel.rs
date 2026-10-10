@@ -80,9 +80,12 @@ impl LootsmithApp {
                             ""
                         };
                         ui.horizontal(|ui| {
-                            if ui
-                                .checkbox(&mut checked, format!("{marker}{display}"))
-                                .changed()
+                            if crate::ui::widgets::checkbox(
+                                ui,
+                                &mut checked,
+                                &format!("{marker}{display}"),
+                            )
+                            .changed()
                             {
                                 toggles.push((resource.clone(), checked));
                             }
