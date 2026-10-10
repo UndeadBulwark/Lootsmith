@@ -67,6 +67,7 @@ fn main() -> ExitCode {
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([1180.0, 820.0])
         .with_min_inner_size([760.0, 520.0])
+        .with_app_id("lootsmith")
         .with_title("Lootsmith");
     if let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../assets/lootsmith.png")) {
         viewport = viewport.with_icon(icon);

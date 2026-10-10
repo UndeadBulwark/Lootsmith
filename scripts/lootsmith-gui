@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Launch Lootsmith. Builds the release binary on first run.
+# Launch Lootsmith. Builds the release binary on first run, and installs the
+# desktop entry + icon so the window and menu show the Lootsmith icon.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$ROOT/target/release/lootsmith-gui"
@@ -7,4 +8,34 @@ if [ ! -x "$BIN" ]; then
   echo "Building Lootsmith (first run)…" >&2
   (cd "$ROOT" && cargo build --release -p lootsmith-gui)
 fi
+
+# Install/refresh the icon and .desktop entry (Wayland matches the window to the
+# entry by app-id == "lootsmith", and shows Icon= from the icon theme).
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+ICON="$ROOT/crates/lootsmith-gui/assets/lootsmith.png"
+if [ -f "$ICON" ]; then
+  for size in 256x256 128x128 64x64 48x48 32x32; do
+    mkdir -p "$DATA/icons/hicolor/$size/apps"
+  done
+  install -m644 "$ICON" "$DATA/icons/hicolor/256x256/apps/lootsmith.png"
+fi
+mkdir -p "$DATA/applications"
+cat > "$DATA/applications/lootsmith.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Lootsmith
+GenericName=Borderlands 2 Save Editor
+Comment=Edit Borderlands 2 save files
+Exec=$ROOT/scripts/lootsmith-gui %f
+Icon=lootsmith
+Terminal=false
+Categories=Utility;Game;
+Keywords=borderlands;save;editor;lootsmith;
+StartupNotify=true
+StartupWMClass=lootsmith
+EOF
+command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$DATA/applications" >/dev/null 2>&1 || true
+command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t "$DATA/icons/hicolor" >/dev/null 2>&1 || true
+
 exec "$BIN" "$@"

@@ -36,7 +36,7 @@ fn main() {
 
     let app = |save: &str, dumps: &Option<String>| {
         let mut harness = Harness::builder()
-            .with_size(Vec2::new(1020.0, 760.0))
+            .with_size(Vec2::new(1280.0, 880.0))
             .build_ui_state(
                 |ui, app: &mut LootsmithApp| app.build(ui),
                 LootsmithApp::new(Some(save.to_string()), dumps.clone()),

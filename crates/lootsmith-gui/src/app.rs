@@ -15,15 +15,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Borderlands-ish accent colour.
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(247, 156, 43);
+use crate::theme::{self, Tokens};
+use egui_extras::{Column, TableBuilder};
 
-/// UI colour theme.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Theme {
-    Dark,
-    Light,
-}
+pub use crate::theme::Theme;
 
 #[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum Tab {
@@ -90,6 +85,9 @@ pub struct Row {
     pub container: Container,
     pub occurrence: usize,
     pub text: String,
+    pub kind: String,
+    pub id: i32,
+    pub balance: String,
     pub quantity: i32,
     pub equipped: bool,
     pub mark: i32,
@@ -231,7 +229,6 @@ enum Action {
     Save,
     SaveAs,
     Reload,
-    LoadData,
     PickData,
     ToggleTheme,
 }
@@ -246,6 +243,72 @@ enum ItemAction {
     SyncAll,
     SyncEquipped,
     InsertCodes,
+}
+
+/// The tab list, in order.
+const TABS: [(Tab, &str); 10] = [
+    (Tab::General, "General"),
+    (Tab::Character, "Character"),
+    (Tab::Currency, "Currency"),
+    (Tab::Skills, "Skills"),
+    (Tab::Travel, "Fast Travel"),
+    (Tab::Vehicles, "Vehicles"),
+    (Tab::Missions, "Missions"),
+    (Tab::Backpack, "Backpack"),
+    (Tab::Bank, "Bank"),
+    (Tab::Raw, "Raw"),
+];
+
+/// A vertical rule between toolbar groups.
+fn toolbar_sep(ui: &mut egui::Ui) {
+    ui.add_space(4.0);
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(1.0, 18.0), egui::Sense::hover());
+    ui.painter()
+        .vline(rect.center().x, rect.y_range(), egui::Stroke::new(1.0, Tokens::BORDER));
+    ui.add_space(4.0);
+}
+
+/// A filled status dot.
+fn status_dot(ui: &mut egui::Ui, color: egui::Color32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(9.0, 9.0), egui::Sense::hover());
+    ui.painter().circle_filled(rect.center(), 4.0, color);
+}
+
+/// A grouped surface card of a fixed width.
+fn card(ui: &mut egui::Ui, width: f32, add: impl FnOnce(&mut egui::Ui)) {
+    ui.allocate_ui_with_layout(
+        egui::vec2(width, 0.0),
+        egui::Layout::top_down(egui::Align::Min),
+        |ui| {
+            egui::Frame::group(ui.style())
+                .fill(Tokens::SURFACE)
+                .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::same(14))
+                .show(ui, |ui| {
+                    ui.set_width(width - 28.0);
+                    add(ui);
+                });
+        },
+    );
+}
+
+/// The empty state shown before a save is open.
+fn empty_state(ui: &mut egui::Ui) {
+    ui.vertical_centered(|ui| {
+        ui.add_space(64.0);
+        ui.label(
+            egui::RichText::new("Lootsmith")
+                .size(26.0)
+                .strong()
+                .color(Tokens::ACCENT),
+        );
+        ui.add_space(6.0);
+        theme::muted(ui, "A cross-platform Borderlands 2 save editor.");
+        ui.add_space(14.0);
+        theme::faint(ui, "Open a save (or use Find saves), then pick your game-data folder");
+        theme::faint(ui, "so item parts, missions and travel stations resolve to names.");
+    });
 }
 
 struct ItemEdit {
@@ -299,6 +362,8 @@ pub struct LootsmithApp {
     pub save_as: String,
     /// The `BL2(base64)` item-code box used for copy/paste.
     pub item_code: String,
+    /// Filter text for the backpack/bank table.
+    pub filter: String,
     /// Saves discovered on disk for the "Find saves" picker.
     pub saves: Vec<SaveCandidate>,
     pub show_saves: bool,
@@ -399,14 +464,17 @@ fn row_for(
                 Container::Bank => String::new(),
             };
             let mark = if decoded.unique_id == 0 { " (empty)" } else { "" };
+            let balance = resolve_balance(manager, &decoded);
             Row {
                 container: entry.container,
                 occurrence: entry.occurrence,
                 text: format!(
-                    "{kind} #{display} id={} balance={}{meta}{mark}",
+                    "{kind} #{display} id={} balance={balance}{meta}{mark}",
                     decoded.unique_id,
-                    resolve_balance(manager, &decoded),
                 ),
+                kind: kind.to_string(),
+                id: decoded.unique_id,
+                balance,
                 quantity: entry.quantity,
                 equipped: entry.equipped,
                 mark: entry.mark,
@@ -419,6 +487,9 @@ fn row_for(
             container: entry.container,
             occurrence: entry.occurrence,
             text: format!("#{display} decode error: {e}"),
+            kind: "?".to_string(),
+            id: 0,
+            balance: format!("decode error: {e}"),
             quantity: entry.quantity,
             equipped: entry.equipped,
             mark: entry.mark,
@@ -461,6 +532,7 @@ impl LootsmithApp {
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             item_code: String::new(),
+            filter: String::new(),
             saves: Vec::new(),
             show_saves: false,
             loaded_once: false,
@@ -1535,21 +1607,7 @@ impl LootsmithApp {
             return;
         }
         self.theme_applied = true;
-        let mut visuals = match self.theme {
-            Theme::Dark => egui::Visuals::dark(),
-            Theme::Light => egui::Visuals::light(),
-        };
-        visuals.selection.bg_fill = ACCENT;
-        visuals.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(28, 24, 18));
-        visuals.hyperlink_color = ACCENT;
-        visuals.widgets.active.bg_fill = ACCENT;
-        visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, ACCENT);
-        ctx.set_visuals(visuals);
-        ctx.all_styles_mut(|style| {
-            style.spacing.item_spacing = egui::vec2(8.0, 6.0);
-            style.spacing.button_padding = egui::vec2(8.0, 4.0);
-            style.spacing.interact_size.y = 22.0;
-        });
+        theme::apply(ctx, self.theme);
     }
 
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
@@ -1589,11 +1647,6 @@ impl LootsmithApp {
             Action::Save => self.save_in_place(),
             Action::SaveAs => self.browse_save_as(),
             Action::Reload => self.load(),
-            Action::LoadData => {
-                if !self.dumps.trim().is_empty() {
-                    self.load_dumps();
-                }
-            }
             Action::PickData => self.browse_dumps_dir(),
             Action::ToggleTheme => {
                 self.theme = match self.theme {
@@ -1673,125 +1726,130 @@ impl LootsmithApp {
         }
 
         let mut action: Option<Action> = None;
-        egui::Panel::top("toolbar").show(ui, |ui| {
-            ui.add_space(4.0);
-            ui.horizontal(|ui| {
-                if ui.button("Open…").clicked() {
-                    action = Some(Action::Open);
-                }
-                if ui.button("Find saves").clicked() {
-                    action = Some(Action::FindSaves);
-                }
-                ui.add_enabled_ui(self.save_game.is_some(), |ui| {
-                    if ui.button("Save").clicked() {
-                        action = Some(Action::Save);
+        egui::Panel::top("toolbar")
+            .frame(
+                egui::Frame::default()
+                    .fill(Tokens::SURFACE)
+                    .inner_margin(egui::Margin::symmetric(12, 8)),
+            )
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Open…").clicked() {
+                        action = Some(Action::Open);
                     }
-                    if ui.button("Save As…").clicked() {
-                        action = Some(Action::SaveAs);
+                    if ui.button("Find saves").clicked() {
+                        action = Some(Action::FindSaves);
                     }
-                    if ui.button("Reload").clicked() {
-                        action = Some(Action::Reload);
+                    toolbar_sep(ui);
+                    ui.add_enabled_ui(self.save_game.is_some(), |ui| {
+                        if ui.button("Save").clicked() {
+                            action = Some(Action::Save);
+                        }
+                        if ui.button("Save As…").clicked() {
+                            action = Some(Action::SaveAs);
+                        }
+                        if ui.button("Reload").clicked() {
+                            action = Some(Action::Reload);
+                        }
+                    });
+                    toolbar_sep(ui);
+                    if ui.button("Game data…").clicked() {
+                        action = Some(Action::PickData);
                     }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let label = if self.theme == Theme::Dark { "☀" } else { "☾" };
+                        if ui.button(label).on_hover_text("Toggle light/dark").clicked() {
+                            action = Some(Action::ToggleTheme);
+                        }
+                        if self.dirty {
+                            ui.colored_label(Tokens::ACCENT, "● unsaved");
+                        }
+                    });
                 });
-                ui.separator();
-                if ui.button("Game data…").clicked() {
-                    action = Some(Action::PickData);
-                }
-                match (&self.manager, &self.save_game) {
-                    (Some(_), _) => {
-                        ui.colored_label(ACCENT, "game data: loaded");
-                    }
-                    (None, _) => {
-                        ui.colored_label(
-                            egui::Color32::from_rgb(214, 122, 60),
-                            "no game data — item parts show raw ids",
-                        );
-                    }
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let label = if self.theme == Theme::Dark { "☀" } else { "☾" };
-                    if ui.button(label).on_hover_text("Toggle light/dark").clicked() {
-                        action = Some(Action::ToggleTheme);
-                    }
-                    if self.dirty {
-                        ui.colored_label(ACCENT, "● unsaved");
-                    }
-                });
-            });
-            ui.add_space(3.0);
-            egui::Grid::new("paths")
-                .num_columns(3)
-                .spacing([10.0, 5.0])
-                .show(ui, |ui| {
-                    ui.label("Save file");
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    status_dot(
+                        ui,
+                        if self.save_game.is_some() {
+                            Tokens::OK
+                        } else {
+                            Tokens::TEXT_FAINT
+                        },
+                    );
+                    ui.label(egui::RichText::new("Save file").color(Tokens::TEXT_DIM).size(11.5));
                     ui.add_sized(
-                        [480.0, 22.0],
+                        [430.0, 24.0],
                         egui::TextEdit::singleline(&mut self.path)
                             .hint_text("/path/to/Save0001.sav"),
                     );
-                    if ui.button("Load").clicked() {
-                        action = Some(Action::Reload);
-                    }
-                    ui.end_row();
-
-                    ui.label("Game data");
-                    ui.add_sized(
-                        [480.0, 22.0],
-                        egui::TextEdit::singleline(&mut self.dumps)
-                            .hint_text("folder containing Asset Library Manager.json"),
+                    toolbar_sep(ui);
+                    status_dot(
+                        ui,
+                        if self.manager.is_some() {
+                            Tokens::OK
+                        } else {
+                            Tokens::WARN
+                        },
                     );
-                    if ui.button("Load data").clicked() {
-                        action = Some(Action::LoadData);
-                    }
-                    ui.end_row();
+                    ui.label(egui::RichText::new("Game data").color(Tokens::TEXT_DIM).size(11.5));
+                    ui.add_sized(
+                        [300.0, 24.0],
+                        egui::TextEdit::singleline(&mut self.dumps)
+                            .hint_text("folder with Asset Library Manager.json"),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if self.manager.is_some() {
+                            ui.colored_label(Tokens::TEXT_FAINT, "names resolved");
+                        } else {
+                            ui.colored_label(Tokens::WARN, "no game data — parts show raw ids");
+                        }
+                    });
                 });
-            ui.add_space(4.0);
-        });
+            });
         if let Some(action) = action {
             self.dispatch(action);
         }
 
-        egui::Panel::bottom("status").show(ui, |ui| {
-            ui.add_space(2.0);
-            ui.horizontal(|ui| {
-                ui.label(format!("Status: {}", self.status));
+        egui::Panel::bottom("status")
+            .frame(
+                egui::Frame::default()
+                    .fill(Tokens::SURFACE)
+                    .inner_margin(egui::Margin::symmetric(12, 4)),
+            )
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    status_dot(
+                        ui,
+                        if self.dirty {
+                            Tokens::ACCENT
+                        } else {
+                            Tokens::OK
+                        },
+                    );
+                    ui.label(egui::RichText::new(self.status.clone()).size(12.0));
+                });
             });
-            ui.add_space(2.0);
-        });
 
         egui::CentralPanel::default().show(ui, |ui| {
             if self.save_game.is_none() {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(48.0);
-                    ui.heading("Lootsmith");
-                    ui.add_space(4.0);
-                    ui.label("A cross-platform Borderlands 2 save editor.");
-                    ui.add_space(12.0);
-                    ui.label("Open a save with the toolbar, then pick your game-data folder so");
-                    ui.label("item parts, missions, and travel stations resolve to real names.");
-                });
+                empty_state(ui);
                 return;
             }
-
-            ui.add_space(2.0);
-            ui.horizontal(|ui| {
-                for (tab, label) in [
-                    (Tab::General, "General"),
-                    (Tab::Character, "Character"),
-                    (Tab::Currency, "Currency"),
-                    (Tab::Skills, "Skills"),
-                    (Tab::Travel, "Fast Travel"),
-                    (Tab::Vehicles, "Vehicles"),
-                    (Tab::Missions, "Missions"),
-                    (Tab::Backpack, "Backpack"),
-                    (Tab::Bank, "Bank"),
-                    (Tab::Raw, "Raw"),
-                ] {
-                    ui.selectable_value(&mut self.tab, tab, label);
-                }
-            });
-            ui.separator();
-
+            egui::Panel::top("tabs")
+                .frame(
+                    egui::Frame::default()
+                        .fill(Tokens::SURFACE)
+                        .inner_margin(egui::Margin::symmetric(10, 0)),
+                )
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        for (tab, label) in TABS {
+                            if theme::tab(ui, self.tab == tab, label) {
+                                self.tab = tab;
+                            }
+                        }
+                    });
+                });
             match self.tab {
                 Tab::General => self.ui_general(ui),
                 Tab::Character => self.ui_character(ui),
@@ -1854,9 +1912,9 @@ impl LootsmithApp {
     }
 
     fn ui_general(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(4.0);
-        ui.heading("General");
-        ui.add_space(4.0);
+        ui.add_space(10.0);
+        card(ui, 560.0, |ui| {
+        theme::section(ui, "General");
         egui::Grid::new("general")
             .num_columns(2)
             .spacing([16.0, 6.0])
@@ -1905,17 +1963,16 @@ impl LootsmithApp {
                     self.dirty = true;
                 }
             });
-        ui.add_space(8.0);
-        self.ui_save_buttons(ui);
+        });
     }
 
     fn ui_character(&mut self, ui: &mut egui::Ui) {
-        ui.add_space(4.0);
-        ui.heading("Character");
-        ui.add_space(4.0);
+        ui.add_space(10.0);
         let customizations = self.customizations.clone();
         let usage = lootsmith_core::usage_for_player_class(&self.read_info.player_class);
         let mut changed = false;
+        card(ui, 620.0, |ui| {
+        theme::section(ui, "Character");
         egui::Grid::new("character")
             .num_columns(2)
             .spacing([16.0, 6.0])
@@ -1977,15 +2034,14 @@ impl LootsmithApp {
                 ui.label(&self.read_info.last_saved);
                 ui.end_row();
             });
+        });
         if changed {
             self.dirty = true;
         }
         if customizations.is_none() {
-            ui.add_space(4.0);
-            ui.label("Load the game-data folder to pick heads and skins by name.");
+            ui.add_space(6.0);
+            theme::muted(ui, "Load the game-data folder to pick heads and skins by name.");
         }
-        ui.add_space(8.0);
-        self.ui_save_buttons(ui);
     }
 
     fn ui_currency(&mut self, ui: &mut egui::Ui) {
@@ -2013,8 +2069,6 @@ impl LootsmithApp {
         if changed {
             self.dirty = true;
         }
-        ui.add_space(8.0);
-        self.ui_save_buttons(ui);
     }
 
     fn ui_skills(&mut self, ui: &mut egui::Ui) {
@@ -2053,8 +2107,6 @@ impl LootsmithApp {
                 ui.label("(unsaved changes)");
             }
         });
-        ui.separator();
-        self.ui_save_buttons(ui);
     }
 
     fn ui_travel(&mut self, ui: &mut egui::Ui) {
@@ -2143,8 +2195,6 @@ impl LootsmithApp {
             self.remove_teleporter(i);
         }
 
-        ui.separator();
-        self.ui_save_buttons(ui);
     }
 
     fn ui_vehicles(&mut self, ui: &mut egui::Ui) {
@@ -2200,8 +2250,6 @@ impl LootsmithApp {
                 ui.label("(unsaved changes)");
             }
         });
-        ui.separator();
-        self.ui_save_buttons(ui);
     }
 
     fn ui_missions(&mut self, ui: &mut egui::Ui) {
@@ -2283,8 +2331,6 @@ impl LootsmithApp {
                     ui.label(format!("[{i:>3}] {challenge}"));
                 }
             });
-        ui.separator();
-        self.ui_save_buttons(ui);
     }
 
     fn ui_raw(&mut self, ui: &mut egui::Ui) {
@@ -2348,47 +2394,66 @@ impl LootsmithApp {
             }
             self.dirty = true;
         }
-        ui.add_space(8.0);
-        self.ui_save_buttons(ui);
     }
 
     fn ui_container(&mut self, ui: &mut egui::Ui, bank: bool) {
-        ui.add_space(4.0);
         let mut item_action: Option<ItemAction> = None;
-        ui.horizontal(|ui| {
-            if ui.button("New weapon").clicked() {
-                item_action = Some(ItemAction::NewWeapon);
-            }
-            if ui.button("New item").clicked() {
-                item_action = Some(ItemAction::NewItem);
-            }
-            ui.add_enabled_ui(self.selected.is_some(), |ui| {
-                if ui.button("Duplicate").clicked() {
-                    item_action = Some(ItemAction::Duplicate);
-                }
-                if ui.button("Copy code").clicked() {
-                    item_action = Some(ItemAction::CopyCode);
-                }
+        let mut clicked: Option<(Container, usize)> = None;
+        let mut apply = false;
+        let mut move_to: Option<Container> = None;
+        let mut remove = false;
+
+        // ---- action bar ----
+        egui::Panel::top("bag_actions")
+            .frame(
+                egui::Frame::default()
+                    .fill(Tokens::BG)
+                    .inner_margin(egui::Margin::symmetric(10, 8)),
+            )
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("New weapon").clicked() {
+                        item_action = Some(ItemAction::NewWeapon);
+                    }
+                    if ui.button("New item").clicked() {
+                        item_action = Some(ItemAction::NewItem);
+                    }
+                    ui.add_enabled_ui(self.selected.is_some(), |ui| {
+                        if ui.button("Duplicate").clicked() {
+                            item_action = Some(ItemAction::Duplicate);
+                        }
+                        if ui.button("Copy code").clicked() {
+                            item_action = Some(ItemAction::CopyCode);
+                        }
+                    });
+                    toolbar_sep(ui);
+                    if ui.button("Sync levels").clicked() {
+                        item_action = Some(ItemAction::SyncAll);
+                    }
+                    if ui.button("Sync equipped").clicked() {
+                        item_action = Some(ItemAction::SyncEquipped);
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add_sized(
+                            [220.0, 24.0],
+                            egui::TextEdit::singleline(&mut self.filter).hint_text("filter items…"),
+                        );
+                    });
+                });
+                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("Item code").color(Tokens::TEXT_DIM).size(11.5));
+                    ui.add_sized(
+                        [520.0, 24.0],
+                        egui::TextEdit::singleline(&mut self.item_code)
+                            .hint_text("paste BL2(...) codes here"),
+                    );
+                    if ui.button("Insert code(s)").clicked() {
+                        item_action = Some(ItemAction::InsertCodes);
+                    }
+                });
             });
-            ui.separator();
-            if ui.button("Sync levels (all)").clicked() {
-                item_action = Some(ItemAction::SyncAll);
-            }
-            if ui.button("Sync equipped").clicked() {
-                item_action = Some(ItemAction::SyncEquipped);
-            }
-        });
-        ui.horizontal(|ui| {
-            ui.label("Item code");
-            ui.add_sized(
-                [520.0, 22.0],
-                egui::TextEdit::singleline(&mut self.item_code)
-                    .hint_text("paste BL2(...) codes here"),
-            );
-            if ui.button("Insert code(s)").clicked() {
-                item_action = Some(ItemAction::InsertCodes);
-            }
-        });
+
         if let Some(action) = item_action {
             match action {
                 ItemAction::NewWeapon => self.new_item(bank, true),
@@ -2402,155 +2467,300 @@ impl LootsmithApp {
                 ItemAction::InsertCodes => self.insert_codes(bank),
             }
         }
-        ui.add_space(6.0);
 
         let rows = if bank {
             self.bank.clone()
         } else {
             self.backpack.clone()
         };
+        let needle = self.filter.trim().to_lowercase();
+        let visible: Vec<Row> = rows
+            .into_iter()
+            .filter(|row| {
+                needle.is_empty()
+                    || row.kind.to_lowercase().contains(&needle)
+                    || row.id.to_string().contains(&needle)
+                    || row.balance.to_lowercase().contains(&needle)
+            })
+            .collect();
+
         let selected = self.selected;
-        let mut clicked: Option<(Container, usize)> = None;
-        egui::ScrollArea::vertical()
-            .id_salt(if bank { "bank_list" } else { "backpack_list" })
-            .max_height(200.0)
-            .show(ui, |ui| {
-                if rows.is_empty() {
-                    ui.label(if bank { "(bank is empty)" } else { "(backpack is empty)" });
-                }
-                for row in &rows {
-                    let is_selected = selected == Some((row.container, row.occurrence));
-                    if ui.selectable_label(is_selected, &row.text).clicked() {
-                        clicked = Some((row.container, row.occurrence));
+        let manager = self.manager.clone();
+        let mut edit_opt = self.item_edit.take();
+
+        // ---- inspector (only when a row is selected) ----
+        if selected.is_some() {
+            egui::Panel::right("inspector")
+                .resizable(true)
+                .default_size(470.0)
+                .min_size(330.0)
+                .frame(
+                    egui::Frame::default()
+                        .fill(Tokens::SURFACE)
+                        .inner_margin(egui::Margin::symmetric(12, 10)),
+                )
+                .show(ui, |ui| {
+                    let (Some(manager), Some(edit)) = (manager.as_ref(), edit_opt.as_mut()) else {
+                        theme::muted(ui, "Load the game-data folder to edit item parts by name.");
+                        return;
+                    };
+                    let display = visible
+                        .iter()
+                        .position(|r| {
+                            r.container == edit.container && r.occurrence == edit.occurrence
+                        })
+                        .map(|i| i + 1);
+                    ui.horizontal(|ui| {
+                        let title = match display {
+                            Some(n) => format!("{} #{n}", edit.container.label()),
+                            None => edit.container.label().to_string(),
+                        };
+                        ui.label(egui::RichText::new(title).strong().size(14.0));
+                        ui.label(theme::mono(format!("id={}", edit.decoded.unique_id)));
+                    });
+                    ui.add_space(6.0);
+
+                    if edit.container == Container::BackpackItem
+                        || edit.container == Container::BackpackWeapon
+                    {
+                        ui.horizontal(|ui| {
+                            if edit.container == Container::BackpackItem {
+                                ui.label("Quantity");
+                                if ui.add(egui::DragValue::new(&mut edit.quantity)).changed() {
+                                    edit.dirty = true;
+                                }
+                                if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
+                                    edit.dirty = true;
+                                }
+                            } else {
+                                ui.label("Quick slot");
+                                if ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed() {
+                                    edit.dirty = true;
+                                }
+                            }
+                            ui.label("Mark");
+                            egui::ComboBox::from_id_salt("mark_edit")
+                                .selected_text(player_mark_name(edit.mark))
+                                .show_ui(ui, |ui| {
+                                    for (value, name) in PLAYER_MARKS.iter().enumerate() {
+                                        if ui
+                                            .selectable_label(edit.mark == value as i32, *name)
+                                            .clicked()
+                                        {
+                                            edit.mark = value as i32;
+                                            edit.dirty = true;
+                                        }
+                                    }
+                                });
+                        });
+                        ui.add_space(6.0);
                     }
+
+                    let is_weapon = edit.decoded.is_weapon;
+                    let set = edit.decoded.asset_library_set_id;
+
+                    egui::Panel::bottom("inspector_actions")
+                        .frame(
+                            egui::Frame::default()
+                                .fill(Tokens::SURFACE)
+                                .inner_margin(egui::Margin::symmetric(0, 8)),
+                        )
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.add_enabled_ui(edit.dirty, |ui| {
+                                    if ui.button("Apply item changes").clicked() {
+                                        apply = true;
+                                    }
+                                });
+                                if edit.container == Container::Bank {
+                                    let target = if is_weapon {
+                                        Container::BackpackWeapon
+                                    } else {
+                                        Container::BackpackItem
+                                    };
+                                    if ui.button("Move to backpack").clicked() {
+                                        move_to = Some(target);
+                                    }
+                                } else if ui.button("Move to bank").clicked() {
+                                    move_to = Some(Container::Bank);
+                                }
+                                if ui.button("Remove").clicked() {
+                                    remove = true;
+                                }
+                            });
+                        });
+
+                    theme::section(ui, if is_weapon { "Weapon parts" } else { "Item parts" });
+                    egui::ScrollArea::vertical()
+                        .id_salt("inspector_parts")
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            egui::Grid::new("parts_grid")
+                                .num_columns(2)
+                                .spacing([10.0, 6.0])
+                                .show(ui, |ui| {
+                                    for (slot, label) in slots_for(is_weapon) {
+                                        ui.label(
+                                            egui::RichText::new(*label)
+                                                .color(Tokens::TEXT_DIM)
+                                                .size(12.0),
+                                        );
+                                        let group =
+                                            items::slot_group(&edit.decoded.slot, slot).unwrap();
+                                        let current = match edit.decoded.part(slot) {
+                                            Some((r, g)) => manager
+                                                .lookup_asset(
+                                                    g,
+                                                    set,
+                                                    r.asset_index,
+                                                    r.sublibrary_index,
+                                                    r.use_set_id,
+                                                )
+                                                .unwrap_or_else(|_| {
+                                                    format!(
+                                                        "#{}/{}",
+                                                        r.asset_index, r.sublibrary_index
+                                                    )
+                                                }),
+                                            None => "-".to_string(),
+                                        };
+                                        let choices = self.choices.get(&group);
+                                        egui::ComboBox::from_id_salt(format!("slot_{slot}"))
+                                            .selected_text(current)
+                                            .width(270.0)
+                                            .show_ui(ui, |ui| {
+                                                if ui.selectable_label(false, "None").clicked() {
+                                                    let _ =
+                                                        edit.decoded.set_part(manager, slot, "None");
+                                                    edit.dirty = true;
+                                                }
+                                                if let Some(list) = choices {
+                                                    for choice in list {
+                                                        if ui
+                                                            .selectable_label(false, choice)
+                                                            .clicked()
+                                                        {
+                                                            let _ = edit
+                                                                .decoded
+                                                                .set_part(manager, slot, choice);
+                                                            edit.dirty = true;
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        ui.end_row();
+                                    }
+                                });
+                        });
+                });
+        }
+        self.item_edit = edit_opt;
+
+        // ---- inventory table ----
+        egui::CentralPanel::default()
+            .frame(egui::Frame::default().fill(Tokens::BG))
+            .show(ui, |ui| {
+                if visible.is_empty() {
+                    ui.add_space(12.0);
+                    theme::muted(ui, if bank { "(bank is empty)" } else { "(backpack is empty)" });
+                    return;
                 }
+                TableBuilder::new(ui)
+                    .striped(true)
+                    .resizable(true)
+                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                    .column(Column::exact(48.0))
+                    .column(Column::exact(96.0))
+                    .column(Column::exact(124.0))
+                    .column(Column::exact(52.0))
+                    .column(Column::exact(44.0))
+                    .column(Column::exact(56.0))
+                    .column(Column::exact(90.0))
+                    .column(Column::remainder().at_least(180.0))
+                    .header(26.0, |mut header| {
+                        for name in ["#", "Type", "ID", "Qty", "Eq", "Quick", "Mark", "Balance / Name"] {
+                            header.col(|ui| {
+                                ui.label(
+                                    egui::RichText::new(name)
+                                        .strong()
+                                        .size(11.5)
+                                        .color(Tokens::TEXT_DIM),
+                                );
+                            });
+                        }
+                    })
+                    .body(|mut body| {
+                    for (i, row) in visible.iter().enumerate() {
+                        let is_selected = selected == Some((row.container, row.occurrence));
+                        body.row(24.0, |mut tr| {
+                            tr.set_selected(is_selected);
+                            tr.col(|ui| {
+                                ui.label((i + 1).to_string());
+                            });
+                            tr.col(|ui| {
+                                ui.label(
+                                    egui::RichText::new(&row.kind)
+                                        .color(if row.is_weapon {
+                                            Tokens::ACCENT
+                                        } else {
+                                            Tokens::TEXT_DIM
+                                        })
+                                        .size(12.0),
+                                );
+                            });
+                            tr.col(|ui| {
+                                if ui
+                                    .selectable_label(is_selected, theme::mono(format!("id={}", row.id)))
+                                    .clicked()
+                                {
+                                    clicked = Some((row.container, row.occurrence));
+                                }
+                            });
+                            tr.col(|ui| {
+                                if row.is_weapon || row.container == Container::Bank {
+                                    ui.label("");
+                                } else {
+                                    ui.label(row.quantity.to_string());
+                                }
+                            });
+                            tr.col(|ui| {
+                                if row.is_weapon || row.container == Container::Bank {
+                                    ui.label("");
+                                } else {
+                                    ui.label(if row.equipped { "✓" } else { "" });
+                                }
+                            });
+                            tr.col(|ui| {
+                                if row.is_weapon {
+                                    ui.label(row.quick_slot.to_string());
+                                } else {
+                                    ui.label("");
+                                }
+                            });
+                            tr.col(|ui| {
+                                ui.label(player_mark_name(row.mark));
+                            });
+                            tr.col(|ui| {
+                                let text = if row.empty {
+                                    egui::RichText::new(&row.balance)
+                                        .color(Tokens::TEXT_FAINT)
+                                        .italics()
+                                } else {
+                                    egui::RichText::new(&row.balance).color(Tokens::TEXT_DIM)
+                                };
+                                ui.label(text).on_hover_text(&row.balance);
+                            });
+                            if tr.response().clicked() {
+                                clicked = Some((row.container, row.occurrence));
+                            }
+                        });
+                    }
+                });
             });
+
         if let Some((container, occurrence)) = clicked {
             self.select_entry(container, occurrence);
         }
-
-        ui.separator();
-        if self.manager.is_none() {
-            ui.label("Load an Asset Library to edit item parts by name.");
-            self.ui_save_buttons(ui);
-            return;
-        }
-
-        let manager = self.manager.clone();
-        let mut edit_opt = self.item_edit.take();
-        let mut apply = false;
-        let mut move_to: Option<Container> = None;
-        let mut remove = false;
-        if let (Some(manager), Some(edit)) = (manager, edit_opt.as_mut()) {
-            let display = rows
-                .iter()
-                .position(|r| r.container == edit.container && r.occurrence == edit.occurrence)
-                .map(|i| i + 1);
-            ui.horizontal(|ui| {
-                let title = match display {
-                    Some(n) => format!("{} #{n}", edit.container.label()),
-                    None => edit.container.label().to_string(),
-                };
-                ui.strong(title);
-                ui.label(format!("id={}", edit.decoded.unique_id));
-            });
-            if edit.container == Container::BackpackItem {
-                ui.horizontal(|ui| {
-                    ui.label("Quantity");
-                    if ui.add(egui::DragValue::new(&mut edit.quantity)).changed() {
-                        edit.dirty = true;
-                    }
-                    if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
-                        edit.dirty = true;
-                    }
-                    ui.label("Mark");
-                    egui::ComboBox::from_id_salt("mark_item")
-                        .selected_text(player_mark_name(edit.mark))
-                        .show_ui(ui, |ui| {
-                            for (value, name) in PLAYER_MARKS.iter().enumerate() {
-                                if ui.selectable_label(edit.mark == value as i32, *name).clicked() {
-                                    edit.mark = value as i32;
-                                    edit.dirty = true;
-                                }
-                            }
-                        });
-                });
-            } else if edit.container == Container::BackpackWeapon {
-                ui.horizontal(|ui| {
-                    ui.label("Quick slot");
-                    if ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed() {
-                        edit.dirty = true;
-                    }
-                    ui.label("Mark");
-                    egui::ComboBox::from_id_salt("mark_weapon")
-                        .selected_text(player_mark_name(edit.mark))
-                        .show_ui(ui, |ui| {
-                            for (value, name) in PLAYER_MARKS.iter().enumerate() {
-                                if ui.selectable_label(edit.mark == value as i32, *name).clicked() {
-                                    edit.mark = value as i32;
-                                    edit.dirty = true;
-                                }
-                            }
-                        });
-                });
-            }
-            let is_weapon = edit.decoded.is_weapon;
-            let set = edit.decoded.asset_library_set_id;
-            for (slot, label) in slots_for(is_weapon) {
-                ui.horizontal(|ui| {
-                    ui.label(*label);
-                    let group = items::slot_group(&edit.decoded.slot, slot).unwrap();
-                    let current = match edit.decoded.part(slot) {
-                        Some((r, g)) => manager
-                            .lookup_asset(g, set, r.asset_index, r.sublibrary_index, r.use_set_id)
-                            .unwrap_or_else(|_| format!("#{}/{}", r.asset_index, r.sublibrary_index)),
-                        None => "-".to_string(),
-                    };
-                    let choices = self.choices.get(&group);
-                    egui::ComboBox::from_id_salt(format!("slot_{slot}"))
-                        .selected_text(current)
-                        .width(520.0)
-                        .show_ui(ui, |ui| {
-                            if ui.selectable_label(false, "None").clicked() {
-                                let _ = edit.decoded.set_part(&manager, slot, "None");
-                                edit.dirty = true;
-                            }
-                            if let Some(list) = choices {
-                                for choice in list {
-                                    if ui.selectable_label(false, choice).clicked() {
-                                        let _ = edit.decoded.set_part(&manager, slot, choice);
-                                        edit.dirty = true;
-                                    }
-                                }
-                            }
-                        });
-                });
-            }
-            ui.separator();
-            ui.horizontal(|ui| {
-                ui.add_enabled_ui(edit.dirty, |ui| {
-                    if ui.button("Apply item changes").clicked() {
-                        apply = true;
-                    }
-                });
-                if edit.container == Container::Bank {
-                    let target = if is_weapon {
-                        Container::BackpackWeapon
-                    } else {
-                        Container::BackpackItem
-                    };
-                    if ui.button("Move to backpack").clicked() {
-                        move_to = Some(target);
-                    }
-                } else if ui.button("Move to bank").clicked() {
-                    move_to = Some(Container::Bank);
-                }
-                if ui.button("Remove").clicked() {
-                    remove = true;
-                }
-            });
-        }
-        self.item_edit = edit_opt;
         if apply {
             self.apply_item();
         }
@@ -2561,21 +2771,6 @@ impl LootsmithApp {
         if remove {
             self.remove_selected();
         }
-        ui.separator();
-        self.ui_save_buttons(ui);
-    }
-
-    fn ui_save_buttons(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            if ui.button("Save (backup + write in place)").clicked() {
-                self.save_in_place();
-            }
-            ui.label("Save As");
-            ui.text_edit_singleline(&mut self.save_as);
-            if ui.button("Save As").clicked() {
-                self.save_as();
-            }
-        });
     }
 }
 

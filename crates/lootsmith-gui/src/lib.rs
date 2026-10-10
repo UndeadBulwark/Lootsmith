@@ -2,6 +2,7 @@
 //! and the `egui_kittest` harness.
 
 pub mod app;
+pub mod theme;
 
 pub use app::{
     slots_for, Form, LootsmithApp, MissionRow, RawEdit, RawField, ReadInfo, Row, SkillRow, Tab,
