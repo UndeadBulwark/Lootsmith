@@ -394,13 +394,27 @@ pub fn mono(text: impl Into<String>) -> egui::RichText {
 
 /// A modern tab. Returns true when clicked.
 pub fn tab(ui: &mut egui::Ui, selected: bool, label: &str) -> bool {
-    let p = active(ui.ctx());
-    let text = egui::RichText::new(label).size(13.0);
-    let text = if selected {
-        text.strong().color(p.fg)
+    let color = if selected {
+        active(ui.ctx()).fg
     } else {
-        text.color(p.dim)
+        active(ui.ctx()).dim
     };
+    let job = egui::text::LayoutJob::simple(
+        label.to_string(),
+        egui::FontId::proportional(13.0),
+        color,
+        f32::INFINITY,
+    );
+    tab_widget(
+        ui,
+        selected,
+        egui::WidgetText::LayoutJob(std::sync::Arc::new(job)),
+    )
+}
+
+/// A tab with fully-built text (so a count can be set in the numeric font).
+pub fn tab_widget(ui: &mut egui::Ui, selected: bool, text: egui::WidgetText) -> bool {
+    let p = active(ui.ctx());
     let response = ui.add(
         egui::Button::new(text)
             .frame(false)

@@ -355,7 +355,8 @@ impl LootsmithApp {
                                 tr.set_selected(is_selected);
                                 tr.col(|ui| {
                                     ui.label(
-                                        egui::RichText::new((i + 1).to_string()).color(cell(p.dim)),
+                                        crate::ui::widgets::num((i + 1).to_string())
+                                            .color(cell(p.dim)),
                                     );
                                 });
                                 tr.col(|ui| {
@@ -369,9 +370,7 @@ impl LootsmithApp {
                                     if ui
                                         .selectable_label(
                                             is_selected,
-                                            egui::RichText::new(format!("id={}", row.id))
-                                                .monospace()
-                                                .size(19.0)
+                                            crate::ui::widgets::num(format!("id={}", row.id))
                                                 .color(cell(p.fg)),
                                         )
                                         .clicked()
@@ -384,7 +383,7 @@ impl LootsmithApp {
                                         ui.label("");
                                     } else {
                                         ui.label(
-                                            egui::RichText::new(row.quantity.to_string())
+                                            crate::ui::widgets::num(row.quantity.to_string())
                                                 .color(cell(p.fg)),
                                         );
                                     }
@@ -406,7 +405,7 @@ impl LootsmithApp {
                                 tr.col(|ui| {
                                     if row.is_weapon {
                                         ui.label(
-                                            egui::RichText::new(row.quick_slot.to_string())
+                                            crate::ui::widgets::num(row.quick_slot.to_string())
                                                 .color(cell(p.fg)),
                                         );
                                     } else {

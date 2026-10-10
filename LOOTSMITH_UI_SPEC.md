@@ -88,6 +88,11 @@ Derive rarity from the balance definition: `items::rarity(balance) -> Rarity` in
 
 - UI: **Pixelify Sans** (OFL), 15 px body, 13 px small caps-style labels, 18 to 24 px headings. Weights 400, 600, 700.
 - Numbers and item codes: **VT323** (OFL), 19 px (26 px for large stat values).
+- **Every digit run uses VT323** through `ui::widgets::num()` — ids, counts,
+  levels, ranks, quick-slot and slot counts — never the label font (Pixelify
+  Sans' `5` reads as `S`). Mixed labels (e.g. `Backpack (5)`) set the count in
+  VT323 via `ui::widgets::counted_label`. `tests/digits.rs` renders `0123456789`
+  in `num()` and asserts every glyph is distinct.
 - Embed both with `include_bytes!` and register them through `egui::FontDefinitions` in `main.rs`; set `TextStyle::Body`, `Button`, `Heading`, `Small`, `Monospace` explicitly.
 - Disable font hinting changes and keep text positions on whole pixels (`Visuals::text_cursor`, `pixels_per_point` integer multiples).
 

@@ -2097,7 +2097,10 @@ impl LootsmithApp {
                         // descending order so they read 100 / 150 / 200 left to
                         // right, then the label.
                         for value in Self::UI_SCALES.iter().rev() {
-                            let text = format!("{}%", (value * 100.0).round() as i32);
+                            let text = crate::ui::widgets::num(format!(
+                                "{}%",
+                                (value * 100.0).round() as i32
+                            ));
                             if ui
                                 .selectable_label(
                                     (self.ui_scale - value).abs() < f32::EPSILON,
@@ -2189,12 +2192,32 @@ impl LootsmithApp {
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         for (tab, label) in TABS {
+                            let selected = self.tab == tab;
+                            let color = if selected { p.fg } else { p.dim };
                             let text = match tab {
-                                Tab::Backpack => format!("Backpack ({})", self.backpack.len()),
-                                Tab::Bank => format!("Bank ({})", self.bank.len()),
-                                _ => label.to_string(),
+                                Tab::Backpack => crate::ui::widgets::counted_label(
+                                    "Backpack",
+                                    self.backpack.len(),
+                                    color,
+                                    13.0,
+                                ),
+                                Tab::Bank => crate::ui::widgets::counted_label(
+                                    "Bank",
+                                    self.bank.len(),
+                                    color,
+                                    13.0,
+                                ),
+                                _ => {
+                                    let job = egui::text::LayoutJob::simple(
+                                        label.to_string(),
+                                        egui::FontId::proportional(13.0),
+                                        color,
+                                        f32::INFINITY,
+                                    );
+                                    egui::WidgetText::LayoutJob(std::sync::Arc::new(job))
+                                }
                             };
-                            if theme::tab(ui, self.tab == tab, &text) {
+                            if theme::tab_widget(ui, selected, text) {
                                 self.tab = tab;
                             }
                         }
