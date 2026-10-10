@@ -4,6 +4,7 @@
 pub mod app;
 pub mod skills;
 pub mod theme;
+pub mod ui;
 
 pub use app::{
     slots_for, Form, LootsmithApp, MissionRow, RawEdit, RawField, ReadInfo, Row, SkillRow, Tab,

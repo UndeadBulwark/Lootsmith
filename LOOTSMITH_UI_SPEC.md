@@ -26,7 +26,19 @@ Name: **Homestead**. A cozy workshop-cabin look in pixel-art style, drawn from t
 4. **Texture is pattern, not shading.** Textures are flat two-color tiles (dither, plank lines). They never change brightness across a surface.
 5. **No pure white, no pure black.** Light theme uses parchment; dark theme uses warm black.
 6. **Hover and focus change borders, not fills.** Hover: border becomes `gold`. Focus: add a 2 px `acc` outline.
-7. **Integer scaling.** UI scale offers 100%, 150% and 200% only, so pixel art stays crisp.
+7. **Whole physical pixels.** UI scale offers 100%, 150% and 200% only. 150% is
+   *not* an integer multiple (1.5x), so a value authored in points can land on a
+   half physical pixel. Every painted rect, line and stroke is therefore snapped
+   to whole physical pixels (`ui::pixel::{snap, snap_pos, snap_rect, snap_len}`),
+   and a test renders the shapes at all three scales and asserts every
+   tessellated vertex is whole (`ui::pixel::tests`).
+   Dimensions that are **odd at 150%** and how they are snapped:
+   - the 3 px dotted trail divider — 4.5 px, rounded up to 5 px;
+   - 13 px and 15 px text — 19.5 / 22.5 px: egui rasterises glyphs at the device
+     scale, and text origins are snapped so baselines stay on whole pixels;
+   - the 14 px rarity diamond — 21 px exactly, but its **centre** is snapped so
+     the 2 px outline stays crisp;
+   - every panel/bar edge and 1–4 px stroke width — snapped independently.
 
 ### 2.2 Palettes (two complete token sets; never mix)
 
