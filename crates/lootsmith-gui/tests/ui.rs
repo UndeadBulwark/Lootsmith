@@ -166,7 +166,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
 }
 
 #[test]
-fn edits_a_skill_and_saves() {
+fn skill_calculator_adds_a_rank() {
     let Some((save, dumps)) = fixtures() else {
         return;
     };
@@ -178,24 +178,32 @@ fn edits_a_skill_and_saves() {
     assert_eq!(h.state().tab, Tab::Skills);
     assert_eq!(h.state().skills.len(), 33);
 
-    let index = h
-        .state()
-        .skills
-        .iter()
-        .position(|s| s.grade == 0)
-        .expect("a rank-0 skill");
-    h.state_mut().skills[index].grade = 5;
+    let grade = |h: &Harness<'static, LootsmithApp>| {
+        h.state()
+            .skills
+            .iter()
+            .find(|r| r.name.ends_with(".Sentry"))
+            .expect("Sentry entry")
+            .grade
+    };
+    let before = grade(&h);
+
+    // The tier-0 Guerilla skill "Sentry" is unlocked; clicking the node adds a rank.
+    h.get_by_label_contains("Sentry").click();
     h.run();
-    assert!(h.state().skills_dirty());
-    h.get_by_label("Apply skill changes").click();
-    h.run();
+    assert_eq!(grade(&h), before + 1, "clicking the node adds a rank");
 
     let out = std::env::temp_dir().join("lootsmith-ui-skills.sav");
     h.state_mut().save_to(out.to_str().unwrap());
     let reopened = reopen(&out);
     assert!(reopened.crc32_valid() && reopened.proto_stable());
     let sg = reopened.save_game().expect("reparse");
-    assert_eq!(sg.skills()[index].grade, 5, "the skill grade should persist");
+    let persisted = sg
+        .skills()
+        .into_iter()
+        .find(|s| s.skill.ends_with(".Sentry"))
+        .expect("Sentry in save");
+    assert_eq!(persisted.grade, before + 1, "the rank persists");
 }
 
 #[test]

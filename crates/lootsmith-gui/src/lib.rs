@@ -2,6 +2,7 @@
 //! and the `egui_kittest` harness.
 
 pub mod app;
+pub mod skills;
 pub mod theme;
 
 pub use app::{
