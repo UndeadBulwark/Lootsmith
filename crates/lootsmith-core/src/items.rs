@@ -276,6 +276,30 @@ pub struct PackedData {
     pub slot: PackedSlot,
 }
 
+impl PackedItem {
+    /// Wrap a packed item blob in [`PackedData`] (asset library set 0).
+    pub fn into_packed(self, unique_id: i32) -> PackedData {
+        PackedData {
+            is_weapon: false,
+            unique_id,
+            asset_library_set_id: 0,
+            slot: PackedSlot::Item(self),
+        }
+    }
+}
+
+impl PackedWeapon {
+    /// Wrap a packed weapon blob in [`PackedData`] (asset library set 0).
+    pub fn into_packed(self, unique_id: i32) -> PackedData {
+        PackedData {
+            is_weapon: true,
+            unique_id,
+            asset_library_set_id: 0,
+            slot: PackedSlot::Weapon(self),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PackedSlot {
     Item(PackedItem),
