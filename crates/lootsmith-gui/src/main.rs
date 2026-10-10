@@ -33,6 +33,7 @@ fn install_panic_hook() {
 struct CliArgs {
     open: Option<String>,
     dumps: Option<String>,
+    stations: Option<String>,
     selftest: bool,
 }
 
@@ -43,6 +44,7 @@ fn parse_cli() -> CliArgs {
         match arg.as_str() {
             "--open" | "-o" => args.open = it.next(),
             "--dumps" | "-d" => args.dumps = it.next(),
+            "--stations" | "-s" => args.stations = it.next(),
             "--selftest" => args.selftest = true,
             other if args.open.is_none() && !other.starts_with('-') => {
                 args.open = Some(other.to_string());
@@ -68,7 +70,10 @@ fn main() -> ExitCode {
             .with_title("Lootsmith"),
         ..Default::default()
     };
-    let app = LootsmithApp::new(args.open, args.dumps);
+    let mut app = LootsmithApp::new(args.open, args.dumps);
+    if let Some(stations) = args.stations {
+        app.set_stations_path(stations);
+    }
     match eframe::run_native("Lootsmith", options, Box::new(move |_cc| Ok(Box::new(app)))) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {

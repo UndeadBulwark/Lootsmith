@@ -6,7 +6,7 @@
 use eframe::egui;
 use lootsmith_core::{
     container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container, PackedEntry,
-    Platform, SaveGame,
+    Platform, SaveGame, TravelStations,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,6 +17,7 @@ pub enum Tab {
     Character,
     Currency,
     Skills,
+    Travel,
     Backpack,
     Bank,
 }
@@ -118,6 +119,12 @@ pub struct LootsmithApp {
     pub backpack: Vec<Row>,
     pub bank: Vec<Row>,
     pub skills: Vec<SkillRow>,
+    /// Visited teleporters (field 16), by station `resource_name`.
+    pub travel: Vec<String>,
+    pub travel_last: Option<String>,
+    pub stations: Option<Arc<TravelStations>>,
+    pub stations_path: String,
+    pub new_station: Option<String>,
     pub status: String,
     pub save_as: String,
     loaded_once: bool,
@@ -259,6 +266,11 @@ impl LootsmithApp {
             backpack: Vec::new(),
             bank: Vec::new(),
             skills: Vec::new(),
+            travel: Vec::new(),
+            travel_last: None,
+            stations: None,
+            stations_path: String::new(),
+            new_station: None,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             loaded_once: false,
@@ -363,6 +375,7 @@ impl LootsmithApp {
         );
         self.refresh_rows();
         self.refresh_skills();
+        self.refresh_travel();
     }
 
     pub fn load_dumps(&mut self) {
@@ -386,6 +399,7 @@ impl LootsmithApp {
             }
         }
         self.refresh_rows();
+        self.load_travel_stations();
     }
 
     fn refresh_rows(&mut self) {
@@ -639,6 +653,95 @@ impl LootsmithApp {
         };
     }
 
+    /// Point at an explicit `Travel Stations.json` and load it.
+    pub fn set_stations_path(&mut self, path: String) {
+        self.stations_path = path;
+        self.load_travel_stations();
+        self.refresh_travel();
+    }
+
+    fn load_travel_stations(&mut self) {
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        if !self.stations_path.trim().is_empty() {
+            candidates.push(std::path::PathBuf::from(self.stations_path.trim()));
+        }
+        if let Ok(env) = std::env::var("LOOTSMITH_TRAVEL_STATIONS") {
+            candidates.push(std::path::PathBuf::from(env));
+        }
+        if let Some(dir) = std::path::Path::new(self.dumps.trim()).parent() {
+            candidates.push(dir.join("Travel Stations.json"));
+        }
+        for candidate in candidates {
+            if candidate.exists() {
+                if let Ok(stations) = TravelStations::from_path(&candidate) {
+                    self.stations = Some(Arc::new(stations));
+                    self.status = format!("loaded travel stations from {}", candidate.display());
+                    return;
+                }
+            }
+        }
+        self.stations = None;
+    }
+
+    fn refresh_travel(&mut self) {
+        match &self.save_game {
+            Some(save_game) => {
+                self.travel = save_game.visited_teleporters();
+                self.travel_last = save_game.last_visited_teleporter();
+            }
+            None => {
+                self.travel.clear();
+                self.travel_last = None;
+            }
+        }
+    }
+
+    /// A label for a save station string, resolved when stations are loaded.
+    pub fn travel_label(&self, name: &str) -> String {
+        match &self.stations {
+            Some(stations) => stations.label_for(name),
+            None => name.to_string(),
+        }
+    }
+
+    pub fn add_teleporter(&mut self, name: &str) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let added = save_game.add_visited_teleporter(name);
+        self.status = if added {
+            format!("added teleporter {name}")
+        } else {
+            format!("{name} already visited")
+        };
+        self.refresh_travel();
+    }
+
+    pub fn remove_teleporter(&mut self, index: usize) {
+        let Some(name) = self.travel.get(index).cloned() else {
+            return;
+        };
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let removed = save_game.remove_visited_teleporter(&name);
+        self.status = if removed {
+            format!("removed teleporter {name}")
+        } else {
+            format!("{name} was not visited")
+        };
+        self.refresh_travel();
+    }
+
+    pub fn set_last_teleporter(&mut self, name: &str) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        save_game.set_last_visited_teleporter(name);
+        self.status = format!("last visited = {name}");
+        self.refresh_travel();
+    }
+
     fn apply_form(&mut self) -> Option<Vec<u8>> {
         let mut save_game = self.save_game.clone()?;
         save_game.set_i32(2, self.form.level);
@@ -780,6 +883,7 @@ impl LootsmithApp {
                 ui.selectable_value(&mut self.tab, Tab::Character, "Character");
                 ui.selectable_value(&mut self.tab, Tab::Currency, "Currency");
                 ui.selectable_value(&mut self.tab, Tab::Skills, "Skills");
+                ui.selectable_value(&mut self.tab, Tab::Travel, "Fast Travel");
                 ui.selectable_value(&mut self.tab, Tab::Backpack, "Backpack");
                 ui.selectable_value(&mut self.tab, Tab::Bank, "Bank");
             });
@@ -790,6 +894,7 @@ impl LootsmithApp {
                 Tab::Character => self.ui_character(ui),
                 Tab::Currency => self.ui_currency(ui),
                 Tab::Skills => self.ui_skills(ui),
+                Tab::Travel => self.ui_travel(ui),
                 Tab::Backpack => self.ui_container(ui, false),
                 Tab::Bank => self.ui_container(ui, true),
             }
@@ -901,6 +1006,96 @@ impl LootsmithApp {
                 ui.label("(unsaved changes)");
             }
         });
+        ui.separator();
+        self.ui_save_buttons(ui);
+    }
+
+    fn ui_travel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label(format!("Visited stations: {}", self.travel.len()));
+            if self.stations.is_some() {
+                ui.label("(names resolved from Travel Stations.json)");
+            } else {
+                ui.label("(load Travel Stations.json next to the Asset Library for names)");
+            }
+        });
+
+        let choices = self
+            .stations
+            .as_ref()
+            .map(|s| s.destination_labels())
+            .unwrap_or_default();
+        let mut add_requested = false;
+        ui.horizontal(|ui| {
+            ui.label("Add station:");
+            if choices.is_empty() {
+                ui.label("—");
+            } else {
+                egui::ComboBox::from_id_salt("add_station")
+                    .selected_text(
+                        self.new_station
+                            .clone()
+                            .unwrap_or_else(|| "choose station…".to_string()),
+                    )
+                    .width(420.0)
+                    .show_ui(ui, |ui| {
+                        for choice in &choices {
+                            let selected = self.new_station.as_deref() == Some(choice.as_str());
+                            if ui.selectable_label(selected, choice).clicked() {
+                                self.new_station = Some(choice.clone());
+                            }
+                        }
+                    });
+            }
+            ui.add_enabled_ui(self.new_station.is_some(), |ui| {
+                if ui.button("Add station").clicked() {
+                    add_requested = true;
+                }
+            });
+        });
+        if add_requested {
+            if let Some(name) = self.new_station.clone() {
+                self.add_teleporter(&name);
+            }
+        }
+
+        let travel = self.travel.clone();
+        let last = self.travel_last.clone();
+        let stations = self.stations.clone();
+        let mut remove = None;
+        let mut set_last = None;
+        ui.separator();
+        egui::ScrollArea::vertical()
+            .id_salt("travel")
+            .max_height(360.0)
+            .show(ui, |ui| {
+                if travel.is_empty() {
+                    ui.label("(no stations visited)");
+                }
+                for (i, name) in travel.iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        let label = match &stations {
+                            Some(s) => s.label_for(name),
+                            None => name.clone(),
+                        };
+                        let is_last = last.as_deref() == Some(name.as_str());
+                        ui.label(format!("{}{label}", if is_last { "★ " } else { "" }));
+                        if ui.small_button("Set last").clicked() {
+                            set_last = Some(name.clone());
+                        }
+                        if ui.small_button("Remove").clicked() {
+                            remove = Some(i);
+                        }
+                    });
+                }
+            });
+        if let Some(name) = set_last {
+            self.set_last_teleporter(&name);
+        }
+        if let Some(i) = remove {
+            self.remove_teleporter(i);
+        }
+
         ui.separator();
         self.ui_save_buttons(ui);
     }

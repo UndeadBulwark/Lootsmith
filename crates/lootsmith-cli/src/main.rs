@@ -2,6 +2,7 @@
 
 use lootsmith_core::{
     container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container, Platform,
+    TravelStations,
 };
 use std::process::ExitCode;
 
@@ -15,12 +16,15 @@ fn usage() -> ExitCode {
          lootsmith dump    <file.sav> [--platform <id>]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith skills  <file.sav> [--platform <id>]\n  \
+         lootsmith travel  <file.sav> [--stations FILE]\n  \
          lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE [--container bag|bank]\n  \
-         lootsmith edit    <file.sav> --skill N [--grade G] [--points P] [--out OUT]\n\
+         lootsmith edit    <file.sav> --skill N [--grade G] [--points P] [--out OUT]\n  \
+         lootsmith edit    <file.sav> [--travel-add NAME] [--travel-remove NAME] [--travel-last NAME] [--out OUT]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
+         --stations <Travel Stations.json> resolves teleporter names (or set LOOTSMITH_TRAVEL_STATIONS).\n\
          --container selects the backpack (default) or the bank/stash for --item.\n\
          edit writes in place with a <file>.bak backup unless --out is given."
     );
@@ -48,6 +52,10 @@ struct Args {
     skill: Option<usize>,
     grade: Option<i32>,
     points: Option<i32>,
+    stations: Option<String>,
+    travel_add: Option<String>,
+    travel_remove: Option<String>,
+    travel_last: Option<String>,
     scope: Scope,
 }
 
@@ -93,6 +101,10 @@ fn parse_args() -> Option<Args> {
         skill: None,
         grade: None,
         points: None,
+        stations: None,
+        travel_add: None,
+        travel_remove: None,
+        travel_last: None,
         scope: Scope::All,
     };
     while let Some(arg) = it.next() {
@@ -118,6 +130,10 @@ fn parse_args() -> Option<Args> {
             "--skill" => args.skill = Some(it.next()?.parse().ok()?),
             "--grade" => args.grade = Some(it.next()?.parse().ok()?),
             "--points" => args.points = Some(it.next()?.parse().ok()?),
+            "--stations" => args.stations = Some(it.next()?),
+            "--travel-add" => args.travel_add = Some(it.next()?),
+            "--travel-remove" => args.travel_remove = Some(it.next()?),
+            "--travel-last" => args.travel_last = Some(it.next()?),
             _ => return None,
         }
     }
@@ -391,6 +407,48 @@ fn main() -> ExitCode {
             println!("total: {} skills", skills.len());
             ExitCode::SUCCESS
         }
+        "travel" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let stations = args
+                .stations
+                .clone()
+                .or_else(|| std::env::var("LOOTSMITH_TRAVEL_STATIONS").ok())
+                .map(|path| (path.clone(), TravelStations::from_path(std::path::Path::new(&path))));
+            let stations = match stations {
+                Some((path, Ok(s))) => {
+                    eprintln!("loaded travel stations from {path}");
+                    Some(s)
+                }
+                Some((path, Err(e))) => {
+                    eprintln!("warning: cannot load {path}: {e}");
+                    None
+                }
+                None => None,
+            };
+            let label = |name: &str| match &stations {
+                Some(s) => s.label_for(name),
+                None => name.to_string(),
+            };
+            let visited = save_game.visited_teleporters();
+            for (i, name) in visited.iter().enumerate() {
+                println!("#{:<3} {}", i + 1, label(name));
+            }
+            println!(
+                "last visited: {}",
+                match save_game.last_visited_teleporter() {
+                    Some(name) => label(&name),
+                    None => "(none)".to_string(),
+                }
+            );
+            println!("total: {} visited teleporters", visited.len());
+            ExitCode::SUCCESS
+        }
         "edit" => {
             let mut save_game = match save.save_game() {
                 Ok(s) => s,
@@ -525,6 +583,28 @@ fn main() -> ExitCode {
                     "skill #{skill}: grade={} points={} ({})",
                     now.grade, now.grade_points, now.skill
                 );
+            }
+
+            if let Some(name) = args.travel_add.clone() {
+                if save_game.add_visited_teleporter(&name) {
+                    println!("travel: added {name}");
+                    changes += 1;
+                } else {
+                    eprintln!("note: {name} was already visited");
+                }
+            }
+            if let Some(name) = args.travel_remove.clone() {
+                if save_game.remove_visited_teleporter(&name) {
+                    println!("travel: removed {name}");
+                    changes += 1;
+                } else {
+                    eprintln!("note: {name} was not visited");
+                }
+            }
+            if let Some(name) = args.travel_last.clone() {
+                save_game.set_last_visited_teleporter(&name);
+                println!("travel: last visited = {name}");
+                changes += 1;
             }
 
             if changes == 0 {

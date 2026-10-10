@@ -61,6 +61,7 @@ fn loads_and_switches_tabs_by_label() {
         ("Character", Tab::Character),
         ("Currency", Tab::Currency),
         ("Skills", Tab::Skills),
+        ("Fast Travel", Tab::Travel),
         ("Backpack", Tab::Backpack),
         ("Bank", Tab::Bank),
         ("General", Tab::General),
@@ -193,6 +194,52 @@ fn edits_a_skill_and_saves() {
     assert!(reopened.crc32_valid() && reopened.proto_stable());
     let sg = reopened.save_game().expect("reparse");
     assert_eq!(sg.skills()[index].grade, 5, "the skill grade should persist");
+}
+
+#[test]
+fn edits_fast_travel_and_saves() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+
+    h.get_by_label("Fast Travel").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Travel);
+    assert_eq!(h.state().travel.len(), 23);
+    assert_eq!(h.state().travel_last.as_deref(), Some("SouthernShelfTown"));
+    assert!(
+        h.state().stations.is_some(),
+        "Travel Stations.json should load from the dumps directory"
+    );
+
+    // Remove the first visited station programmatically.
+    let first = h.state().travel[0].clone();
+    h.state_mut().remove_teleporter(0);
+    h.run();
+    assert_eq!(h.state().travel.len(), 22);
+    assert!(!h.state().travel.contains(&first));
+
+    // Add one through the dropdown + button.
+    h.state_mut().new_station = Some("Xmas".to_string());
+    h.run();
+    h.get_by_label("Add station").click();
+    h.run();
+    assert!(h.state().travel.iter().any(|s| s == "Xmas"));
+
+    h.state_mut().set_last_teleporter("Xmas");
+    h.run();
+
+    let out = std::env::temp_dir().join("lootsmith-ui-travel.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = reopen(&out);
+    assert!(reopened.crc32_valid() && reopened.proto_stable());
+    let sg = reopened.save_game().expect("reparse");
+    assert_eq!(sg.visited_teleporters().len(), 23, "23 - 1 removed + 1 added");
+    assert!(sg.visited_teleporters().iter().any(|s| s == "Xmas"));
+    assert!(!sg.visited_teleporters().contains(&first));
+    assert_eq!(sg.last_visited_teleporter().as_deref(), Some("Xmas"));
 }
 
 #[test]

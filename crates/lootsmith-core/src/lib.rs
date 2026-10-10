@@ -13,6 +13,7 @@ pub mod items;
 pub mod platform;
 pub mod proto;
 pub mod savegame;
+pub mod travel;
 
 pub use container::{pack_inner, serialize, unpack, wrap, SaveFile, BLOCK_SIZE};
 pub use error::{Error, Result};
@@ -20,3 +21,4 @@ pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryMan
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use savegame::{Container, PackedEntry, SaveGame, Skill};
+pub use travel::{TravelStation, TravelStations};

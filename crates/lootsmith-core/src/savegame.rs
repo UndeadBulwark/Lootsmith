@@ -395,6 +395,15 @@ impl SaveGame {
         out
     }
 
+    /// Repeated string fields, in order (field 16 style: one field per value).
+    pub fn get_str_list(&self, number: u32) -> Vec<String> {
+        self.message
+            .get_all(number)
+            .filter_map(|f| f.as_str())
+            .map(|s| s.into_owned())
+            .collect()
+    }
+
     // ---- scalar setters ----
 
     pub fn set_str(&mut self, number: u32, value: &str) {
@@ -421,6 +430,14 @@ impl SaveGame {
         }
         self.message.remove_all(number);
         self.message.push(Field::bytes(number, &payload));
+    }
+
+    /// Replace all occurrences of a repeated string field with `values`.
+    pub fn set_str_list(&mut self, number: u32, values: &[String]) {
+        self.message.remove_all(number);
+        for value in values {
+            self.message.push(Field::string(number, value));
+        }
     }
 
     // ---- named convenience accessors ----
@@ -460,6 +477,47 @@ impl SaveGame {
     }
     pub fn max_bank_slots(&self) -> Option<i32> {
         self.get_i32(56)
+    }
+
+    // ---- fast travel ----
+
+    pub fn visited_teleporters(&self) -> Vec<String> {
+        self.get_str_list(16)
+    }
+
+    pub fn last_visited_teleporter(&self) -> Option<String> {
+        self.get_str(17)
+    }
+
+    pub fn set_visited_teleporters(&mut self, list: &[String]) {
+        self.set_str_list(16, list);
+    }
+
+    pub fn set_last_visited_teleporter(&mut self, name: &str) {
+        self.set_str(17, name);
+    }
+
+    /// Add a teleporter if not already visited. Returns true if it was added.
+    pub fn add_visited_teleporter(&mut self, name: &str) -> bool {
+        let mut list = self.visited_teleporters();
+        if list.iter().any(|entry| entry == name) {
+            return false;
+        }
+        list.push(name.to_string());
+        self.set_visited_teleporters(&list);
+        true
+    }
+
+    /// Remove a teleporter. Returns true if it was present.
+    pub fn remove_visited_teleporter(&mut self, name: &str) -> bool {
+        let mut list = self.visited_teleporters();
+        let before = list.len();
+        list.retain(|entry| entry != name);
+        if list.len() == before {
+            return false;
+        }
+        self.set_visited_teleporters(&list);
+        true
     }
 
     /// One annotated line per field, in wire order.
