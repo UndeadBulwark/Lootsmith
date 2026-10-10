@@ -273,6 +273,61 @@ pub fn dither(painter: &egui::Painter, rect: Rect, texture: &egui::TextureHandle
     );
 }
 
+/// A drawn UI icon (no font symbol, so it never renders as tofu).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Icon {
+    Sun,
+    Moon,
+    Close,
+}
+
+/// Paint an [`Icon`] centred on `center` (about 12x12 px at `scale` 1.0).
+/// `cut` is the fill the icon sits on, used to carve the moon's crescent.
+pub fn icon(
+    painter: &egui::Painter,
+    center: Pos2,
+    kind: Icon,
+    color: Color32,
+    cut: Color32,
+    scale: f32,
+) {
+    let width = (2.0 * scale).round().max(1.0);
+    let stroke = Stroke::new(width, color);
+    let r = 4.0 * scale;
+    match kind {
+        Icon::Sun => {
+            painter.circle_filled(center, r * 0.55, color);
+            for (dx, dy) in [
+                (1.0, 0.0),
+                (-1.0, 0.0),
+                (0.0, 1.0),
+                (0.0, -1.0),
+                (0.707, 0.707),
+                (-0.707, 0.707),
+                (0.707, -0.707),
+                (-0.707, -0.707),
+            ] {
+                painter.line_segment(
+                    [
+                        center + vec2(dx * r * 0.8, dy * r * 0.8),
+                        center + vec2(dx * r * 1.3, dy * r * 1.3),
+                    ],
+                    stroke,
+                );
+            }
+        }
+        Icon::Moon => {
+            painter.circle_filled(center, r * 1.05, color);
+            painter.circle_filled(center + vec2(r * 0.8, -r * 0.3), r * 0.95, cut);
+        }
+        Icon::Close => {
+            let s = r * 0.9;
+            painter.line_segment([center + vec2(-s, -s), center + vec2(s, s)], stroke);
+            painter.line_segment([center + vec2(-s, s), center + vec2(s, -s)], stroke);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

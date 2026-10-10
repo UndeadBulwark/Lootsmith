@@ -402,14 +402,19 @@ impl LootsmithApp {
                                     if row.is_weapon || row.container == Container::Bank {
                                         ui.label("");
                                     } else {
-                                        ui.label(
-                                            egui::RichText::new(if row.equipped {
-                                                "✓"
-                                            } else {
-                                                ""
-                                            })
-                                            .color(cell(p.fg)),
+                                        let (rect, _) = ui.allocate_exact_size(
+                                            egui::vec2(11.0, 11.0),
+                                            egui::Sense::hover(),
                                         );
+                                        if row.equipped {
+                                            crate::ui::widgets::paint_glyph(
+                                                ui.painter(),
+                                                rect.center(),
+                                                crate::ui::widgets::Glyph::Check,
+                                                cell(p.fg),
+                                                1.0,
+                                            );
+                                        }
                                     }
                                 });
                                 tr.col(|ui| {

@@ -10,7 +10,16 @@ impl LootsmithApp {
         ui.horizontal(|ui| {
             ui.heading("Raw fields");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("✕").on_hover_text("Clear search").clicked() {
+                if crate::ui::widgets::icon_button(
+                    ui,
+                    crate::ui::pixel::Icon::Close,
+                    p.fg,
+                    p.pan,
+                    24.0,
+                    "Clear search",
+                )
+                .clicked()
+                {
                     self.raw_filter.clear();
                 }
                 ui.add_sized(

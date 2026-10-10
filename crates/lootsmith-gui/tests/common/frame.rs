@@ -8,7 +8,7 @@
 use egui::{Color32, Rect, Shape};
 use image::RgbaImage;
 use lootsmith_core::Container;
-use lootsmith_gui::app::Tab;
+use lootsmith_gui::app::{LootsmithApp, Tab};
 use lootsmith_gui::theme::Theme;
 
 pub struct Run {
@@ -215,4 +215,51 @@ pub fn screen_rule_violations(tab: Tab, theme: Theme) -> Vec<String> {
     }
     h.run();
     rule_violations(h.output(), 1.0)
+}
+
+/// Any text section on `tab` in `theme` whose characters are not all present in
+/// its font would render as a "tofu" box. Run on a plain `Context` (no renderer).
+pub fn screen_tofu(tab: Tab, theme: Theme) -> Vec<String> {
+    let save = super::synthetic_save_path();
+    let mut app = LootsmithApp::new_isolated(Some(save));
+    app.set_theme(theme);
+    app.set_tab(tab);
+    match tab {
+        Tab::Backpack => {
+            app.select_entry(Container::BackpackWeapon, 0);
+        }
+        Tab::Bank => {
+            app.select_entry(Container::Bank, 0);
+        }
+        _ => {}
+    }
+    let ctx = egui::Context::default();
+    let input = || egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            egui::vec2(1280.0, 800.0),
+        )),
+        ..Default::default()
+    };
+    let mut out = ctx.run_ui(input(), |ui| app.build(ui));
+    out.textures_delta.clear();
+    out = ctx.run_ui(input(), |ui| app.build(ui));
+    out.textures_delta.clear();
+
+    let mut bad = Vec::new();
+    for cs in &out.shapes {
+        if let egui::Shape::Text(t) = &cs.shape {
+            for s in &t.galley.job.sections {
+                let range = s.byte_range.start.0..s.byte_range.end.0;
+                let text = t.galley.job.text.get(range).unwrap_or_default();
+                if !text.chars().any(|c| !c.is_whitespace()) {
+                    continue;
+                }
+                if !ctx.fonts_mut(|f| f.has_glyphs(&s.format.font_id, text)) {
+                    bad.push(format!("{text:?} in {:?}", s.format.font_id));
+                }
+            }
+        }
+    }
+    bad
 }

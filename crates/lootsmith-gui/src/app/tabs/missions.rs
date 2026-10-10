@@ -115,10 +115,15 @@ impl LootsmithApp {
             {
                 self.set_prestige(self.prestiges);
             }
-            if ui
-                .button("✕")
-                .on_hover_text("Clear challenge search")
-                .clicked()
+            if crate::ui::widgets::icon_button(
+                ui,
+                crate::ui::pixel::Icon::Close,
+                p.fg,
+                p.pan,
+                24.0,
+                "Clear challenge search",
+            )
+            .clicked()
             {
                 self.challenge_filter.clear();
             }

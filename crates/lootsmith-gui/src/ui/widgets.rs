@@ -144,6 +144,23 @@ pub fn paint_glyph(
     }
 }
 
+/// A square button that draws an [`Icon`](crate::ui::pixel::Icon) instead of a
+/// font symbol (no tofu).
+pub fn icon_button(
+    ui: &mut egui::Ui,
+    kind: crate::ui::pixel::Icon,
+    color: egui::Color32,
+    cut: egui::Color32,
+    size: f32,
+    hover: &str,
+) -> egui::Response {
+    let response = ui
+        .add_sized([size, size], egui::Button::new(""))
+        .on_hover_text(hover);
+    crate::ui::pixel::icon(ui.painter(), response.rect.center(), kind, color, cut, 1.0);
+    response
+}
+
 /// Run `add` with the body/button font set to VT323 at `size`, for pure-number
 /// input widgets (`DragValue`, numeric `TextEdit`) that pick their font from the
 /// style.

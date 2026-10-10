@@ -2098,16 +2098,20 @@ impl LootsmithApp {
                         action = Some(Action::PickData);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let label = if self.theme == Theme::Dark {
-                            "☀"
+                        let icon = if self.theme == Theme::Dark {
+                            crate::ui::pixel::Icon::Sun
                         } else {
-                            "☾"
+                            crate::ui::pixel::Icon::Moon
                         };
-                        if ui
-                            .button(label)
-                            .on_hover_text("Toggle light/dark")
-                            .clicked()
-                        {
+                        let resp = crate::ui::widgets::icon_button(
+                            ui,
+                            icon,
+                            p.fg,
+                            p.pan,
+                            28.0,
+                            "Toggle light/dark",
+                        );
+                        if resp.clicked() {
                             action = Some(Action::ToggleTheme);
                         }
                         // Right-to-left layout: add the scale buttons in
@@ -2132,7 +2136,16 @@ impl LootsmithApp {
                         ui.label(egui::RichText::new("Scale").color(p.dim).size(11.5));
                         ui.add_space(4.0);
                         if self.dirty {
-                            ui.colored_label(p.acc, "● unsaved");
+                            let (rect, _) = ui
+                                .allocate_exact_size(egui::vec2(11.0, 11.0), egui::Sense::hover());
+                            crate::ui::widgets::paint_glyph(
+                                ui.painter(),
+                                rect.center(),
+                                Glyph::Dot,
+                                p.acc,
+                                1.0,
+                            );
+                            ui.label(egui::RichText::new("unsaved").color(p.acc).size(12.0));
                         }
                     });
                 });
