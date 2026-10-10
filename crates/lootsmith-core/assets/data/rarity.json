@@ -15,7 +15,7 @@
       "method": "pattern table in this file; game naming encodes the tier"
     },
     "rules": {
-      "legendary_pool_only": "never classified from pools alone; Unknown unless Borderlens confirms exactly",
+      "legendary_pool_only": "pools alone never classify Legendary; the named Norfleet / Kiss of Death / Deadly Bloom entries keep their Borderlens values (origin borderlens)",
       "marker_less": "a single non-Legendary pool tier classifies marker-less gear (origin pool)"
     },
     "pattern_vs_pool": {

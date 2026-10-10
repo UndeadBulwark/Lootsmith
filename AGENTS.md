@@ -26,7 +26,8 @@ lootsmith-gui    egui front end over core. No format logic here.
    dump tables are additionally bundled under `crates/lootsmith-core/assets/data/`
    (data only, no art or binaries) so a fresh run resolves names with no setup.
    A folder the user picks always overrides the bundled copy. Do not add new
-   Gearbox art.
+   Gearbox art. Rebuild the bundled tables with `scripts/refresh-data.sh`
+   (sources, revisions and licences in `assets/data/PROVENANCE.md`).
 5. `app.rs` was split in `0ad078a`: the app now lives in `app/mod.rs` (state, build,
    toolbar, dispatch, model), `app/widgets.rs`, `app/item_editor.rs` and one module per tab
    under `app/tabs/`. Keep it that way — new screens go in their own tab module.

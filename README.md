@@ -298,10 +298,9 @@ included so the skill calculator works offline. Remove that directory and the
 `crates/lootsmith-core/assets/data/` ships the community dump tables the editor
 needs to resolve names (asset library, balances, part lists, name parts, travel
 stations, missions, customizations, downloadable contents) plus the derived
-`rarity.json`. They are data tables (names, ids, numbers) re-serialised to
-compact JSON, not art or code; they originate from the community dumps
-(Gibbed's Borderlands2Dumps and the OpenBLCMM datapack) and the curated
-`thekeogh/borderlens` item list, which carries no license — only the *derived*
-balance→rarity mapping is bundled, with its provenance recorded in
-`rarity.json`. A game-data folder chosen in **Game data…** always overrides the
-bundled copies.
+`rarity.json`. They are **verbatim copies** of the community dumps (Gibbed's
+Borderlands2Dumps, pinned) and the derived balance→rarity mapping; not art or
+code. Per-table sources, revisions and licence status are in
+`crates/lootsmith-core/assets/data/PROVENANCE.md`, and the whole folder can be
+rebuilt with `scripts/refresh-data.sh`. A game-data folder chosen in
+**Game data…** always overrides the bundled copies.
