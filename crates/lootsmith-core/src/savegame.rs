@@ -671,6 +671,17 @@ pub fn mission_status_name(value: i32) -> &'static str {
         .unwrap_or("?")
 }
 
+/// `PlayerMark` names, indexed by value.
+pub const PLAYER_MARKS: &[&str] = &["Trash", "Standard", "Favorite"];
+
+/// The name of a `PlayerMark` value.
+pub fn player_mark_name(value: i32) -> &'static str {
+    PLAYER_MARKS
+        .get(value as usize)
+        .copied()
+        .unwrap_or("?")
+}
+
 /// A `ChallengeData` entry (field 38).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Challenge {
@@ -957,6 +968,35 @@ impl SaveGame {
     ) -> crate::error::Result<()> {
         self.mutate_entry(container.field_number(), occurrence, |sub| {
             sub.set(Field::varint(3, u64::from(equipped)));
+        })
+    }
+
+    /// Set `PackedWeaponData.QuickSlot` (field 2) on a backpack weapon.
+    pub fn set_entry_quick_slot(
+        &mut self,
+        container: Container,
+        occurrence: usize,
+        slot: i32,
+    ) -> crate::error::Result<()> {
+        self.mutate_entry(container.field_number(), occurrence, |sub| {
+            sub.set(Field::varint(2, slot as u32 as u64));
+        })
+    }
+
+    /// Set the `PlayerMark` of an entry (item field 4 / weapon field 3).
+    pub fn set_entry_mark(
+        &mut self,
+        container: Container,
+        occurrence: usize,
+        mark: i32,
+    ) -> crate::error::Result<()> {
+        let field = if container == Container::BackpackWeapon {
+            3
+        } else {
+            4
+        };
+        self.mutate_entry(container.field_number(), occurrence, |sub| {
+            sub.set(Field::varint(field, mark as u32 as u64));
         })
     }
 

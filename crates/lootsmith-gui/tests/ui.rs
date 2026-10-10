@@ -370,6 +370,85 @@ fn dirty_tracking() {
 }
 
 #[test]
+fn creates_duplicates_and_inserts_codes() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    h.get_by_label("Backpack").click();
+    h.run();
+    let before = h.state().backpack.len();
+
+    // Create a blank weapon.
+    h.get_by_label("New weapon").click();
+    h.run();
+    assert_eq!(h.state().backpack.len(), before + 1);
+    assert_eq!(h.state().tab, Tab::Backpack);
+    assert!(h.state().dirty);
+
+    // The new weapon is selected; round-trip it through a BL2 code.
+    let code = {
+        let (container, occurrence) = h.state().selected.unwrap();
+        lootsmith_core::items::encode_code(
+            &h.state().item_serial(container, occurrence).unwrap(),
+        )
+    };
+    h.state_mut().item_code = code;
+    h.run();
+    h.get_by_label("Insert code(s)").click();
+    h.run();
+    assert_eq!(h.state().backpack.len(), before + 2);
+}
+
+#[test]
+fn duplicates_a_selected_item() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    h.get_by_label("Backpack").click();
+    h.run();
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    let before = h.state().backpack.len();
+    h.get_by_label("Duplicate").click();
+    h.run();
+    assert_eq!(h.state().backpack.len(), before + 1);
+}
+
+#[test]
+fn syncs_item_levels() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+    h.get_by_label("Backpack").click();
+    h.run();
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.state_mut().form.level = 60;
+    h.run();
+    h.get_by_label("Sync equipped").click();
+    h.run();
+
+    let serial = h
+        .state()
+        .item_serial(Container::BackpackWeapon, 0)
+        .unwrap();
+    let configs = lootsmith_core::AssetLibraryConfigs::pc_default();
+    let decoded = lootsmith_core::items::unpack(&serial, &configs).unwrap();
+    match decoded.slot {
+        lootsmith_core::items::PackedSlot::Weapon(weapon) => {
+            assert_eq!(weapon.manufacturer_grade_index, 60);
+            assert_eq!(weapon.game_stage, 60);
+        }
+        _ => panic!("expected a weapon"),
+    }
+}
+
+#[test]
 fn removes_an_entry() {
     let Some((save, dumps)) = fixtures() else {
         return;

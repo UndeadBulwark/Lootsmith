@@ -25,7 +25,8 @@ pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot
 pub use missions::{Mission, Missions};
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use savegame::{
-    mission_status_name, Challenge, Container, MissionEntry, MissionPlaythrough, PackedEntry,
-    SaveGame, Skill, VehicleCustomization, VEHICLE_FAMILIES, MISSION_STATUSES,
+    mission_status_name, player_mark_name, Challenge, Container, MissionEntry, MissionPlaythrough,
+    PackedEntry, SaveGame, Skill, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
+    VEHICLE_FAMILIES,
 };
 pub use travel::{TravelStation, TravelStations};

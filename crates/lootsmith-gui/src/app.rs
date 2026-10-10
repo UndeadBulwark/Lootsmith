@@ -5,9 +5,9 @@
 
 use eframe::egui;
 use lootsmith_core::{
-    container, items, mission_status_name, AssetGroup, AssetLibraryConfigs, AssetLibraryManager,
-    Container, Customizations, Missions, PackedEntry, Platform, SaveGame, TravelStations,
-    VehicleCustomization, MISSION_STATUSES, VEHICLE_FAMILIES,
+    container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
+    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, SaveGame,
+    TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS, VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -175,14 +175,30 @@ enum Action {
     ToggleTheme,
 }
 
+/// A backpack/bank toolbar action.
+#[derive(Clone, Copy)]
+enum ItemAction {
+    NewWeapon,
+    NewItem,
+    Duplicate,
+    CopyCode,
+    SyncAll,
+    SyncEquipped,
+    InsertCodes,
+}
+
 struct ItemEdit {
     container: Container,
     occurrence: usize,
     decoded: items::PackedData,
     quantity: i32,
     equipped: bool,
+    mark: i32,
+    quick_slot: i32,
     orig_quantity: i32,
     orig_equipped: bool,
+    orig_mark: i32,
+    orig_quick_slot: i32,
     dirty: bool,
 }
 
@@ -218,6 +234,8 @@ pub struct LootsmithApp {
     pub dirty: bool,
     pub status: String,
     pub save_as: String,
+    /// The `BL2(base64)` item-code box used for copy/paste.
+    pub item_code: String,
     loaded_once: bool,
     pub tab: Tab,
     /// Selected entry as (container, occurrence).
@@ -375,6 +393,7 @@ impl LootsmithApp {
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
+            item_code: String::new(),
             loaded_once: false,
             tab: Tab::General,
             selected: None,
@@ -598,8 +617,12 @@ impl LootsmithApp {
             decoded,
             quantity: entry.quantity,
             equipped: entry.equipped,
+            mark: entry.mark,
+            quick_slot: entry.quick_slot,
             orig_quantity: entry.quantity,
             orig_equipped: entry.equipped,
+            orig_mark: entry.mark,
+            orig_quick_slot: entry.quick_slot,
             dirty: false,
         });
     }
@@ -672,6 +695,16 @@ impl LootsmithApp {
                 let _ = save_game.set_entry_equipped(edit.container, edit.occurrence, edit.equipped);
             }
         }
+        if edit.container == Container::BackpackWeapon && edit.quick_slot != edit.orig_quick_slot {
+            let _ = save_game.set_entry_quick_slot(edit.container, edit.occurrence, edit.quick_slot);
+        }
+        if matches!(
+            edit.container,
+            Container::BackpackItem | Container::BackpackWeapon
+        ) && edit.mark != edit.orig_mark
+        {
+            let _ = save_game.set_entry_mark(edit.container, edit.occurrence, edit.mark);
+        }
         self.dirty = true;
         self.status = "item updated (remember to Save)".into();
         let selected = self.selected;
@@ -731,6 +764,190 @@ impl LootsmithApp {
             }
             Err(e) => self.status = format!("remove error: {e}"),
         }
+    }
+
+    /// Create a blank weapon/item with a fresh id, append it, and select it.
+    pub fn new_item(&mut self, bank: bool, is_weapon: bool) {
+        let configs = self.configs();
+        let data = items::PackedData {
+            is_weapon,
+            unique_id: items::random_unique_id(),
+            asset_library_set_id: 0,
+            slot: if is_weapon {
+                items::PackedSlot::Weapon(items::PackedWeapon::default())
+            } else {
+                items::PackedSlot::Item(items::PackedItem::default())
+            },
+        };
+        let serial = match items::pack(&data, &configs) {
+            Ok(serial) => serial,
+            Err(e) => {
+                self.status = format!("create error: {e}");
+                return;
+            }
+        };
+        let container = if bank {
+            Container::Bank
+        } else if is_weapon {
+            Container::BackpackWeapon
+        } else {
+            Container::BackpackItem
+        };
+        let result = match self.save_game.as_mut() {
+            Some(save_game) => save_game.append_entry(container, &serial),
+            None => return,
+        };
+        let occurrence = match result {
+            Ok(occurrence) => occurrence,
+            Err(e) => {
+                self.status = format!("create error: {e}");
+                return;
+            }
+        };
+        self.dirty = true;
+        self.tab = if bank { Tab::Bank } else { Tab::Backpack };
+        self.refresh_rows();
+        self.select_entry(container, occurrence);
+        self.status = format!(
+            "added a blank {} (edit its parts, then Save)",
+            if is_weapon { "weapon" } else { "item" }
+        );
+    }
+
+    /// Duplicate the selected entry with a fresh unique id.
+    pub fn duplicate_selected(&mut self) {
+        let Some((container, occurrence)) = self.selected else {
+            return;
+        };
+        let Some(serial) = self.item_serial(container, occurrence) else {
+            return;
+        };
+        let configs = self.configs();
+        let Ok(mut decoded) = items::unpack(&serial, &configs) else {
+            self.status = "duplicate: cannot decode item".into();
+            return;
+        };
+        decoded.unique_id = items::random_unique_id();
+        let Ok(new_serial) = items::pack(&decoded, &configs) else {
+            return;
+        };
+        let result = match self.save_game.as_mut() {
+            Some(save_game) => save_game.append_entry(container, &new_serial),
+            None => return,
+        };
+        if let Ok(new_occurrence) = result {
+            self.dirty = true;
+            self.refresh_rows();
+            self.select_entry(container, new_occurrence);
+            self.status = "duplicated the selected item".into();
+        }
+    }
+
+    /// Encode the selected entry as a `BL2(...)` code and copy it.
+    pub fn copy_selected_code(&mut self, ctx: &egui::Context) -> bool {
+        let Some((container, occurrence)) = self.selected else {
+            return false;
+        };
+        let Some(serial) = self.item_serial(container, occurrence) else {
+            return false;
+        };
+        let code = items::encode_code(&serial);
+        ctx.copy_text(code.clone());
+        self.item_code = code;
+        self.status = "item code copied to the clipboard".into();
+        true
+    }
+
+    /// Insert every `BL2(...)` code currently in the item-code box.
+    pub fn insert_codes(&mut self, bank: bool) {
+        let codes = items::decode_codes(&self.item_code);
+        if codes.is_empty() {
+            self.status = "no BL2(...) codes found in the box".into();
+            return;
+        }
+        let configs = self.configs();
+        let mut added = 0usize;
+        let mut last: Option<(Container, usize)> = None;
+        for bytes in codes {
+            let Ok(mut decoded) = items::unpack(&bytes, &configs) else {
+                continue;
+            };
+            decoded.unique_id = items::random_unique_id();
+            let Ok(serial) = items::pack(&decoded, &configs) else {
+                continue;
+            };
+            let container = if bank {
+                Container::Bank
+            } else if decoded.is_weapon {
+                Container::BackpackWeapon
+            } else {
+                Container::BackpackItem
+            };
+            let result = match self.save_game.as_mut() {
+                Some(save_game) => save_game.append_entry(container, &serial),
+                None => return,
+            };
+            if let Ok(occurrence) = result {
+                added += 1;
+                last = Some((container, occurrence));
+            }
+        }
+        self.dirty = true;
+        self.item_code.clear();
+        self.refresh_rows();
+        if let Some((container, occurrence)) = last {
+            self.tab = if bank { Tab::Bank } else { Tab::Backpack };
+            self.select_entry(container, occurrence);
+        }
+        self.status = format!("inserted {added} item(s) from codes");
+    }
+
+    /// Set item level (manufacturer grade + game stage) on backpack items.
+    pub fn sync_levels(&mut self, equipped_only: bool) {
+        let level = self.form.level.clamp(0, 127);
+        let configs = self.configs();
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let mut updated = 0usize;
+        for container in [Container::BackpackWeapon, Container::BackpackItem] {
+            let entries = save_game.entries_in(container);
+            for entry in entries {
+                let equipped = if container == Container::BackpackWeapon {
+                    entry.quick_slot >= 0
+                } else {
+                    entry.equipped
+                };
+                if equipped_only && !equipped {
+                    continue;
+                }
+                let Ok(mut decoded) = items::unpack(&entry.serial, &configs) else {
+                    continue;
+                };
+                match &mut decoded.slot {
+                    items::PackedSlot::Weapon(w) => {
+                        w.manufacturer_grade_index = level;
+                        w.game_stage = level;
+                    }
+                    items::PackedSlot::Item(i) => {
+                        i.manufacturer_grade_index = level;
+                        i.game_stage = level;
+                    }
+                }
+                let Ok(serial) = items::pack(&decoded, &configs) else {
+                    continue;
+                };
+                if save_game
+                    .replace_serial(container.field_number(), entry.occurrence, &serial)
+                    .is_ok()
+                {
+                    updated += 1;
+                }
+            }
+        }
+        self.dirty = true;
+        self.refresh_rows();
+        self.status = format!("synced {updated} item level(s) to {level}");
     }
 
     fn refresh_skills(&mut self) {
@@ -1813,6 +2030,57 @@ impl LootsmithApp {
     }
 
     fn ui_container(&mut self, ui: &mut egui::Ui, bank: bool) {
+        ui.add_space(4.0);
+        let mut item_action: Option<ItemAction> = None;
+        ui.horizontal(|ui| {
+            if ui.button("New weapon").clicked() {
+                item_action = Some(ItemAction::NewWeapon);
+            }
+            if ui.button("New item").clicked() {
+                item_action = Some(ItemAction::NewItem);
+            }
+            ui.add_enabled_ui(self.selected.is_some(), |ui| {
+                if ui.button("Duplicate").clicked() {
+                    item_action = Some(ItemAction::Duplicate);
+                }
+                if ui.button("Copy code").clicked() {
+                    item_action = Some(ItemAction::CopyCode);
+                }
+            });
+            ui.separator();
+            if ui.button("Sync levels (all)").clicked() {
+                item_action = Some(ItemAction::SyncAll);
+            }
+            if ui.button("Sync equipped").clicked() {
+                item_action = Some(ItemAction::SyncEquipped);
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.label("Item code");
+            ui.add_sized(
+                [520.0, 22.0],
+                egui::TextEdit::singleline(&mut self.item_code)
+                    .hint_text("paste BL2(...) codes here"),
+            );
+            if ui.button("Insert code(s)").clicked() {
+                item_action = Some(ItemAction::InsertCodes);
+            }
+        });
+        if let Some(action) = item_action {
+            match action {
+                ItemAction::NewWeapon => self.new_item(bank, true),
+                ItemAction::NewItem => self.new_item(bank, false),
+                ItemAction::Duplicate => self.duplicate_selected(),
+                ItemAction::CopyCode => {
+                    self.copy_selected_code(ui.ctx());
+                }
+                ItemAction::SyncAll => self.sync_levels(false),
+                ItemAction::SyncEquipped => self.sync_levels(true),
+                ItemAction::InsertCodes => self.insert_codes(bank),
+            }
+        }
+        ui.add_space(6.0);
+
         let rows = if bank {
             self.bank.clone()
         } else {
@@ -1872,6 +2140,35 @@ impl LootsmithApp {
                     if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
                         edit.dirty = true;
                     }
+                    ui.label("Mark");
+                    egui::ComboBox::from_id_salt("mark_item")
+                        .selected_text(player_mark_name(edit.mark))
+                        .show_ui(ui, |ui| {
+                            for (value, name) in PLAYER_MARKS.iter().enumerate() {
+                                if ui.selectable_label(edit.mark == value as i32, *name).clicked() {
+                                    edit.mark = value as i32;
+                                    edit.dirty = true;
+                                }
+                            }
+                        });
+                });
+            } else if edit.container == Container::BackpackWeapon {
+                ui.horizontal(|ui| {
+                    ui.label("Quick slot");
+                    if ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed() {
+                        edit.dirty = true;
+                    }
+                    ui.label("Mark");
+                    egui::ComboBox::from_id_salt("mark_weapon")
+                        .selected_text(player_mark_name(edit.mark))
+                        .show_ui(ui, |ui| {
+                            for (value, name) in PLAYER_MARKS.iter().enumerate() {
+                                if ui.selectable_label(edit.mark == value as i32, *name).clicked() {
+                                    edit.mark = value as i32;
+                                    edit.dirty = true;
+                                }
+                            }
+                        });
                 });
             }
             let is_weapon = edit.decoded.is_weapon;

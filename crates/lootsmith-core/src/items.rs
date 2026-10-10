@@ -591,15 +591,79 @@ pub fn pack_styled(
     Ok(bytes)
 }
 
+// ---------------------------------------------------------------------------
+// Community `BL2(...)` item codes (base64 of an `InventorySerialNumber`).
+// ---------------------------------------------------------------------------
+
+/// A fresh, non-zero item unique id (Gibbed assigns one on create/duplicate).
+pub fn random_unique_id() -> i32 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x1234_5678);
+    let mut x = nanos ^ 0x9E37_79B9_7F4A_7C15;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    let id = x as u32 as i32;
+    if id == 0 {
+        1
+    } else {
+        id
+    }
+}
+
+/// Wrap an `InventorySerialNumber` in the community `BL2(base64)` form.
+pub fn encode_code(serial: &[u8]) -> String {
+    use base64::Engine as _;
+    format!(
+        "BL2({})",
+        base64::engine::general_purpose::STANDARD.encode(serial)
+    )
+}
+
+/// Extract and decode every `BL2(base64)` code in `text`.
+pub fn decode_codes(text: &str) -> Vec<Vec<u8>> {
+    use base64::Engine as _;
+    let mut out = Vec::new();
+    for (idx, _) in text.match_indices("BL2(") {
+        let rest = &text[idx + 4..];
+        let Some(end) = rest.find(')') else {
+            continue;
+        };
+        let b64: String = rest[..end].chars().filter(|c| !c.is_whitespace()).collect();
+        if b64.is_empty() {
+            continue;
+        }
+        if let Ok(data) = base64::engine::general_purpose::STANDARD.decode(&b64) {
+            if !data.is_empty() {
+                out.push(data);
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn item_code_round_trip() {
+        let serial: Vec<u8> = (0u8..20).collect();
+        let code = encode_code(&serial);
+        assert!(code.starts_with("BL2("));
+        assert_eq!(decode_codes(&format!("junk {code} trailing")), vec![serial.clone()]);
+        assert_eq!(decode_codes(&format!("{code}\n{code}")).len(), 2);
+        assert!(decode_codes("nothing here").is_empty());
+        assert_ne!(random_unique_id(), 0);
+    }
+
+    #[test]
     fn check_fold() {
         assert_eq!(fold_check(0x1234_ABCD), 0xB9F9);
     }
-
     #[test]
     fn bogo_round_trip() {
         let mut buf: Vec<u8> = (0..30u8).collect();
