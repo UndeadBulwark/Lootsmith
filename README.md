@@ -11,9 +11,9 @@ CLI (`lootsmith-cli`), and (later) an `egui` desktop app (`lootsmith-gui`),
 with `lootsmith` as a facade crate.
 
 Status: **core + CLI complete and validated against a real PC save; the GUI is a
-working editor (General, Character, Currency, Skills, Fast Travel, Backpack, Bank)
-with more parity tabs to come.** See `../.opencode/plan/LOOTSMITH_PLAN.md` for the
-full plan.
+working editor (General, Character, Currency, Skills, Fast Travel, Vehicles,
+Backpack, Bank) with the missions tab still to come.** See
+`../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
 
 ## Workspace layout
 
@@ -62,12 +62,15 @@ cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --dumps "/path/Asset
 cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --container bank
 cargo run -p lootsmith-cli -- skills  /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- travel  /path/to/Save0001.sav --stations "/path/Travel Stations.json"
+cargo run -p lootsmith-cli -- vehicles /path/to/Save0001.sav --customizations "/path/Customizations.json"
 ```
 
 `items` lists the backpack (fields 53/54) and the bank (field 41); pass
 `--container bag|bank` to filter (default `all`). `skills` lists the skill tree
 (`SkillData`, field 8) with each node's grade and points. `travel` lists the
 visited fast-travel stations (fields 16/17), resolved through `Travel Stations.json`.
+`vehicles` lists the chosen vehicle skins (field 57) and steering mode (field 58),
+resolved through `Customizations.json`.
 
 Edit and write (in place with a `.bak` backup, or with `--out`):
 
@@ -106,6 +109,13 @@ cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
     --travel-add Xmas --travel-last Xmas --out /path/to/edited.sav
 ```
 
+Change the vehicle steering mode (0/1/2):
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
+    --steering-mode 0 --out /path/to/edited.sav
+```
+
 ## GUI
 
 ```sh
@@ -116,13 +126,15 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 ```
 
 A native window with tabs for **General**, **Character**, **Currency**,
-**Skills**, **Fast Travel**, **Backpack**, and **Bank**. Edit the common scalars;
-raise or lower skill ranks; add, remove, and pick the last fast-travel station
-(resolved through `Travel Stations.json`, auto-loaded next to the Asset Library);
-see the item list with per-item quantity/equipped and per-weapon quick slot;
-select an entry to edit its parts by name, change a stack quantity, **Move to
-bank** / **Move to backpack**, or **Remove**; then **Save** (in place, creating a
-`.bak`) or **Save As**. The Asset Library path enables item names.
+**Skills**, **Fast Travel**, **Vehicles**, **Backpack**, and **Bank**. Edit the
+common scalars; raise or lower skill ranks; add, remove, and pick the last
+fast-travel station (resolved through `Travel Stations.json`); choose vehicle skins
+per family and the steering mode (skins resolved through `Customizations.json`);
+both data files are auto-loaded next to the Asset Library. See the item list with
+per-item quantity/equipped and per-weapon quick slot; select an entry to edit its
+parts by name, change a stack quantity, **Move to bank** / **Move to backpack**, or
+**Remove**; then **Save** (in place, creating a `.bak`) or **Save As**. The Asset
+Library path enables item names.
 
 ### Desktop launcher (interim)
 
