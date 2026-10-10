@@ -61,13 +61,22 @@ fn field_to_json(field: &Field) -> Value {
             if as_message.as_ref().is_some_and(|m| m.fields.is_empty()) {
                 as_message = None;
             }
-            if let Ok(text) = std::str::from_utf8(payload) {
-                if as_message.is_none() {
-                    return json!({ "n": field.number, "s": text });
+            // Only tag a nested message when the whole JSON round trip of the
+            // sub-message reproduces the exact payload. Binary blobs (e.g. a
+            // random `SaveGameGuid`) can parse as a message but encode field
+            // numbers beyond the protobuf limit, which the JSON path cannot
+            // reproduce; those fall back to a lossless "s"/"b" tag.
+            if let Some(sub) = as_message {
+                let json = message_to_json(&sub);
+                let lossless = message_from_json(&json)
+                    .map(|back| back.to_bytes() == payload)
+                    .unwrap_or(false);
+                if lossless {
+                    return json!({ "n": field.number, "m": json });
                 }
             }
-            if let Some(sub) = as_message {
-                return json!({ "n": field.number, "m": message_to_json(&sub) });
+            if let Ok(text) = std::str::from_utf8(payload) {
+                return json!({ "n": field.number, "s": text });
             }
             let text = BASE64.encode(payload);
             json!({ "n": field.number, "b": text })
@@ -151,6 +160,24 @@ mod tests {
         let text = save_to_json(&save);
         let rebuilt = save_from_json(&text).expect("parse back");
         assert_eq!(save.to_bytes(), rebuilt.to_bytes());
+    }
+
+    /// The round trip must be exact for **every** save, not just common GUIDs:
+    /// `blank()` sets a random `SaveGameGuid` (field 34), and a 16-byte blob can
+    /// parse as a protobuf message. Running it 200 times in one process
+    /// exercises many random GUIDs.
+    #[test]
+    fn json_round_trip_is_exact_over_200_saves() {
+        for i in 0..200 {
+            let save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+            let text = save_to_json(&save);
+            let rebuilt = save_from_json(&text).expect("parse back");
+            assert_eq!(
+                save.to_bytes(),
+                rebuilt.to_bytes(),
+                "round trip {i} not exact"
+            );
+        }
     }
 
     use super::{save_from_json, save_to_json};
