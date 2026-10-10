@@ -11,6 +11,7 @@ pub mod error;
 pub mod gameinfo;
 pub mod huffman;
 pub mod items;
+pub mod locate;
 pub mod missions;
 pub mod platform;
 pub mod proto;
@@ -22,6 +23,7 @@ pub use customizations::{usage_for_player_class, Customization, Customizations};
 pub use error::{Error, Result};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
+pub use locate::{find_saves, find_saves_in, SaveCandidate};
 pub use missions::{Mission, Missions};
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use savegame::{

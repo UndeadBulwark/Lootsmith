@@ -15,6 +15,7 @@ fn usage() -> ExitCode {
          lootsmith inspect <file.sav> [--platform <id>]\n  \
          lootsmith verify  <file.sav> [--platform <id>]\n  \
          lootsmith dump    <file.sav> [--platform <id>]\n  \
+         lootsmith saves   [--platform <id>]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith skills  <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
@@ -96,9 +97,15 @@ impl Scope {
 
 fn parse_args() -> Option<Args> {
     let mut it = std::env::args().skip(1);
+    let command = it.next()?;
+    let file = if command == "saves" {
+        String::new()
+    } else {
+        it.next()?
+    };
     let mut args = Args {
-        command: it.next()?,
-        file: it.next()?,
+        command,
+        file,
         platform: Platform::PC,
         dumps: None,
         out: None,
@@ -258,6 +265,20 @@ fn main() -> ExitCode {
         Some(a) => a,
         None => return usage(),
     };
+
+    if args.command == "saves" {
+        let saves = lootsmith_core::locate::find_saves();
+        for (i, candidate) in saves.iter().enumerate() {
+            println!(
+                "#{:<3} {}  {}",
+                i + 1,
+                candidate.modified_text(),
+                candidate.path.display()
+            );
+        }
+        println!("total: {} save(s) found", saves.len());
+        return ExitCode::SUCCESS;
+    }
 
     let data = match std::fs::read(&args.file) {
         Ok(d) => d,

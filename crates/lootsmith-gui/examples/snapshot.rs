@@ -77,6 +77,13 @@ fn main() {
     harness.state_mut().move_selected_to(Container::Bank);
     harness.run();
     render(&mut harness, &out_dir, "bank");
+
+    // The "Find saves" picker (scans the real machine).
+    let mut harness = app(&save, &dumps);
+    harness.state_mut().scan_saves();
+    harness.state_mut().show_saves = true;
+    harness.run();
+    render(&mut harness, &out_dir, "find-saves");
 }
 
 fn render(harness: &mut Harness<'_, LootsmithApp>, out_dir: &str, name: &str) {

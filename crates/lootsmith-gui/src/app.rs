@@ -7,8 +7,9 @@ use eframe::egui;
 use lootsmith_core::savegame::Kind;
 use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, SaveGame,
-    TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS, VEHICLE_FAMILIES,
+    AssetLibraryManager, Container, Customizations, Missions, PackedEntry, Platform, SaveCandidate,
+    SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
+    VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -226,6 +227,7 @@ fn tab_from_key(key: &str) -> Option<Tab> {
 #[derive(Clone, Copy)]
 enum Action {
     Open,
+    FindSaves,
     Save,
     SaveAs,
     Reload,
@@ -297,6 +299,9 @@ pub struct LootsmithApp {
     pub save_as: String,
     /// The `BL2(base64)` item-code box used for copy/paste.
     pub item_code: String,
+    /// Saves discovered on disk for the "Find saves" picker.
+    pub saves: Vec<SaveCandidate>,
+    pub show_saves: bool,
     loaded_once: bool,
     pub tab: Tab,
     /// Selected entry as (container, occurrence).
@@ -456,6 +461,8 @@ impl LootsmithApp {
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             item_code: String::new(),
+            saves: Vec::new(),
+            show_saves: false,
             loaded_once: false,
             tab: Tab::General,
             selected: None,
@@ -1575,6 +1582,10 @@ impl LootsmithApp {
     fn dispatch(&mut self, action: Action) {
         match action {
             Action::Open => self.browse_save(),
+            Action::FindSaves => {
+                self.scan_saves();
+                self.show_saves = true;
+            }
             Action::Save => self.save_in_place(),
             Action::SaveAs => self.browse_save_as(),
             Action::Reload => self.load(),
@@ -1635,6 +1646,12 @@ impl LootsmithApp {
         }
     }
 
+    /// Scan the usual locations for saves (for the picker / first run).
+    pub fn scan_saves(&mut self) {
+        self.saves = lootsmith_core::locate::find_saves();
+        self.status = format!("found {} save(s) on disk", self.saves.len());
+    }
+
     /// Build the full UI. Called by both the native app and the test harness.
     pub fn build(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
@@ -1643,6 +1660,13 @@ impl LootsmithApp {
 
         if !self.loaded_once {
             self.loaded_once = true;
+            if self.path.trim().is_empty() {
+                // First run: auto-open the newest save we can find.
+                self.scan_saves();
+                if let Some(newest) = self.saves.first() {
+                    self.path = newest.path.display().to_string();
+                }
+            }
             if !self.path.trim().is_empty() {
                 self.load();
             }
@@ -1654,6 +1678,9 @@ impl LootsmithApp {
             ui.horizontal(|ui| {
                 if ui.button("Open…").clicked() {
                     action = Some(Action::Open);
+                }
+                if ui.button("Find saves").clicked() {
+                    action = Some(Action::FindSaves);
                 }
                 ui.add_enabled_ui(self.save_game.is_some(), |ui| {
                     if ui.button("Save").clicked() {
@@ -1778,6 +1805,52 @@ impl LootsmithApp {
                 Tab::Raw => self.ui_raw(ui),
             }
         });
+
+        if self.show_saves {
+            let saves = self.saves.clone();
+            let mut pick: Option<String> = None;
+            let mut rescan = false;
+            let mut open = true;
+            egui::Window::new("Saves found")
+                .collapsible(false)
+                .resizable(true)
+                .default_width(760.0)
+                .open(&mut open)
+                .show(ui.ctx(), |ui| {
+                    if saves.is_empty() {
+                        ui.label("No Borderlands 2 saves found in the usual locations.");
+                        ui.label("Use Open… to pick one manually, or set LOOTSMITH_SAVE_ROOTS.");
+                    } else {
+                        ui.label("Pick a save to open (newest first):");
+                        ui.add_space(4.0);
+                        for candidate in &saves {
+                            let text = format!(
+                                "{}   [{}]",
+                                candidate.path.display(),
+                                candidate.modified_text()
+                            );
+                            if ui.selectable_label(false, text).clicked() {
+                                pick = Some(candidate.path.display().to_string());
+                            }
+                        }
+                    }
+                    ui.add_space(6.0);
+                    if ui.button("Rescan").clicked() {
+                        rescan = true;
+                    }
+                });
+            if !open {
+                self.show_saves = false;
+            }
+            if rescan {
+                self.scan_saves();
+            }
+            if let Some(path) = pick {
+                self.path = path;
+                self.show_saves = false;
+                self.load();
+            }
+        }
     }
 
     fn ui_general(&mut self, ui: &mut egui::Ui) {
