@@ -93,6 +93,10 @@ Derive rarity from the balance definition: `items::rarity(balance) -> Rarity` in
   Sans' `5` reads as `S`). Mixed labels (e.g. `Backpack (5)`) set the count in
   VT323 via `ui::widgets::counted_label`. `tests/digits.rs` renders `0123456789`
   in `num()` and asserts every glyph is distinct.
+- **Text fields:** a field whose *content* is an identifier — the save path, the
+  game-data folder, the `BL2(...)` item code — renders in VT323 (its digits must
+  not be Pixelify, and monospace suits identifiers). A free-text field (the item
+  filter) renders in Pixelify Sans so its placeholder matches the other labels.
 - Embed both with `include_bytes!` and register them through `egui::FontDefinitions` in `main.rs`; set `TextStyle::Body`, `Button`, `Heading`, `Small`, `Monospace` explicitly.
 - Disable font hinting changes and keep text positions on whole pixels (`Visuals::text_cursor`, `pixels_per_point` integer multiples).
 

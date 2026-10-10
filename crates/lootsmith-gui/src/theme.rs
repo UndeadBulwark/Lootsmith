@@ -272,6 +272,13 @@ pub fn active(ctx: &egui::Context) -> &'static Palette {
 /// Install visuals, spacing and typography for the chosen theme.
 pub fn apply(ctx: &egui::Context, theme: Theme) {
     ctx.data_mut(|d| d.insert_temp(palette_id(), theme));
+    // Make egui use the style theme that matches the palette, so widget visuals
+    // (and widget text) come from the palette we install -- not from egui's own
+    // (system) theme.
+    ctx.set_theme(match theme {
+        Theme::Dark => egui::Theme::Dark,
+        Theme::Light => egui::Theme::Light,
+    });
     let p = Palette::for_theme(theme);
     let mut visuals = match theme {
         Theme::Dark => egui::Visuals::dark(),
@@ -326,7 +333,10 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     w.active.bg_fill = p.acc;
     w.active.weak_bg_fill = p.acc;
     w.active.bg_stroke = egui::Stroke::new(1.0, p.acc);
-    w.active.fg_stroke = egui::Stroke::new(1.0, p.on);
+    // egui draws `strong()` text from `widgets.active.fg_stroke`; use `fg` so
+    // headers are readable on a panel. Selected widgets use `selection.stroke`
+    // (`on`), which is unaffected.
+    w.active.fg_stroke = egui::Stroke::new(1.0, p.fg);
     w.active.corner_radius = egui::CornerRadius::same(6);
 
     w.open.bg_fill = p.pan;
@@ -508,6 +518,40 @@ mod tests {
     #[test]
     fn diamond_outline_is_mandated() {
         assert_eq!(DIAMOND_OUTLINE, 2.0, "spec 2.3: 2 px fg outline");
+    }
+
+    /// `strong()` text must use `fg`, not `on`. egui resolves it from
+    /// `widgets.active.fg_stroke`; with `on` there, headers on a panel are
+    /// invisible (dark) or low-contrast (light).
+    #[test]
+    fn strong_text_uses_fg() {
+        let ctx = egui::Context::default();
+        apply(&ctx, Theme::Dark);
+        assert_eq!(
+            ctx.style_of(egui::Theme::Dark).visuals.strong_text_color(),
+            DARK.fg,
+            "strong text must use fg, not on"
+        );
+        apply(&ctx, Theme::Light);
+        assert_eq!(
+            ctx.style_of(egui::Theme::Light).visuals.strong_text_color(),
+            LIGHT.fg
+        );
+    }
+
+    /// The egui style theme must match the palette, so widget visuals (and thus
+    /// widget text) are the ones we install, not egui's own (system) theme.
+    #[test]
+    fn apply_sets_egui_theme() {
+        let ctx = egui::Context::default();
+        apply(&ctx, Theme::Light);
+        assert_eq!(
+            ctx.theme(),
+            egui::Theme::Light,
+            "egui theme must match the palette"
+        );
+        apply(&ctx, Theme::Dark);
+        assert_eq!(ctx.theme(), egui::Theme::Dark);
     }
 
     #[test]
