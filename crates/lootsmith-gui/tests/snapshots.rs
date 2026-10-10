@@ -54,3 +54,27 @@ fn smoke_inspector_bundled() {
     h.run();
     h.snapshot("smoke_inspector_bundled");
 }
+
+/// A **real weapon** (the personal fixture's Dahl pistol, "Smooth Repeater") in
+/// the inspector with **no game-data folder**: names must come from the bundled
+/// tables, including the composed display name. Skipped when the personal save
+/// is absent (hard failure under LOOTSMITH_REQUIRE_FIXTURES=1).
+#[test]
+fn smoke_inspector_real_item_bundled() {
+    let save = format!(
+        "{}/../../tests/fixtures/pc_Save0001.sav",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    if !std::path::Path::new(&save).exists() {
+        if common::require_fixtures() {
+            panic!("LOOTSMITH_REQUIRE_FIXTURES=1 but the personal save is missing");
+        }
+        eprintln!("smoke_inspector_real_item_bundled: skipped (no personal save)");
+        return;
+    }
+    let mut h = harness_with(&save, None);
+    h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
+    h.state_mut().select_entry(lootsmith_core::Container::BackpackWeapon, 0);
+    h.run();
+    h.snapshot("smoke_inspector_real_item_bundled");
+}
