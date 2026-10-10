@@ -9,14 +9,30 @@
 
 mod common;
 
-use common::frame::{render_tab, shape_fill, Fill, Run};
+use common::frame::{render_tab, shape_fill, Fill, Run, SCREENS};
 use egui::{Color32, Rect};
 use image::RgbaImage;
-use lootsmith_gui::app::Tab;
 use lootsmith_gui::theme::{contrast, Theme};
 
-/// Accepted failing-run count per theme (dark, light) for the Backpack screen.
-const ACCEPTED_FAILURES: [usize; 2] = [0, 0];
+/// Accepted failing-run count per screen, per theme `[dark, light]`, indexed by
+/// [`SCREENS`]. Recorded from today's render; the gate fails on any increase.
+/// Backpack, Bank, Character and Currency are fully migrated, so they are hard
+/// zero. Step (f) must drive the rest to zero.
+const ACCEPTED_FAILURES: [[usize; 2]; SCREENS.len()] = [
+    [0, 11],  // General
+    [0, 0],   // Character
+    [0, 0],   // Currency
+    [6, 6],   // Ammo
+    [0, 2],   // World
+    [25, 29], // Skills
+    [1, 2],   // Travel
+    [5, 7],   // Vehicles
+    [4, 4],   // Missions
+    [0, 0],   // Backpack
+    [0, 0],   // Bank
+    [5, 5],   // Raw
+    [0, 3],   // About
+];
 
 struct Failure {
     text: String,
@@ -95,43 +111,55 @@ fn sampled_fill(img: &RgbaImage, run: &Run) -> Option<Color32> {
 
 #[test]
 fn rendered_text_meets_wcag_in_both_themes() {
-    let mut totals = [0usize; 2];
-    for (slot, theme) in [Theme::Dark, Theme::Light].into_iter().enumerate() {
-        let (runs, fills, _sections, img) = render_tab(Tab::Backpack, theme);
-        let failures = analyse(&runs, &fills);
-        totals[slot] = failures.len();
+    let mut totals = [[0usize; 2]; SCREENS.len()];
+    for (s, tab) in SCREENS.iter().enumerate() {
+        for (slot, theme) in [Theme::Dark, Theme::Light].into_iter().enumerate() {
+            let (runs, fills, _sections, img) = render_tab(*tab, theme);
+            let failures = analyse(&runs, &fills);
+            totals[s][slot] = failures.len();
 
-        let mut disagreements = 0usize;
-        for run in &runs {
-            if let (Some(shape), Some(sampled)) = (shape_fill(run, &fills), sampled_fill(&img, run))
-            {
-                if shape != sampled {
-                    disagreements += 1;
-                    if disagreements <= 10 {
-                        eprintln!(
-                            "  sample-disagreement {:?}: shape=#{:02X}{:02X}{:02X} sampled=#{:02X}{:02X}{:02X}",
-                            run.text, shape.r(), shape.g(), shape.b(), sampled.r(), sampled.g(), sampled.b(),
-                        );
+            let mut disagreements = 0usize;
+            for run in &runs {
+                if let (Some(shape), Some(sampled)) =
+                    (shape_fill(run, &fills), sampled_fill(&img, run))
+                {
+                    if shape != sampled {
+                        disagreements += 1;
                     }
                 }
             }
-        }
-        eprintln!(
-            "{theme:?}: {} text runs, {} failing (<4.5:1), {disagreements} sampling disagreements",
-            runs.len(),
-            failures.len()
-        );
-        for f in &failures {
-            eprintln!("  FAIL {f:?}");
+            eprintln!(
+                "{tab:?} {theme:?}: {} runs, {} failing, {disagreements} sampling disagreements",
+                runs.len(),
+                failures.len(),
+            );
+            for f in failures.iter().take(60) {
+                eprintln!("  FAIL {f:?}");
+            }
+            if failures.len() > 60 {
+                eprintln!("  … {} more", failures.len() - 60);
+            }
         }
     }
-    for (slot, theme) in [Theme::Dark, Theme::Light].into_iter().enumerate() {
-        assert!(
-            totals[slot] <= ACCEPTED_FAILURES[slot],
-            "{theme:?}: {} failing runs exceeds the accepted {}",
-            totals[slot],
-            ACCEPTED_FAILURES[slot]
-        );
+    let mut exceeded = Vec::new();
+    for (s, tab) in SCREENS.iter().enumerate() {
+        for (slot, theme) in [Theme::Dark, Theme::Light].into_iter().enumerate() {
+            if totals[s][slot] > ACCEPTED_FAILURES[s][slot] {
+                exceeded.push(format!(
+                    "{tab:?} {theme:?}: {} > accepted {}",
+                    totals[s][slot], ACCEPTED_FAILURES[s][slot]
+                ));
+            }
+        }
+    }
+    assert!(
+        exceeded.is_empty(),
+        "contrast ratchet exceeded:\n{}",
+        exceeded.join("\n")
+    );
+    eprintln!("ratchet table (dark,light):");
+    for (s, tab) in SCREENS.iter().enumerate() {
+        eprintln!("  {tab:?}: {:?}", totals[s]);
     }
 }
 
