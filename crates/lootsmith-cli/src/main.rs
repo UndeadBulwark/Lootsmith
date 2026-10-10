@@ -1,6 +1,9 @@
 //! Lootsmith CLI: `inspect`, `verify`, and `dump`.
 
-use lootsmith_core::{container, items, proto::Message, AssetLibraryConfigs, Platform};
+use lootsmith_core::{
+    container, items, proto::Message, AssetGroup, AssetLibraryConfigs, AssetLibraryManager,
+    Platform,
+};
 use std::process::ExitCode;
 
 fn usage() -> ExitCode {
@@ -14,7 +17,7 @@ fn usage() -> ExitCode {
          lootsmith items   <file.sav> [--platform <id>]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
-         Set LOOTSMITH_ASSET_LIBRARY to an 'Asset Library Manager.json' to override the built-in config."
+         --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY)."
     );
     ExitCode::from(2)
 }
@@ -23,6 +26,7 @@ struct Args {
     command: String,
     file: String,
     platform: Platform,
+    dumps: Option<String>,
 }
 
 fn parse_args() -> Option<Args> {
@@ -30,11 +34,15 @@ fn parse_args() -> Option<Args> {
     let command = it.next()?;
     let file = it.next()?;
     let mut platform = Platform::PC;
+    let mut dumps = None;
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--platform" | "-p" => {
                 let id = it.next()?;
                 platform = Platform::from_id(&id)?;
+            }
+            "--dumps" | "-d" => {
+                dumps = Some(it.next()?);
             }
             _ => return None,
         }
@@ -43,6 +51,7 @@ fn parse_args() -> Option<Args> {
         command,
         file,
         platform,
+        dumps,
     })
 }
 
@@ -144,16 +153,46 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         "items" => {
-            let configs = match std::env::var("LOOTSMITH_ASSET_LIBRARY") {
-                Ok(p) => match AssetLibraryConfigs::from_path(std::path::Path::new(&p)) {
-                    Ok(c) => c,
+            let manager = match args
+                .dumps
+                .clone()
+                .or_else(|| std::env::var("LOOTSMITH_ASSET_LIBRARY").ok())
+            {
+                Some(path) => match AssetLibraryManager::from_path(std::path::Path::new(&path)) {
+                    Ok(m) => {
+                        eprintln!("loaded asset library manager from {path}");
+                        Some(m)
+                    }
                     Err(e) => {
-                        eprintln!("error: cannot load {p}: {e}");
-                        return ExitCode::FAILURE;
+                        eprintln!("warning: cannot load {path}: {e}");
+                        None
                     }
                 },
-                Err(_) => AssetLibraryConfigs::pc_default(),
+                None => None,
             };
+            let configs = manager
+                .as_ref()
+                .map(|m| m.configs.clone())
+                .unwrap_or_else(AssetLibraryConfigs::pc_default);
+
+            let resolve = |group: AssetGroup,
+                           set_id: i32,
+                           r: items::PackedAssetReference|
+             -> String {
+                match &manager {
+                    Some(m) => m
+                        .lookup_asset(
+                            group,
+                            set_id,
+                            r.asset_index,
+                            r.sublibrary_index,
+                            r.use_set_id,
+                        )
+                        .unwrap_or_else(|_| format!("#{}/{}", r.asset_index, r.sublibrary_index)),
+                    None => format!("#{}/{}", r.asset_index, r.sublibrary_index),
+                }
+            };
+
             let top = match Message::parse(&save.proto) {
                 Ok(m) => m,
                 Err(e) => {
@@ -161,6 +200,12 @@ fn main() -> ExitCode {
                     return ExitCode::FAILURE;
                 }
             };
+            if manager.is_none() {
+                eprintln!(
+                    "(no dumps file: showing raw indices; pass --dumps <Asset Library Manager.json>)"
+                );
+            }
+
             let mut count = 0usize;
             for (field, kind) in [(53u32, "item"), (54u32, "weapon")] {
                 for entry in top.get_all(field) {
@@ -175,33 +220,50 @@ fn main() -> ExitCode {
                     let equipped = sub.get(3).and_then(|f| f.as_bool());
                     count += 1;
                     match items::unpack(serial, &configs) {
-                        Ok(decoded) => match &decoded.slot {
-                            items::PackedSlot::Weapon(w) => println!(
-                                "{kind:>6} #{count} len={} id={} set={} type={:?} balance={:?} \
-                                 mfr={:?} grade={} stage={}",
-                                serial.len(),
-                                decoded.unique_id,
-                                decoded.asset_library_set_id,
-                                w.weapon_type,
-                                w.balance,
-                                w.manufacturer,
-                                w.manufacturer_grade_index,
-                                w.game_stage
-                            ),
-                            items::PackedSlot::Item(it) => println!(
-                                "{kind:>6} #{count} len={} id={} set={} qty={:?} equipped={:?} \
-                                 balance={:?} mfr={:?} grade={} stage={}",
-                                serial.len(),
-                                decoded.unique_id,
-                                decoded.asset_library_set_id,
-                                quantity,
-                                equipped,
-                                it.balance,
-                                it.manufacturer,
-                                it.manufacturer_grade_index,
-                                it.game_stage
-                            ),
-                        },
+                        Ok(decoded) => {
+                            let set = decoded.asset_library_set_id;
+                            match &decoded.slot {
+                                items::PackedSlot::Weapon(w) => {
+                                    println!(
+                                        "{kind:>6} #{count} id={} balance={} mfr={} grade={} stage={}",
+                                        decoded.unique_id,
+                                        resolve(AssetGroup::BalanceDefs, set, w.balance),
+                                        resolve(AssetGroup::Manufacturers, set, w.manufacturer),
+                                        w.manufacturer_grade_index,
+                                        w.game_stage
+                                    );
+                                    println!(
+                                        "        type={} body={} grip={} barrel={} sight={} stock={} \
+                                         elemental={} acc1={} acc2={} material={} prefix={} title={}",
+                                        resolve(AssetGroup::WeaponTypes, set, w.weapon_type),
+                                        resolve(AssetGroup::WeaponParts, set, w.body_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.grip_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.barrel_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.sight_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.stock_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.elemental_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.accessory1_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.accessory2_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.material_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.prefix_part),
+                                        resolve(AssetGroup::WeaponParts, set, w.title_part),
+                                    );
+                                }
+                                items::PackedSlot::Item(it) => {
+                                    println!(
+                                        "{kind:>6} #{count} id={} qty={:?} equipped={:?} \
+                                         balance={} mfr={} grade={} stage={}",
+                                        decoded.unique_id,
+                                        quantity,
+                                        equipped,
+                                        resolve(AssetGroup::BalanceDefs, set, it.balance),
+                                        resolve(AssetGroup::Manufacturers, set, it.manufacturer),
+                                        it.manufacturer_grade_index,
+                                        it.game_stage
+                                    );
+                                }
+                            }
+                        }
                         Err(e) => println!("{kind:>6} #{count} decode error: {e}"),
                     }
                 }
