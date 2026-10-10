@@ -66,6 +66,21 @@ cargo run -p lootsmith-cli -- travel  /path/to/Save0001.sav --stations "/path/Tr
 cargo run -p lootsmith-cli -- vehicles /path/to/Save0001.sav --customizations "/path/Customizations.json"
 cargo run -p lootsmith-cli -- missions /path/to/Save0001.sav --missions-json "/path/Missions.json"
 cargo run -p lootsmith-cli -- ammo    /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- sdus    /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- challenges /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- world   /path/to/Save0001.sav
+```
+
+Edit one ammo pool, one Black Market SDU, one challenge value, or run the
+bulk operations:
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --ammo 5 --amount 999 --sdu 3 --out /path/to/edited.sav
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --market Backpack --sdu-level 3 --out /path/to/edited.sav
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --challenge-stat 1623 --value 500 --prestige 2 --out /path/to/edited.sav
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --max-sdus --out /path/to/edited.sav
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --explore-all --clear-lockouts --clear-mementos --complete-all-missions --unlock-all-travel --stations "/path/Travel Stations.json" --out /path/to/edited.sav
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --game-stage "Zone1.Sanctuary" --stage 40 --out /path/to/edited.sav
 ```
 
 Edit an ammo pool's current amount and SDU upgrade level:
@@ -186,7 +201,10 @@ bonus stats, and the head/skin unlock list (unlock everything, or set keys;
 --badass-tokens N --unlock-customizations`.
 
 Tabs: **General**, **Character** (name, level, class, overpower), **Currency**
-(named money/eridium/seraph/torgue), **Ammo** (per-pool amount + SDU level), **Skills**, **Fast Travel**, **Vehicles**,
+(named money/eridium/seraph/torgue), **Ammo** (per-pool amount + SDU level +
+Storage Deck Upgrades with Max all + backpack/bank slot editors), **World**
+(discoveries, region game stages, lockouts, DLC expansions, mementos with
+Mark all explored / Clear lockouts / Clear mementos), **Skills**, **Fast Travel**, **Vehicles**,
 **Missions**, **Backpack**, **Bank**, and **Raw** (edit any scalar top-level
 field). The **General** tab has Max / OP-max level buttons (72 / 80).
 **Backpack/Bank rows and the item inspector show the item's composed display

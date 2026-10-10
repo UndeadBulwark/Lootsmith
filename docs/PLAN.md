@@ -185,13 +185,13 @@ tab-bar labels include counts ("Backpack (14)") — kittest queries must match e
 |---|---|---|
 | 0–5 | core + CLI | ✅ |
 | 6 | GUI | ✅ 12 tabs |
-| 7 | AGENTS.md gaps | 1, 2, 11 + split done; challenge/next: 3 |
+| 7 | AGENTS.md gaps | 1,2,3,4,5,6,7,9,10,11 + split done; 8 = low-left; 12 = human |
 
 ---
 
 ## 7. History (newest first)
 
-`6a9733c` SDUs (gap 2) · `8be3ca9` ammo (gap 1) · `2c53b1b` fixture (gap 11) · `0ad078a` split ·
+`6a9733c` SDUs (gap 2) · `b4f3696` challenges (gap 3) · `0472eaa` fmt · `fcdbbb6` world (gap 4) · `dede710` onboarding (gap 9) · `0c2210d` packaging (gap 10) · `8be3ca9` ammo (gap 1) · `2c53b1b` fixture (gap 11) · `0ad078a` split ·
 `2b4e26e` AGENTS.md · `2192c08` names/class/OP/travel · `83fb0cb` balance pickers ·
 `bd216a8` profile.bin · `53c3ae5` raw lists · `031603f` new/import/JSON/platform ·
 `9f5184a` skill plates · `64af860` 3×6 grid · `d1175a9` calculator composition ·
