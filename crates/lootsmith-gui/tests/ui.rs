@@ -62,6 +62,7 @@ fn loads_and_switches_tabs_by_label() {
         ("Currency", Tab::Currency),
         ("Skills", Tab::Skills),
         ("Fast Travel", Tab::Travel),
+        ("Vehicles", Tab::Vehicles),
         ("Backpack", Tab::Backpack),
         ("Bank", Tab::Bank),
         ("General", Tab::General),
@@ -240,6 +241,60 @@ fn edits_fast_travel_and_saves() {
     assert!(sg.visited_teleporters().iter().any(|s| s == "Xmas"));
     assert!(!sg.visited_teleporters().contains(&first));
     assert_eq!(sg.last_visited_teleporter().as_deref(), Some("Xmas"));
+}
+
+#[test]
+fn edits_vehicles_and_saves() {
+    let Some((save, dumps)) = fixtures() else {
+        return;
+    };
+    let mut h = harness(save, dumps);
+    h.run();
+
+    h.get_by_label("Vehicles").click();
+    h.run();
+    assert_eq!(h.state().tab, Tab::Vehicles);
+    assert!(
+        h.state().vehicles.iter().all(|r| r.skin1 == "None"),
+        "the fixture has no chosen vehicle skins"
+    );
+    assert_eq!(h.state().steering_mode, 2);
+    assert!(
+        h.state().customizations.is_some(),
+        "Customizations.json should load from the dumps directory"
+    );
+
+    // Pick the first Runner skin, as the combo box would.
+    let key = h
+        .state()
+        .customizations
+        .clone()
+        .unwrap()
+        .skin_options("Runner")
+        .first()
+        .expect("a Runner skin")
+        .0
+        .clone();
+    h.state_mut().vehicles[0].skin1 = key.clone();
+    h.state_mut().steering_mode = 0;
+    h.run();
+    assert!(h.state().vehicles_dirty());
+    h.get_by_label("Apply vehicle changes").click();
+    h.run();
+
+    let out = std::env::temp_dir().join("lootsmith-ui-vehicles.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = reopen(&out);
+    assert!(reopened.crc32_valid() && reopened.proto_stable());
+    let sg = reopened.save_game().expect("reparse");
+    let vehicles = sg.vehicles();
+    assert_eq!(vehicles.len(), 1);
+    assert_eq!(
+        vehicles[0].family,
+        "GD_Globals.VehicleSpawnStation.VehicleFamily_Runner"
+    );
+    assert_eq!(vehicles[0].customizations[0], key);
+    assert_eq!(sg.vehicle_steering_mode(), Some(0));
 }
 
 #[test]

@@ -625,6 +625,35 @@ pub struct Skill {
     pub equipped_slot_index: i32,
 }
 
+/// A `ChosenVehicleCustomization` entry (field 57): a vehicle family and the
+/// skin customizations chosen for it (slot 0, slot 1, then any extras).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VehicleCustomization {
+    pub family: String,
+    pub customizations: Vec<String>,
+}
+
+/// The vehicle families the game recognises, as `(usage, family_resource)`.
+/// `usage` is the key into `Customizations.json` used to offer skin choices.
+pub const VEHICLE_FAMILIES: &[(&str, &str)] = &[
+    (
+        "Runner",
+        "GD_Globals.VehicleSpawnStation.VehicleFamily_Runner",
+    ),
+    (
+        "BanditTech",
+        "GD_Globals.VehicleSpawnStation.VehicleFamily_BanditTechnical",
+    ),
+    (
+        "Hovercraft",
+        "GD_OrchidPackageDef.Vehicles.VehicleFamily_Hovercraft",
+    ),
+    (
+        "FanBoat",
+        "GD_SagePackageDef.Vehicles.VehicleFamily_FanBoat",
+    ),
+];
+
 /// Which top-level list a packed blob lives in.
 ///
 /// `PackedItemData`/`PackedWeaponData` (fields 53/54) are the backpack;
@@ -917,5 +946,49 @@ impl SaveGame {
         self.mutate_entry(8, index, |sub| {
             sub.set(Field::varint(3, points as u32 as u64));
         })
+    }
+
+    // ---- vehicles ----
+
+    /// All `ChosenVehicleCustomization` entries (field 57), in order.
+    pub fn vehicles(&self) -> Vec<VehicleCustomization> {
+        self.message
+            .get_all(57)
+            .filter_map(|field| field.as_message().ok().flatten())
+            .map(|sub| VehicleCustomization {
+                family: sub
+                    .get(1)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                customizations: sub
+                    .get_all(2)
+                    .filter_map(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .collect(),
+            })
+            .collect()
+    }
+
+    /// `VehicleSteeringMode` (field 58), if present.
+    pub fn vehicle_steering_mode(&self) -> Option<i32> {
+        self.get_i32(58)
+    }
+
+    pub fn set_vehicle_steering_mode(&mut self, mode: i32) {
+        self.set_i32(58, mode);
+    }
+
+    /// Replace the whole `ChosenVehicleCustomizations` list (field 57).
+    pub fn set_vehicles(&mut self, vehicles: &[VehicleCustomization]) {
+        self.message.remove_all(57);
+        for vehicle in vehicles {
+            let mut sub = Message::default();
+            sub.push(Field::string(1, &vehicle.family));
+            for customization in &vehicle.customizations {
+                sub.push(Field::string(2, customization));
+            }
+            self.message.push(Field::bytes(57, &sub.to_bytes()));
+        }
     }
 }

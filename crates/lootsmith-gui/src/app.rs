@@ -5,8 +5,9 @@
 
 use eframe::egui;
 use lootsmith_core::{
-    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container, PackedEntry,
-    Platform, SaveGame, TravelStations,
+    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container,
+    Customizations, PackedEntry, Platform, SaveGame, TravelStations, VehicleCustomization,
+    VEHICLE_FAMILIES,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ pub enum Tab {
     Currency,
     Skills,
     Travel,
+    Vehicles,
     Backpack,
     Bank,
 }
@@ -87,6 +89,18 @@ pub struct SkillRow {
     pub orig_points: i32,
 }
 
+/// One editable vehicle family row (a `ChosenVehicleCustomization`, field 57).
+#[derive(Clone, Debug)]
+pub struct VehicleRow {
+    pub usage: String,
+    pub family: String,
+    pub skin1: String,
+    pub skin2: String,
+    pub extra: Vec<String>,
+    pub orig_skin1: String,
+    pub orig_skin2: String,
+}
+
 /// A readable `Tree.Leaf` label from a full skill resource path.
 fn short_skill(name: &str) -> String {
     match name.rsplit_once('.') {
@@ -125,6 +139,10 @@ pub struct LootsmithApp {
     pub stations: Option<Arc<TravelStations>>,
     pub stations_path: String,
     pub new_station: Option<String>,
+    /// Vehicle family rows (field 57) and steering mode (field 58).
+    pub vehicles: Vec<VehicleRow>,
+    pub steering_mode: i32,
+    pub customizations: Option<Arc<Customizations>>,
     pub status: String,
     pub save_as: String,
     loaded_once: bool,
@@ -271,6 +289,9 @@ impl LootsmithApp {
             stations: None,
             stations_path: String::new(),
             new_station: None,
+            vehicles: Vec::new(),
+            steering_mode: 0,
+            customizations: None,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             loaded_once: false,
@@ -376,6 +397,7 @@ impl LootsmithApp {
         self.refresh_rows();
         self.refresh_skills();
         self.refresh_travel();
+        self.refresh_vehicles();
     }
 
     pub fn load_dumps(&mut self) {
@@ -400,6 +422,7 @@ impl LootsmithApp {
         }
         self.refresh_rows();
         self.load_travel_stations();
+        self.load_customizations();
     }
 
     fn refresh_rows(&mut self) {
@@ -742,6 +765,92 @@ impl LootsmithApp {
         self.refresh_travel();
     }
 
+    fn load_customizations(&mut self) {
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        if let Ok(env) = std::env::var("LOOTSMITH_CUSTOMIZATIONS") {
+            candidates.push(std::path::PathBuf::from(env));
+        }
+        if let Some(dir) = std::path::Path::new(self.dumps.trim()).parent() {
+            candidates.push(dir.join("Customizations.json"));
+        }
+        for candidate in candidates {
+            if candidate.exists() {
+                if let Ok(customizations) = Customizations::from_path(&candidate) {
+                    self.customizations = Some(Arc::new(customizations));
+                    return;
+                }
+            }
+        }
+        self.customizations = None;
+    }
+
+    fn refresh_vehicles(&mut self) {
+        let mut rows: Vec<VehicleRow> = VEHICLE_FAMILIES
+            .iter()
+            .map(|(usage, family)| VehicleRow {
+                usage: (*usage).to_string(),
+                family: (*family).to_string(),
+                skin1: "None".to_string(),
+                skin2: "None".to_string(),
+                extra: Vec::new(),
+                orig_skin1: "None".to_string(),
+                orig_skin2: "None".to_string(),
+            })
+            .collect();
+        if let Some(save_game) = &self.save_game {
+            for vehicle in save_game.vehicles() {
+                if let Some(row) = rows.iter_mut().find(|r| r.family == vehicle.family) {
+                    row.skin1 = vehicle
+                        .customizations
+                        .first()
+                        .cloned()
+                        .unwrap_or_else(|| "None".to_string());
+                    row.skin2 = vehicle
+                        .customizations
+                        .get(1)
+                        .cloned()
+                        .unwrap_or_else(|| "None".to_string());
+                    row.extra = vehicle.customizations.iter().skip(2).cloned().collect();
+                    row.orig_skin1 = row.skin1.clone();
+                    row.orig_skin2 = row.skin2.clone();
+                }
+            }
+            self.steering_mode = save_game.vehicle_steering_mode().unwrap_or(0);
+        } else {
+            self.steering_mode = 0;
+        }
+        self.vehicles = rows;
+    }
+
+    /// Whether any vehicle row differs from what is stored in the save.
+    pub fn vehicles_dirty(&self) -> bool {
+        self.vehicles
+            .iter()
+            .any(|r| r.skin1 != r.orig_skin1 || r.skin2 != r.orig_skin2)
+    }
+
+    /// Write the vehicle families and steering mode back into the save.
+    pub fn apply_vehicles(&mut self) {
+        let mut list = Vec::new();
+        for row in &self.vehicles {
+            if row.skin1 != "None" || row.skin2 != "None" || !row.extra.is_empty() {
+                let mut customizations = vec![row.skin1.clone(), row.skin2.clone()];
+                customizations.extend(row.extra.iter().cloned());
+                list.push(VehicleCustomization {
+                    family: row.family.clone(),
+                    customizations,
+                });
+            }
+        }
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        save_game.set_vehicles(&list);
+        save_game.set_vehicle_steering_mode(self.steering_mode);
+        self.status = format!("vehicle settings applied ({} family set(s))", list.len());
+        self.refresh_vehicles();
+    }
+
     fn apply_form(&mut self) -> Option<Vec<u8>> {
         let mut save_game = self.save_game.clone()?;
         save_game.set_i32(2, self.form.level);
@@ -884,6 +993,7 @@ impl LootsmithApp {
                 ui.selectable_value(&mut self.tab, Tab::Currency, "Currency");
                 ui.selectable_value(&mut self.tab, Tab::Skills, "Skills");
                 ui.selectable_value(&mut self.tab, Tab::Travel, "Fast Travel");
+                ui.selectable_value(&mut self.tab, Tab::Vehicles, "Vehicles");
                 ui.selectable_value(&mut self.tab, Tab::Backpack, "Backpack");
                 ui.selectable_value(&mut self.tab, Tab::Bank, "Bank");
             });
@@ -895,6 +1005,7 @@ impl LootsmithApp {
                 Tab::Currency => self.ui_currency(ui),
                 Tab::Skills => self.ui_skills(ui),
                 Tab::Travel => self.ui_travel(ui),
+                Tab::Vehicles => self.ui_vehicles(ui),
                 Tab::Backpack => self.ui_container(ui, false),
                 Tab::Bank => self.ui_container(ui, true),
             }
@@ -1096,6 +1207,63 @@ impl LootsmithApp {
             self.remove_teleporter(i);
         }
 
+        ui.separator();
+        self.ui_save_buttons(ui);
+    }
+
+    fn ui_vehicles(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Vehicle steering mode");
+            ui.add(egui::DragValue::new(&mut self.steering_mode));
+        });
+        if self.customizations.is_some() {
+            ui.label("Skin names resolved from Customizations.json.");
+        } else {
+            ui.label("Load Customizations.json next to the Asset Library to pick skins by name.");
+        }
+        ui.separator();
+
+        let customizations = self.customizations.clone();
+        for row in self.vehicles.iter_mut() {
+            ui.horizontal(|ui| {
+                ui.strong(format!("{}:", row.usage));
+                for (slot, value) in [("Skin 1", &mut row.skin1), ("Skin 2", &mut row.skin2)] {
+                    let current = match (&customizations, value.as_str()) {
+                        (Some(_), "None") => "None".to_string(),
+                        (Some(c), key) => c.label_for(key),
+                        (None, key) => key.to_string(),
+                    };
+                    egui::ComboBox::from_id_salt(format!("{slot}_{}", row.usage))
+                        .selected_text(current)
+                        .width(240.0)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(value == "None", "None").clicked() {
+                                *value = "None".to_string();
+                            }
+                            if let Some(c) = &customizations {
+                                for (key, name) in c.skin_options(&row.usage) {
+                                    if ui.selectable_label(value == &key, &name).clicked() {
+                                        *value = key;
+                                    }
+                                }
+                            }
+                        });
+                }
+            });
+        }
+
+        let dirty = self.vehicles_dirty();
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.add_enabled_ui(dirty, |ui| {
+                if ui.button("Apply vehicle changes").clicked() {
+                    self.apply_vehicles();
+                }
+            });
+            if dirty {
+                ui.label("(unsaved changes)");
+            }
+        });
         ui.separator();
         self.ui_save_buttons(ui);
     }

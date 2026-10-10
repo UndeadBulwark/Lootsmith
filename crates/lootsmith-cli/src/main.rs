@@ -1,8 +1,8 @@
 //! Lootsmith CLI: `inspect`, `verify`, and `dump`.
 
 use lootsmith_core::{
-    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container, Platform,
-    TravelStations,
+    container, items, AssetGroup, AssetLibraryConfigs, AssetLibraryManager, Container,
+    Customizations, Platform, TravelStations, VEHICLE_FAMILIES,
 };
 use std::process::ExitCode;
 
@@ -17,14 +17,17 @@ fn usage() -> ExitCode {
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith skills  <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
+         lootsmith vehicles <file.sav> [--customizations FILE]\n  \
          lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --item N --part SLOT --set NAME --dumps FILE [--container bag|bank]\n  \
          lootsmith edit    <file.sav> --skill N [--grade G] [--points P] [--out OUT]\n  \
-         lootsmith edit    <file.sav> [--travel-add NAME] [--travel-remove NAME] [--travel-last NAME] [--out OUT]\n\
+         lootsmith edit    <file.sav> [--travel-add NAME] [--travel-remove NAME] [--travel-last NAME] [--out OUT]\n  \
+         lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
          --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
          --stations <Travel Stations.json> resolves teleporter names (or set LOOTSMITH_TRAVEL_STATIONS).\n\
+         --customizations <Customizations.json> resolves vehicle skin names (or set LOOTSMITH_CUSTOMIZATIONS).\n\
          --container selects the backpack (default) or the bank/stash for --item.\n\
          edit writes in place with a <file>.bak backup unless --out is given."
     );
@@ -53,9 +56,11 @@ struct Args {
     grade: Option<i32>,
     points: Option<i32>,
     stations: Option<String>,
+    customizations: Option<String>,
     travel_add: Option<String>,
     travel_remove: Option<String>,
     travel_last: Option<String>,
+    steering_mode: Option<i32>,
     scope: Scope,
 }
 
@@ -102,9 +107,11 @@ fn parse_args() -> Option<Args> {
         grade: None,
         points: None,
         stations: None,
+        customizations: None,
         travel_add: None,
         travel_remove: None,
         travel_last: None,
+        steering_mode: None,
         scope: Scope::All,
     };
     while let Some(arg) = it.next() {
@@ -131,9 +138,11 @@ fn parse_args() -> Option<Args> {
             "--grade" => args.grade = Some(it.next()?.parse().ok()?),
             "--points" => args.points = Some(it.next()?.parse().ok()?),
             "--stations" => args.stations = Some(it.next()?),
+            "--customizations" => args.customizations = Some(it.next()?),
             "--travel-add" => args.travel_add = Some(it.next()?),
             "--travel-remove" => args.travel_remove = Some(it.next()?),
             "--travel-last" => args.travel_last = Some(it.next()?),
+            "--steering-mode" => args.steering_mode = Some(it.next()?.parse().ok()?),
             _ => return None,
         }
     }
@@ -154,6 +163,37 @@ fn load_manager(dumps: &Option<String>) -> Option<AssetLibraryManager> {
             None
         }
     }
+}
+
+fn usage_for_family(family: &str) -> Option<&'static str> {
+    VEHICLE_FAMILIES
+        .iter()
+        .find(|(_, f)| *f == family)
+        .map(|(usage, _)| *usage)
+}
+
+fn load_customizations(args: &Args) -> Option<Customizations> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+    if let Some(path) = &args.customizations {
+        candidates.push(std::path::PathBuf::from(path));
+    }
+    if let Ok(env) = std::env::var("LOOTSMITH_CUSTOMIZATIONS") {
+        candidates.push(std::path::PathBuf::from(env));
+    }
+    if let Some(dumps) = &args.dumps {
+        if let Some(dir) = std::path::Path::new(dumps).parent() {
+            candidates.push(dir.join("Customizations.json"));
+        }
+    }
+    for candidate in candidates {
+        if candidate.exists() {
+            if let Ok(customizations) = Customizations::from_path(&candidate) {
+                eprintln!("loaded customizations from {}", candidate.display());
+                return Some(customizations);
+            }
+        }
+    }
+    None
 }
 
 fn main() -> ExitCode {
@@ -449,6 +489,34 @@ fn main() -> ExitCode {
             println!("total: {} visited teleporters", visited.len());
             ExitCode::SUCCESS
         }
+        "vehicles" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let customizations = load_customizations(&args);
+            let label = |key: &str| match &customizations {
+                Some(c) => c.label_for(key),
+                None => key.to_string(),
+            };
+            let vehicles = save_game.vehicles();
+            for vehicle in &vehicles {
+                let usage = usage_for_family(&vehicle.family).unwrap_or("?");
+                println!("{usage:<12} {}", vehicle.family);
+                for (i, customization) in vehicle.customizations.iter().enumerate() {
+                    println!("    slot {}: {}", i + 1, label(customization));
+                }
+            }
+            if vehicles.is_empty() {
+                println!("(no vehicle families set)");
+            }
+            println!("steering mode: {:?}", save_game.vehicle_steering_mode());
+            println!("total: {} vehicle families set", vehicles.len());
+            ExitCode::SUCCESS
+        }
         "edit" => {
             let mut save_game = match save.save_game() {
                 Ok(s) => s,
@@ -604,6 +672,12 @@ fn main() -> ExitCode {
             if let Some(name) = args.travel_last.clone() {
                 save_game.set_last_visited_teleporter(&name);
                 println!("travel: last visited = {name}");
+                changes += 1;
+            }
+
+            if let Some(mode) = args.steering_mode {
+                save_game.set_vehicle_steering_mode(mode);
+                println!("vehicle steering mode = {mode}");
                 changes += 1;
             }
 
