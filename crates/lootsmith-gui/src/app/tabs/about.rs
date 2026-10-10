@@ -8,11 +8,11 @@ pub(crate) fn ui_about(ui: &mut egui::Ui) {
     ui.add_space(10.0);
     card(ui, 620.0, |ui| {
         theme::section(ui, "About");
-        ui.label(
-            egui::RichText::new("Lootsmith — a cross-platform Borderlands 2 save editor")
-                .strong()
-                .size(15.0)
-                .color(Tokens::ACCENT),
+        crate::ui::widgets::label_nums(
+            ui,
+            "Lootsmith — a cross-platform Borderlands 2 save editor",
+            Tokens::ACCENT,
+            15.0,
         );
         ui.add_space(6.0);
         theme::muted(

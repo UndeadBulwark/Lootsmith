@@ -5,6 +5,7 @@ use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_currency(&mut self, ui: &mut egui::Ui) {
+        let p = *crate::theme::active(ui.ctx());
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             ui.heading("Currency");
@@ -13,7 +14,12 @@ impl LootsmithApp {
             });
         });
         ui.add_space(2.0);
-        ui.label("Index 0 is money. Other slots are eridium, seraph crystals, Torgue tokens, ...");
+        crate::ui::widgets::label_nums(
+            ui,
+            "Index 0 is money. Other slots are eridium, seraph crystals, Torgue tokens, ...",
+            p.fg,
+            15.0,
+        );
         ui.add_space(4.0);
         let mut changed = false;
         egui::ScrollArea::vertical()
@@ -33,7 +39,12 @@ impl LootsmithApp {
                             } else {
                                 currency_name(i)
                             });
-                            changed |= ui.add(egui::DragValue::new(value)).changed();
+                            changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                    ui.add(egui::DragValue::new(value))
+                                })
+                            })
+                            .changed();
                             ui.end_row();
                         }
                     });

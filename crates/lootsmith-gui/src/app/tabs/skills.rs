@@ -42,11 +42,11 @@ impl LootsmithApp {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
-                ui.label(
-                    egui::RichText::new("BORDERLANDS 2 SKILL CALCULATOR")
-                        .strong()
-                        .size(18.0)
-                        .color(Tokens::ACCENT),
+                crate::ui::widgets::label_nums(
+                    ui,
+                    "BORDERLANDS 2 SKILL CALCULATOR",
+                    Tokens::ACCENT,
+                    18.0,
                 );
                 ui.add_space(2.0);
                 ui.label(
@@ -55,19 +55,22 @@ impl LootsmithApp {
                         .size(28.0)
                         .color(Tokens::ACCENT),
                 );
-                ui.label(
-                    egui::RichText::new(format!(
+                crate::ui::widgets::label_nums(
+                    ui,
+                    format!(
                         "LEVEL {} {}",
                         self.form.level,
                         class.class_name.to_uppercase()
-                    ))
-                    .size(14.0),
+                    ),
+                    Tokens::TEXT,
+                    14.0,
                 );
                 ui.add_space(6.0);
-                ui.label(
-                    egui::RichText::new(format!("Spent {spent}     Available {available}"))
-                        .color(Tokens::TEXT_DIM)
-                        .size(12.0),
+                crate::ui::widgets::label_nums(
+                    ui,
+                    format!("Spent {spent}     Available {available}"),
+                    Tokens::TEXT_DIM,
+                    12.0,
                 );
                 theme::faint(ui, "Left-click adds a rank, right-click removes.");
                 theme::faint(ui, "A tier unlocks every 5 points invested.");
@@ -119,15 +122,18 @@ impl LootsmithApp {
                                 leaf
                             };
                             let grade = grades[i];
-                            let label =
-                                egui::RichText::new(format!("{display}   {grade}/1")).size(12.0);
-                            let label = if grade > 0 {
-                                label.color(Tokens::ACCENT)
+                            let color = if grade > 0 {
+                                Tokens::ACCENT
                             } else {
-                                label
+                                Tokens::TEXT
                             };
+                            let text = crate::ui::widgets::text_with_nums(
+                                &format!("{display}   {grade}/1"),
+                                color,
+                                12.0,
+                            );
                             if ui
-                                .button(label)
+                                .button(text)
                                 .on_hover_text(&self.skills[i].name)
                                 .clicked()
                                 && grade < 1

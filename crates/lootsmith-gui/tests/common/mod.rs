@@ -10,6 +10,9 @@
 
 #![allow(dead_code)]
 
+pub mod frame;
+pub mod gallery;
+
 use egui::Vec2;
 use egui_kittest::Harness;
 use lootsmith_core::fixture;

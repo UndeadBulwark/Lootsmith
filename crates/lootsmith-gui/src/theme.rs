@@ -370,21 +370,27 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
 /// A section heading.
 pub fn section(ui: &mut egui::Ui, title: &str) {
     let gold = active(ui.ctx()).gold;
-    ui.add_space(2.0);
-    ui.label(egui::RichText::new(title).strong().size(15.0).color(gold));
-    ui.add_space(2.0);
+    ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+        title, gold, 15.0,
+    )));
 }
 
 /// A dimmed secondary label.
 pub fn muted(ui: &mut egui::Ui, text: impl Into<String>) {
     let dim = active(ui.ctx()).dim;
-    ui.label(egui::RichText::new(text.into()).color(dim).size(12.0));
+    let text = text.into();
+    ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+        &text, dim, 12.0,
+    )));
 }
 
 /// A faint label (paths, ids).
 pub fn faint(ui: &mut egui::Ui, text: impl Into<String>) {
     let dim = active(ui.ctx()).dim;
-    ui.label(egui::RichText::new(text.into()).color(dim).size(11.5));
+    let text = text.into();
+    ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+        &text, dim, 11.5,
+    )));
 }
 
 /// Monospaced text for ids.

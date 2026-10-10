@@ -48,6 +48,7 @@ impl LootsmithApp {
     }
 
     pub(crate) fn ui_character(&mut self, ui: &mut egui::Ui) {
+        let p = *theme::active(ui.ctx());
         ui.add_space(10.0);
         let customizations = self.customizations.clone();
         let usage = lootsmith_core::usage_for_player_class(&self.read_info.player_class);
@@ -96,29 +97,37 @@ impl LootsmithApp {
                     ui.end_row();
                     ui.label("Overpower level");
                     let op = self.overpower_level();
-                    ui.label(if op > 0 {
-                        op.to_string()
+                    if op > 0 {
+                        crate::ui::widgets::label_num(ui, op.to_string(), p.fg, 15.0);
                     } else {
-                        "—".to_string()
-                    });
+                        ui.label("—");
+                    }
                     ui.end_row();
                     ui.label("Level");
-                    changed |= ui.add(egui::DragValue::new(&mut self.form.level)).changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                            ui.add(egui::DragValue::new(&mut self.form.level))
+                        })
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Experience");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.exp_points))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.exp_points))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("General skill points");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.general_skill_points))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.general_skill_points))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Specialist skill points");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.specialist_skill_points))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.specialist_skill_points))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Head");
                     customization_combo(
@@ -141,13 +150,18 @@ impl LootsmithApp {
                     );
                     ui.end_row();
                     ui.label("Save id");
-                    ui.label(self.read_info.save_id.to_string());
+                    crate::ui::widgets::label_num(
+                        ui,
+                        self.read_info.save_id.to_string(),
+                        p.fg,
+                        15.0,
+                    );
                     ui.end_row();
                     ui.label("GUID");
-                    ui.label(&self.read_info.guid);
+                    crate::ui::widgets::label_nums(ui, &self.read_info.guid, p.fg, 15.0);
                     ui.end_row();
                     ui.label("Last saved");
-                    ui.label(&self.read_info.last_saved);
+                    crate::ui::widgets::label_nums(ui, &self.read_info.last_saved, p.fg, 15.0);
                     ui.end_row();
                 });
         });

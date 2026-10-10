@@ -2097,10 +2097,10 @@ impl LootsmithApp {
                         // descending order so they read 100 / 150 / 200 left to
                         // right, then the label.
                         for value in Self::UI_SCALES.iter().rev() {
-                            let text = crate::ui::widgets::num(format!(
-                                "{}%",
-                                (value * 100.0).round() as i32
-                            ));
+                            let text = crate::ui::widgets::num(
+                                format!("{}%", (value * 100.0).round() as i32),
+                                15.0,
+                            );
                             if ui
                                 .selectable_label(
                                     (self.ui_scale - value).abs() < f32::EPSILON,
@@ -2130,11 +2130,13 @@ impl LootsmithApp {
                         },
                     );
                     ui.label(egui::RichText::new("Save file").color(p.dim).size(11.5));
-                    ui.add_sized(
-                        [430.0, 24.0],
-                        egui::TextEdit::singleline(&mut self.path)
-                            .hint_text("/path/to/Save0001.sav"),
-                    );
+                    crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add_sized(
+                            [430.0, 24.0],
+                            egui::TextEdit::singleline(&mut self.path)
+                                .hint_text("/path/to/Save0001.sav"),
+                        )
+                    });
                     toolbar_sep(ui);
                     status_dot(
                         ui,
@@ -2145,11 +2147,13 @@ impl LootsmithApp {
                         },
                     );
                     ui.label(egui::RichText::new("Game data").color(p.dim).size(11.5));
-                    ui.add_sized(
-                        [300.0, 24.0],
-                        egui::TextEdit::singleline(&mut self.dumps)
-                            .hint_text("folder with Asset Library Manager.json"),
-                    );
+                    crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add_sized(
+                            [300.0, 24.0],
+                            egui::TextEdit::singleline(&mut self.dumps)
+                                .hint_text("folder with Asset Library Manager.json"),
+                        )
+                    });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if self.manager.is_some() && self.dumps_bundled {
                             ui.colored_label(p.dim, "names resolved (bundled)");
@@ -2174,7 +2178,11 @@ impl LootsmithApp {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     status_dot(ui, if self.dirty { p.acc } else { p.gold });
-                    ui.label(egui::RichText::new(self.status.clone()).size(12.0));
+                    ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+                        &self.status,
+                        p.fg,
+                        12.0,
+                    )));
                 });
             });
 

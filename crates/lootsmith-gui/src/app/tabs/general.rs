@@ -16,13 +16,14 @@ impl LootsmithApp {
                     let mut changed = false;
                     ui.label("Level");
                     ui.horizontal(|ui| {
-                        changed |= ui
-                            .add(
+                        changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                            ui.add(
                                 egui::DragValue::new(&mut self.form.level)
                                     .range(1..=80)
                                     .speed(0.2),
                             )
-                            .changed();
+                        })
+                        .changed();
                         if ui
                             .button("Max")
                             .on_hover_text("Vanilla cap: level 72")
@@ -42,42 +43,49 @@ impl LootsmithApp {
                     });
                     ui.end_row();
                     ui.label("Experience");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.exp_points))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.exp_points))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("General skill points");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.general_skill_points))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.general_skill_points))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Specialist skill points");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.specialist_skill_points))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.specialist_skill_points))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Playthroughs");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.playthroughs))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.playthroughs))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Total play time (s)");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.total_play_time))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.total_play_time))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Badass mode");
                     changed |= ui.checkbox(&mut self.form.badass, "").changed();
                     ui.end_row();
                     ui.label("Golden keys");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.golden_keys))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.golden_keys))
+                    })
+                    .changed();
                     ui.end_row();
                     ui.label("Bank slots");
-                    changed |= ui
-                        .add(egui::DragValue::new(&mut self.form.bank_slots))
-                        .changed();
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.bank_slots))
+                    })
+                    .changed();
                     ui.end_row();
                     if changed {
                         self.dirty = true;

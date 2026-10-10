@@ -44,20 +44,25 @@ impl LootsmithApp {
                         item_action = Some(ItemAction::SyncEquipped);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.add_sized(
-                            [220.0, 24.0],
-                            egui::TextEdit::singleline(&mut self.filter).hint_text("filter items…"),
-                        );
+                        crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                            ui.add_sized(
+                                [220.0, 24.0],
+                                egui::TextEdit::singleline(&mut self.filter)
+                                    .hint_text("filter items…"),
+                            )
+                        });
                     });
                 });
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new("Item code").color(p.dim).size(11.5));
-                    ui.add_sized(
-                        [520.0, 24.0],
-                        egui::TextEdit::singleline(&mut self.item_code)
-                            .hint_text("paste BL2(...) codes here"),
-                    );
+                    crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add_sized(
+                            [520.0, 24.0],
+                            egui::TextEdit::singleline(&mut self.item_code)
+                                .hint_text("paste BL2(...) codes here"),
+                        )
+                    });
                     if ui.button("Insert code(s)").clicked() {
                         item_action = Some(ItemAction::InsertCodes);
                     }
@@ -126,7 +131,7 @@ impl LootsmithApp {
                             Some(n) => format!("{} #{n}", edit.container.label()),
                             None => edit.container.label().to_string(),
                         };
-                        ui.label(egui::RichText::new(title).strong().size(14.0).color(p.fg));
+                        crate::ui::widgets::label_nums(ui, &title, p.fg, 14.0);
                         ui.label(theme::mono(format!("id={}", edit.decoded.unique_id)));
                     });
                     let name = item_name(
@@ -145,7 +150,9 @@ impl LootsmithApp {
                         ui.horizontal(|ui| {
                             if edit.container == Container::BackpackItem {
                                 ui.label("Quantity");
-                                if ui.add(egui::DragValue::new(&mut edit.quantity)).changed() {
+                                if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                    ui.add(egui::DragValue::new(&mut edit.quantity)).changed()
+                                }) {
                                     edit.dirty = true;
                                 }
                                 if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
@@ -153,7 +160,9 @@ impl LootsmithApp {
                                 }
                             } else {
                                 ui.label("Quick slot");
-                                if ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed() {
+                                if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                    ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed()
+                                }) {
                                     edit.dirty = true;
                                 }
                             }
@@ -183,11 +192,15 @@ impl LootsmithApp {
                         };
                         ui.horizontal(|ui| {
                             ui.label("Game stage");
-                            if ui.add(egui::DragValue::new(gstage).range(1..=80)).changed() {
+                            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                ui.add(egui::DragValue::new(gstage).range(1..=80)).changed()
+                            }) {
                                 edit.dirty = true;
                             }
                             ui.label("Manufacturer grade");
-                            if ui.add(egui::DragValue::new(mgrade).range(1..=10)).changed() {
+                            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                ui.add(egui::DragValue::new(mgrade).range(1..=10)).changed()
+                            }) {
                                 edit.dirty = true;
                             }
                         });
@@ -243,9 +256,7 @@ impl LootsmithApp {
                                 .spacing([10.0, 6.0])
                                 .show(ui, |ui| {
                                     for (slot, label) in slots_for(is_weapon) {
-                                        ui.label(
-                                            egui::RichText::new(*label).color(p.dim).size(12.0),
-                                        );
+                                        crate::ui::widgets::label_nums(ui, *label, p.dim, 12.0);
                                         let group =
                                             items::slot_group(&edit.decoded.slot, slot).unwrap();
                                         let current = match edit.decoded.part(slot) {
@@ -274,7 +285,9 @@ impl LootsmithApp {
                                             slot,
                                         );
                                         egui::ComboBox::from_id_salt(format!("slot_{slot}"))
-                                            .selected_text(current)
+                                            .selected_text(crate::ui::widgets::text_with_nums(
+                                                &current, p.fg, 15.0,
+                                            ))
                                             .width(270.0)
                                             .show_ui(ui, |ui| {
                                                 if ui.selectable_label(false, "None").clicked() {
@@ -355,7 +368,7 @@ impl LootsmithApp {
                                 tr.set_selected(is_selected);
                                 tr.col(|ui| {
                                     ui.label(
-                                        crate::ui::widgets::num((i + 1).to_string())
+                                        crate::ui::widgets::num((i + 1).to_string(), 15.0)
                                             .color(cell(p.dim)),
                                     );
                                 });
@@ -370,7 +383,7 @@ impl LootsmithApp {
                                     if ui
                                         .selectable_label(
                                             is_selected,
-                                            crate::ui::widgets::num(format!("id={}", row.id))
+                                            crate::ui::widgets::num(format!("id={}", row.id), 15.0)
                                                 .color(cell(p.fg)),
                                         )
                                         .clicked()
@@ -383,7 +396,7 @@ impl LootsmithApp {
                                         ui.label("");
                                     } else {
                                         ui.label(
-                                            crate::ui::widgets::num(row.quantity.to_string())
+                                            crate::ui::widgets::num(row.quantity.to_string(), 15.0)
                                                 .color(cell(p.fg)),
                                         );
                                     }
@@ -405,8 +418,11 @@ impl LootsmithApp {
                                 tr.col(|ui| {
                                     if row.is_weapon {
                                         ui.label(
-                                            crate::ui::widgets::num(row.quick_slot.to_string())
-                                                .color(cell(p.fg)),
+                                            crate::ui::widgets::num(
+                                                row.quick_slot.to_string(),
+                                                15.0,
+                                            )
+                                            .color(cell(p.fg)),
                                         );
                                     } else {
                                         ui.label("");
@@ -419,21 +435,18 @@ impl LootsmithApp {
                                     );
                                 });
                                 tr.col(|ui| {
-                                    let label = if row.empty {
-                                        egui::RichText::new(&row.balance)
-                                            .color(cell(p.dim))
-                                            .italics()
-                                    } else if !row.name.is_empty() {
-                                        egui::RichText::new(&row.name).color(cell(p.fg))
+                                    let (text, color) = if row.empty || row.name.is_empty() {
+                                        (row.balance.clone(), cell(p.dim))
                                     } else {
-                                        egui::RichText::new(&row.balance).color(cell(p.dim))
+                                        (row.name.clone(), cell(p.fg))
                                     };
                                     let tip = if row.name.is_empty() {
                                         row.balance.clone()
                                     } else {
                                         format!("{} — {}", row.name, row.balance)
                                     };
-                                    ui.label(label).on_hover_text(tip);
+                                    crate::ui::widgets::label_nums(ui, &text, color, 15.0)
+                                        .on_hover_text(tip);
                                 });
                                 if tr.response().clicked() {
                                     clicked = Some((row.container, row.occurrence));

@@ -40,7 +40,7 @@ impl LootsmithApp {
             }
         }
         let visited = format!("visited: {} / {}", self.travel.len(), stations.len());
-        ui.label(egui::RichText::new(visited).color(Tokens::TEXT_DIM));
+        crate::ui::widgets::label_nums(ui, &visited, Tokens::TEXT_DIM, 15.0);
         ui.add_space(4.0);
 
         // Apply deferred checkbox / group edits after rendering.

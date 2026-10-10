@@ -5,6 +5,7 @@ use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_missions(&mut self, ui: &mut egui::Ui) {
+        let p = *theme::active(ui.ctx());
         let missions_data = self.missions_data.clone();
         let name_for = |number: i32| match &missions_data {
             Some(m) => m
@@ -15,17 +16,26 @@ impl LootsmithApp {
 
         ui.horizontal(|ui| {
             ui.label("Plot mission");
-            ui.add(egui::DragValue::new(&mut self.plot_mission));
-            ui.label(name_for(self.plot_mission));
+            crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                ui.add(egui::DragValue::new(&mut self.plot_mission))
+            });
+            crate::ui::widgets::label_nums(ui, name_for(self.plot_mission), p.fg, 15.0);
         });
         ui.horizontal(|ui| {
             ui.label("Active mission");
-            ui.add(egui::DragValue::new(&mut self.active_mission));
-            ui.label(name_for(self.active_mission));
+            crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                ui.add(egui::DragValue::new(&mut self.active_mission))
+            });
+            crate::ui::widgets::label_nums(ui, name_for(self.active_mission), p.fg, 15.0);
         });
         ui.separator();
 
-        ui.label(format!("Missions ({})", self.mission_rows.len()));
+        crate::ui::widgets::label_num(
+            ui,
+            format!("Missions ({})", self.mission_rows.len()),
+            p.fg,
+            15.0,
+        );
         egui::ScrollArea::vertical()
             .id_salt("missions")
             .max_height(280.0)
@@ -39,8 +49,13 @@ impl LootsmithApp {
                                 Some(m) => m.label_for(&row.key),
                                 None => row.key.clone(),
                             };
-                            ui.label(format!("P{}", row.playthrough + 1));
-                            ui.label(label);
+                            crate::ui::widgets::label_num(
+                                ui,
+                                format!("P{}", row.playthrough + 1),
+                                p.fg,
+                                15.0,
+                            );
+                            crate::ui::widgets::label_nums(ui, label, p.fg, 15.0);
                             egui::ComboBox::from_id_salt(format!(
                                 "mission_status_{}_{}",
                                 row.playthrough, row.index
@@ -74,15 +89,17 @@ impl LootsmithApp {
         });
         ui.separator();
 
-        ui.label(format!(
-            "Challenge resource entries: {}",
-            self.challenges.len()
-        ));
+        crate::ui::widgets::label_num(
+            ui,
+            format!("Challenge resource entries: {}", self.challenges.len()),
+            p.fg,
+            15.0,
+        );
         egui::CollapsingHeader::new("Challenge entries")
             .default_open(false)
             .show(ui, |ui| {
                 for (i, challenge) in self.challenges.iter().enumerate() {
-                    ui.label(format!("[{i:>3}] {challenge}"));
+                    crate::ui::widgets::label_nums(ui, format!("[{i:>3}] {challenge}"), p.fg, 15.0);
                 }
             });
 
@@ -91,9 +108,10 @@ impl LootsmithApp {
         theme::section(ui, "Challenge progress");
         ui.horizontal(|ui| {
             ui.label("Prestiges");
-            if ui
-                .add(egui::DragValue::new(&mut self.prestiges).range(0..=9999))
-                .changed()
+            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                ui.add(egui::DragValue::new(&mut self.prestiges).range(0..=9999))
+            })
+            .changed()
             {
                 self.set_prestige(self.prestiges);
             }
@@ -131,22 +149,33 @@ impl LootsmithApp {
                                 if !needle.is_empty() && !entry.id.to_string().contains(&needle) {
                                     continue;
                                 }
-                                ui.label(format!(
-                                    "{}{}",
-                                    entry.id,
-                                    if entry.previous_value > 0 {
-                                        " (reset)"
-                                    } else {
-                                        ""
-                                    }
-                                ));
-                                if ui
-                                    .add(egui::DragValue::new(&mut entry.total_value).speed(0.5))
-                                    .changed()
+                                crate::ui::widgets::label_nums(
+                                    ui,
+                                    format!(
+                                        "{}{}",
+                                        entry.id,
+                                        if entry.previous_value > 0 {
+                                            " (reset)"
+                                        } else {
+                                            ""
+                                        }
+                                    ),
+                                    p.fg,
+                                    15.0,
+                                );
+                                if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                    ui.add(egui::DragValue::new(&mut entry.total_value).speed(0.5))
+                                })
+                                .changed()
                                 {
                                     edits.push((entry.id, entry.total_value));
                                 }
-                                ui.label(entry.previous_value.to_string());
+                                crate::ui::widgets::label_num(
+                                    ui,
+                                    entry.previous_value.to_string(),
+                                    p.fg,
+                                    15.0,
+                                );
                                 ui.end_row();
                             }
                         });

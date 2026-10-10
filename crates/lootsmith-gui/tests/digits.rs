@@ -1,49 +1,45 @@
-//! Digits must render in VT323 (`ui::widgets::num`), never in the label font
-//! (Pixelify Sans' `5` reads as `S`).
+//! Digit gate: **no digit may be drawn in the label font** (Pixelify Sans) on
+//! any screen the contrast gate renders, plus the gallery — every digit run must
+//! go through `ui::widgets::num` / `text_with_nums` (VT323).
 
+mod common;
+
+use common::frame::{extract, render_tab, Section, SCREENS};
 use egui::Vec2;
-use egui_kittest::Harness;
-use lootsmith_gui::theme::{self, Theme};
-use lootsmith_gui::ui::widgets::num;
+use lootsmith_gui::theme::Theme;
 
-struct One(char);
-
-fn build(ui: &mut egui::Ui, state: &mut One) {
-    theme::apply(ui.ctx(), Theme::Dark);
-    ui.painter()
-        .rect_filled(ui.max_rect(), 0.0, egui::Color32::BLACK);
-    // Fixed rect + left alignment: only the glyph shape can differ between runs.
-    ui.put(
-        egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(28.0, 36.0)),
-        egui::Label::new(num(state.0.to_string()).color(egui::Color32::WHITE)),
-    );
+fn violations(sections: &[Section]) -> Vec<String> {
+    sections
+        .iter()
+        .filter(|s| s.proportional && s.text.chars().any(|c| c.is_ascii_digit()))
+        .map(|s| s.text.clone())
+        .collect()
 }
 
-/// FNV-1a over the rendered pixels of one digit.
-fn hash_digit(c: char) -> u64 {
-    let mut h = Harness::builder()
-        .with_size(Vec2::new(28.0, 36.0))
-        .build_ui_state(build, One(c));
-    h.run();
-    let img = h.render().expect("render digit");
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in img.as_raw() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    hash
-}
-
-/// `"0123456789"` in `num()`: every glyph is distinct.
 #[test]
-fn every_digit_is_a_distinct_glyph() {
-    let mut seen = std::collections::HashMap::new();
-    for d in 0..10 {
-        let c = char::from_digit(d, 10).unwrap();
-        let hash = hash_digit(c);
-        if let Some(prev) = seen.insert(hash, c) {
-            panic!("digits {prev:?} and {c:?} render identically in num()");
+fn digits_never_use_the_label_font() {
+    let mut bad: Vec<String> = Vec::new();
+    for theme in [Theme::Dark, Theme::Light] {
+        for tab in SCREENS {
+            let (_runs, _fills, sections, _img) = render_tab(tab, theme);
+            for s in violations(&sections) {
+                bad.push(format!("{tab:?} {theme:?}: {s:?}"));
+            }
+        }
+        let mut h = common::gallery::harness(theme, 1.0, Vec2::new(760.0, 700.0));
+        h.run();
+        let sections = {
+            let out = h.output();
+            extract(out).2
+        };
+        for s in violations(&sections) {
+            bad.push(format!("Gallery {theme:?}: {s:?}"));
         }
     }
-    assert_eq!(seen.len(), 10, "ten distinct digit glyphs");
+    assert!(
+        bad.is_empty(),
+        "digits drawn in the label font ({}):\n{}",
+        bad.len(),
+        bad.join("\n")
+    );
 }

@@ -7,6 +7,7 @@ use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_world(&mut self, ui: &mut egui::Ui) {
+        let p = *theme::active(ui.ctx());
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             if ui
@@ -35,15 +36,17 @@ impl LootsmithApp {
 
         theme::section(ui, "World discoveries");
         let total = self.world_discoveries.len();
-        ui.label(
-            egui::RichText::new(format!(
+        crate::ui::widgets::label_nums(
+            ui,
+            format!(
                 "uncovered: {} / {total}",
                 self.world_discoveries
                     .iter()
                     .filter(|d| d.uncovered)
                     .count()
-            ))
-            .color(Tokens::TEXT_DIM),
+            ),
+            Tokens::TEXT_DIM,
+            15.0,
         );
         ui.add_space(2.0);
         let mut discovery_edit: Option<(usize, bool)> = None;
@@ -56,9 +59,12 @@ impl LootsmithApp {
                     .spacing([12.0, 3.0])
                     .show(ui, |ui| {
                         for (i, discovery) in self.world_discoveries.iter_mut().enumerate() {
-                            ui.label(format!("#{}", i + 1));
+                            crate::ui::widgets::label_nums(ui, format!("#{}", i + 1), p.fg, 15.0);
                             if ui
-                                .checkbox(&mut discovery.uncovered, &discovery.name)
+                                .checkbox(
+                                    &mut discovery.uncovered,
+                                    crate::ui::widgets::text_with_nums(&discovery.name, p.fg, 15.0),
+                                )
                                 .changed()
                             {
                                 discovery_edit = Some((i + 1, discovery.uncovered));
@@ -80,11 +86,12 @@ impl LootsmithApp {
             .spacing([12.0, 3.0])
             .show(ui, |ui| {
                 for (i, region) in self.world_regions.iter_mut().enumerate() {
-                    ui.label(format!("#{}", i + 1));
-                    ui.label(&region.region);
-                    if ui
-                        .add(egui::DragValue::new(&mut region.game_stage).range(1..=80))
-                        .changed()
+                    crate::ui::widgets::label_nums(ui, format!("#{}", i + 1), p.fg, 15.0);
+                    crate::ui::widgets::label_nums(ui, &region.region, p.fg, 15.0);
+                    if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut region.game_stage).range(1..=80))
+                    })
+                    .changed()
                     {
                         stage_edit = Some((i + 1, region.game_stage));
                     }
@@ -101,7 +108,7 @@ impl LootsmithApp {
             theme::muted(ui, "(no lockout timers)");
         } else {
             for lockout in &self.world_lockouts {
-                ui.label(egui::RichText::new(lockout.label()).color(Tokens::TEXT_DIM));
+                crate::ui::widgets::label_nums(ui, lockout.label(), Tokens::TEXT_DIM, 15.0);
             }
         }
 
@@ -111,20 +118,30 @@ impl LootsmithApp {
             theme::muted(ui, "(no DLC expansion data)");
         } else {
             for (i, expansion) in self.world_expansions.iter().enumerate() {
-                ui.label(format!(
-                    "#{:<2} tag={:<3} data {} bytes",
-                    i + 1,
-                    expansion.tag,
-                    expansion.data.len()
-                ));
+                crate::ui::widgets::label_nums(
+                    ui,
+                    format!(
+                        "#{:<2} tag={:<3} data {} bytes",
+                        i + 1,
+                        expansion.tag,
+                        expansion.data.len()
+                    ),
+                    p.fg,
+                    15.0,
+                );
             }
         }
 
         ui.add_space(8.0);
         theme::section(ui, "Mementos");
-        ui.label(format!(
-            "weapons: {}, items: {} — \"Clear mementos\" above drops them",
-            self.mementos.0, self.mementos.1
-        ));
+        crate::ui::widgets::label_nums(
+            ui,
+            format!(
+                "weapons: {}, items: {} — \"Clear mementos\" above drops them",
+                self.mementos.0, self.mementos.1
+            ),
+            p.fg,
+            15.0,
+        );
     }
 }

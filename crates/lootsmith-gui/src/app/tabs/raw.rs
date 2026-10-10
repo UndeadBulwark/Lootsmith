@@ -5,6 +5,7 @@ use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_raw(&mut self, ui: &mut egui::Ui) {
+        let p = *theme::active(ui.ctx());
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             ui.heading("Raw fields");
@@ -43,21 +44,24 @@ impl LootsmithApp {
                         if !needle.is_empty() && !field.name.to_lowercase().contains(&needle) {
                             continue;
                         }
-                        ui.label(field.number.to_string());
+                        crate::ui::widgets::label_num(ui, field.number.to_string(), p.fg, 15.0);
                         ui.label(&field.name);
                         ui.label(&field.kind);
-                        ui.label(field.count.to_string());
+                        crate::ui::widgets::label_num(ui, field.count.to_string(), p.fg, 15.0);
                         match &mut field.edit {
                             RawEdit::Int(v) => {
-                                changed |= ui.add(egui::DragValue::new(v)).changed();
+                                changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                    ui.add(egui::DragValue::new(v)).changed()
+                                });
                             }
                             RawEdit::Bool(v) => {
                                 changed |= ui.checkbox(v, "").changed();
                             }
                             RawEdit::Str(v) => {
-                                changed |= ui
-                                    .add_sized([300.0, 20.0], egui::TextEdit::singleline(v))
-                                    .changed();
+                                changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                    ui.add_sized([300.0, 20.0], egui::TextEdit::singleline(v))
+                                        .changed()
+                                });
                             }
                             RawEdit::None if !field.elements.is_empty() => {
                                 let number = field.number;
@@ -67,18 +71,29 @@ impl LootsmithApp {
                                         ui.horizontal(|ui| {
                                             match &mut field.elements[i].edit {
                                                 RawEdit::Int(v) => {
-                                                    if ui.add(egui::DragValue::new(v)).changed() {
+                                                    if crate::ui::widgets::num_scope(
+                                                        ui,
+                                                        15.0,
+                                                        |ui| {
+                                                            ui.add(egui::DragValue::new(v))
+                                                                .changed()
+                                                        },
+                                                    ) {
                                                         field.elements[i].changed = true;
                                                     }
                                                 }
                                                 RawEdit::Str(v) => {
-                                                    if ui
-                                                        .add(
-                                                            egui::TextEdit::singleline(v)
-                                                                .desired_width(260.0),
-                                                        )
-                                                        .changed()
-                                                    {
+                                                    if crate::ui::widgets::num_scope(
+                                                        ui,
+                                                        15.0,
+                                                        |ui| {
+                                                            ui.add(
+                                                                egui::TextEdit::singleline(v)
+                                                                    .desired_width(260.0),
+                                                            )
+                                                            .changed()
+                                                        },
+                                                    ) {
                                                         field.elements[i].changed = true;
                                                     }
                                                 }
@@ -103,7 +118,7 @@ impl LootsmithApp {
                                 });
                             }
                             RawEdit::None => {
-                                ui.label(&field.preview);
+                                crate::ui::widgets::label_nums(ui, &field.preview, p.fg, 15.0);
                             }
                         }
                         ui.end_row();

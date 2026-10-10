@@ -7,7 +7,9 @@ impl LootsmithApp {
     pub(crate) fn ui_vehicles(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label("Vehicle steering mode");
-            ui.add(egui::DragValue::new(&mut self.steering_mode));
+            crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                ui.add(egui::DragValue::new(&mut self.steering_mode))
+            });
         });
         if self.customizations.is_some() {
             ui.label("Skin names resolved from Customizations.json.");

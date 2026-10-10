@@ -1,41 +1,101 @@
-//! Shared UI components (spec §2.7). First entry: [`num`], the numeric font.
+//! Shared UI components (spec §2.7) and the digit rule (§2.4).
 
 use eframe::egui;
 
-/// Numeric text: **VT323** (the monospace family), 19 px. Use this for **every
-/// digit run** — ids, counts, levels, ranks, quick-slot and slot counts — so
-/// digits never render in the label font (Pixelify Sans' `5` reads as `S`).
-/// Spec §2.4.
-pub fn num(text: impl Into<String>) -> egui::RichText {
-    egui::RichText::new(text.into()).monospace().size(19.0)
+/// Numeric text: **VT323** (the monospace family) at `size`. Use for **every**
+/// digit run so digits never render in the label font (Pixelify Sans' `5` reads
+/// as `S`). One size per context: body 15 px, tab labels / status 13 px.
+pub fn num(text: impl Into<String>, size: f32) -> egui::RichText {
+    egui::RichText::new(text.into()).monospace().size(size)
 }
 
-/// A label whose trailing count is set in the numeric font, e.g.
-/// `Backpack (5)` — the word in Pixelify Sans, the count in VT323.
+/// A layout with every **digit run** in VT323 and everything else in the label
+/// font, so mixed strings (paths, `id=400`, status lines) stay compliant.
+pub fn job_with_nums(text: &str, color: egui::Color32, size: f32) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob::default();
+    let mut run = String::new();
+    let mut run_digit = false;
+    let flush = |job: &mut egui::text::LayoutJob, run: &mut String, digit: bool| {
+        if run.is_empty() {
+            return;
+        }
+        let font_id = if digit {
+            egui::FontId::monospace(size)
+        } else {
+            egui::FontId::proportional(size)
+        };
+        job.append(
+            run,
+            0.0,
+            egui::TextFormat {
+                font_id,
+                color,
+                ..Default::default()
+            },
+        );
+        run.clear();
+    };
+    for ch in text.chars() {
+        let digit = ch.is_ascii_digit();
+        if !run.is_empty() && digit != run_digit {
+            flush(&mut job, &mut run, run_digit);
+        }
+        run.push(ch);
+        run_digit = digit;
+    }
+    flush(&mut job, &mut run, run_digit);
+    job
+}
+
+/// [`job_with_nums`] as a widget text.
+pub fn text_with_nums(text: &str, color: egui::Color32, size: f32) -> egui::WidgetText {
+    egui::WidgetText::LayoutJob(std::sync::Arc::new(job_with_nums(text, color, size)))
+}
+
+/// A label whose trailing count uses VT323, e.g. `Backpack (5)`.
 pub fn counted_label(
     name: &str,
     count: usize,
     color: egui::Color32,
     size: f32,
 ) -> egui::WidgetText {
-    let mut job = egui::text::LayoutJob::default();
-    job.append(
-        name,
-        0.0,
-        egui::TextFormat {
-            font_id: egui::FontId::proportional(size),
-            color,
-            ..Default::default()
-        },
-    );
-    job.append(
-        &format!(" ({count})"),
-        0.0,
-        egui::TextFormat {
-            font_id: egui::FontId::monospace(size),
-            color,
-            ..Default::default()
-        },
-    );
-    egui::WidgetText::LayoutJob(std::sync::Arc::new(job))
+    text_with_nums(&format!("{name} ({count})"), color, size)
+}
+
+/// A label with every digit run in VT323 ([`text_with_nums`]).
+pub fn label_nums(
+    ui: &mut egui::Ui,
+    text: impl AsRef<str>,
+    color: egui::Color32,
+    size: f32,
+) -> egui::Response {
+    ui.add(egui::Label::new(text_with_nums(text.as_ref(), color, size)))
+}
+
+/// A pure-numeric label in VT323 ([`num`]).
+pub fn label_num(
+    ui: &mut egui::Ui,
+    text: impl Into<String>,
+    color: egui::Color32,
+    size: f32,
+) -> egui::Response {
+    ui.label(num(text, size).color(color))
+}
+
+/// Run `add` with the body/button font set to VT323 at `size`, for pure-number
+/// input widgets (`DragValue`, numeric `TextEdit`) that pick their font from the
+/// style.
+pub fn num_scope<R>(ui: &mut egui::Ui, size: f32, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    let mut style: egui::Style = (**ui.style()).clone();
+    style
+        .text_styles
+        .insert(egui::TextStyle::Body, egui::FontId::monospace(size));
+    style
+        .text_styles
+        .insert(egui::TextStyle::Button, egui::FontId::monospace(size));
+    ui.scope(|ui| {
+        ui.set_style(style);
+        add(ui)
+    })
+    .inner
 }

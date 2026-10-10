@@ -139,12 +139,7 @@ pub(crate) fn tree_card(
                             .color(accent),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(
-                            egui::RichText::new(tree_total.to_string())
-                                .strong()
-                                .size(13.0)
-                                .color(accent),
-                        );
+                        crate::ui::widgets::label_num(ui, tree_total.to_string(), accent, 13.0);
                     });
                 });
             });
@@ -240,11 +235,11 @@ pub(crate) fn skill_tile(ui: &mut egui::Ui, t: &TileState) -> egui::Response {
     } else {
         Tokens::TEXT
     };
-    let galley = painter.layout_no_wrap(
-        format!("{}/{}", t.grade, t.max),
-        egui::FontId::proportional(11.5),
+    let galley = painter.layout_job(crate::ui::widgets::job_with_nums(
+        &format!("{}/{}", t.grade, t.max),
         badge_color,
-    );
+        11.5,
+    ));
     let pad = egui::vec2(4.0, 2.0);
     let badge_size = galley.size() + pad * 2.0;
     let badge = egui::Rect::from_min_size(

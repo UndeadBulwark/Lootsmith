@@ -5,6 +5,7 @@ use eframe::egui;
 
 impl LootsmithApp {
     pub(crate) fn ui_ammo(&mut self, ui: &mut egui::Ui) {
+        let p = *theme::active(ui.ctx());
         // ---- SDU table (Black Market upgrades) ----
         theme::section(ui, "Storage Deck Upgrades (Black Market)");
         ui.add_space(4.0);
@@ -25,10 +26,11 @@ impl LootsmithApp {
                     .zip(self.sdus.iter_mut())
                     .enumerate()
                 {
-                    ui.label(format!("{} ({})", i + 1, name));
-                    if ui
-                        .add(egui::DragValue::new(level).range(0..=if i >= 7 { 9 } else { 127 }))
-                        .changed()
+                    crate::ui::widgets::label_nums(ui, format!("{} ({})", i + 1, name), p.fg, 15.0);
+                    if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(level).range(0..=if i >= 7 { 9 } else { 127 }))
+                    })
+                    .changed()
                     {
                         sdu_edit = Some((i + 1, *level));
                     }
@@ -38,24 +40,26 @@ impl LootsmithApp {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             ui.label("Backpack slots");
-            if ui
-                .add(
+            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                ui.add(
                     egui::DragValue::new(&mut self.backpack_slots)
                         .range(12..=255)
                         .speed(1.0),
                 )
-                .changed()
+            })
+            .changed()
             {
                 backpack_edit = Some(self.backpack_slots);
             }
             ui.label("Bank slots");
-            if ui
-                .add(
+            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                ui.add(
                     egui::DragValue::new(&mut self.bank_size)
                         .range(6..=255)
                         .speed(1.0),
                 )
-                .changed()
+            })
+            .changed()
             {
                 bank_edit = Some(self.bank_size);
             }
@@ -109,10 +113,14 @@ impl LootsmithApp {
                     ui.end_row();
                     for (i, pool) in self.ammo.iter_mut().enumerate() {
                         let row = i;
-                        ui.label(format!("{}", row + 1));
-                        ui.label(pool.label());
-                        ui.add(egui::DragValue::new(&mut pool.amount).speed(1.0));
-                        ui.add(egui::DragValue::new(&mut pool.upgrade_level).range(0..=10));
+                        crate::ui::widgets::label_num(ui, format!("{}", row + 1), p.fg, 15.0);
+                        crate::ui::widgets::label_nums(ui, pool.label(), p.fg, 15.0);
+                        crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                            ui.add(egui::DragValue::new(&mut pool.amount).speed(1.0))
+                        });
+                        crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                            ui.add(egui::DragValue::new(&mut pool.upgrade_level).range(0..=10))
+                        });
                         ui.end_row();
                         edits.push(PoolEdit {
                             pool: row,
