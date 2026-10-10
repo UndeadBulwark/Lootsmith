@@ -167,8 +167,8 @@ mod tests {
     /// parse as a protobuf message. Running it 200 times in one process
     /// exercises many random GUIDs.
     #[test]
-    fn json_round_trip_is_exact_over_200_saves() {
-        for i in 0..200 {
+    fn json_round_trip_is_exact_over_1000_random_guids() {
+        for i in 0..1000 {
             let save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
             let text = save_to_json(&save);
             let rebuilt = save_from_json(&text).expect("parse back");
@@ -178,6 +178,24 @@ mod tests {
                 "round trip {i} not exact"
             );
         }
+    }
+
+    /// The normal edit-and-save path is **protobuf only** — it never calls this
+    /// module. A scalar edit, the container round trip and a reparse leave the
+    /// protobuf payload byte-identical (no JSON involved). `savejson` is used
+    /// only by the `json`/`unjson` commands.
+    #[test]
+    fn normal_edit_and_save_is_protobuf_only() {
+        use crate::container::{serialize, unpack};
+        use crate::Platform;
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_i32(2, 61);
+        let proto = save.to_bytes();
+        let file = serialize(&proto, Platform::PC).expect("serialize");
+        let back = unpack(&file, Platform::PC).expect("reopen");
+        assert!(back.crc32_valid() && back.proto_stable() && back.huffman_stable());
+        assert_eq!(back.proto, proto, "the save path re-encoded the protobuf");
+        assert_eq!(back.save_game().expect("reparse").exp_level(), Some(61));
     }
 
     use super::{save_from_json, save_to_json};

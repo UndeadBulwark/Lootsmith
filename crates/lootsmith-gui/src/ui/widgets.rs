@@ -2,11 +2,19 @@
 
 use eframe::egui;
 
-/// Numeric text: **VT323** (the monospace family) at `size`. Use for **every**
-/// digit run so digits never render in the label font (Pixelify Sans' `5` reads
-/// as `S`). One size per context: body 15 px, tab labels / status 13 px.
+/// VT323 is rendered at `size * NUM_SCALE` so its cap height matches the
+/// surrounding Pixelify Sans at `size`. Measured by ink height: VT323 19 px ==
+/// Pixelify 15 px, so this is exactly the spec's "19 px" body-size equivalence.
+/// Without it, mixed text shows digits as small, low subscripts.
+pub const NUM_SCALE: f32 = 19.0 / 15.0;
+
+fn num_font(size: f32) -> egui::FontId {
+    egui::FontId::monospace(size * NUM_SCALE)
+}
+
+/// Numeric text: **VT323** at the cap height of `size` in the label font.
 pub fn num(text: impl Into<String>, size: f32) -> egui::RichText {
-    egui::RichText::new(text.into()).monospace().size(size)
+    egui::RichText::new(text.into()).font(num_font(size))
 }
 
 /// A layout with every **digit run** in VT323 and everything else in the label
@@ -20,7 +28,7 @@ pub fn job_with_nums(text: &str, color: egui::Color32, size: f32) -> egui::text:
             return;
         }
         let font_id = if digit {
-            egui::FontId::monospace(size)
+            num_font(size)
         } else {
             egui::FontId::proportional(size)
         };
@@ -143,10 +151,10 @@ pub fn num_scope<R>(ui: &mut egui::Ui, size: f32, add: impl FnOnce(&mut egui::Ui
     let mut style: egui::Style = (**ui.style()).clone();
     style
         .text_styles
-        .insert(egui::TextStyle::Body, egui::FontId::monospace(size));
+        .insert(egui::TextStyle::Body, num_font(size));
     style
         .text_styles
-        .insert(egui::TextStyle::Button, egui::FontId::monospace(size));
+        .insert(egui::TextStyle::Button, num_font(size));
     ui.scope(|ui| {
         ui.set_style(style);
         add(ui)

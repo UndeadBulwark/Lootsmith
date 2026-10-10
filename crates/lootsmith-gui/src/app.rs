@@ -376,6 +376,8 @@ pub struct LootsmithApp {
     /// UI scale: 1.0, 1.5 or 2.0 (spec §2.1 rule 7). Applied via
     /// `ctx.set_pixels_per_point`.
     pub ui_scale: f32,
+    /// Cached background dither texture, keyed by dark/light.
+    dither_tex: Option<(bool, egui::TextureHandle)>,
     /// There are edits in memory that have not been written to disk.
     pub dirty: bool,
     pub status: String,
@@ -464,6 +466,7 @@ impl LootsmithApp {
             theme: Theme::Dark,
             theme_applied: false,
             ui_scale: 1.0,
+            dither_tex: None,
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
@@ -553,6 +556,19 @@ impl LootsmithApp {
     /// Set the UI scale, clamped to the permitted values.
     pub fn set_ui_scale(&mut self, scale: f32) {
         self.ui_scale = Self::clamp_ui_scale(scale);
+    }
+
+    /// The cached background dither texture for the active theme (spec §2.5).
+    fn dither_handle(&mut self, ctx: &egui::Context, p: &theme::Palette) -> egui::TextureHandle {
+        let dark = self.theme == Theme::Dark;
+        if let Some((cached_dark, tex)) = &self.dither_tex {
+            if *cached_dark == dark {
+                return tex.clone();
+            }
+        }
+        let tex = crate::ui::pixel::dither_texture(ctx, p);
+        self.dither_tex = Some((dark, tex.clone()));
+        tex
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -2188,6 +2204,10 @@ impl LootsmithApp {
             });
 
         egui::CentralPanel::default().show(ui, |ui| {
+            // Spec §2.5: the background dither tile is painted over the central
+            // panel rect (content panels are drawn on top of it).
+            let tex = self.dither_handle(&ctx, p);
+            crate::ui::pixel::dither(ui.painter(), ui.max_rect(), &tex);
             if self.save_game.is_none() {
                 empty_state(ui);
                 return;

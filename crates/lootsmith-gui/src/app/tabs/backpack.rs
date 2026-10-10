@@ -44,13 +44,10 @@ impl LootsmithApp {
                         item_action = Some(ItemAction::SyncEquipped);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                            ui.add_sized(
-                                [220.0, 24.0],
-                                egui::TextEdit::singleline(&mut self.filter)
-                                    .hint_text("filter items…"),
-                            )
-                        });
+                        ui.add_sized(
+                            [220.0, 24.0],
+                            egui::TextEdit::singleline(&mut self.filter).hint_text("filter items…"),
+                        );
                     });
                 });
                 ui.add_space(4.0);
