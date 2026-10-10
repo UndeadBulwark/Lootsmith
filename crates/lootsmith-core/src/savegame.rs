@@ -1239,6 +1239,11 @@ impl SaveGame {
         save.set_i32(49, 0); // LastPlaythroughNumber
         save.set_bool(55, false); // AwesomeSkillDisabled
         save.set_i32(58, 0); // VehicleSteeringMode
+        let mut slots = Message::default(); // InventorySlotData (field 13)
+        slots.push(Field::varint(1, 12)); // backpack max
+        slots.push(Field::varint(2, 2)); // weapon ready max
+        slots.push(Field::varint(3, 2)); // quick slots flourished
+        save.message.set(Field::bytes(13, &slots.to_bytes()));
         save
     }
 
@@ -1619,5 +1624,155 @@ mod resource_tests {
         // The other entry is untouched.
         assert_eq!(reload[0].amount, 273.0);
         assert_eq!(reload[0].upgrade_level, 2);
+    }
+}
+
+/// The nine `BlackMarketUpgrades` (field 36) entries, in save order (0-based):
+/// seven ammo pools, then the backpack SDU (7) and the bank SDU (8).
+pub const BLACK_MARKET_KEYS: [&str; 9] = [
+    "Assault rifle",
+    "Pistol",
+    "Rocket launcher",
+    "Shotgun",
+    "SMG",
+    "Sniper rifle",
+    "Grenade",
+    "Backpack",
+    "Bank",
+];
+
+/// Vanilla SDU caps: ammo tops out at 7, backpack/bank at 9 (per the Black
+/// Market's own price ladder). Community edits go higher; the game clamps
+/// what it dislikes, but stay within these unless you know better.
+pub const SDU_LEVEL_MAX: [i32; 9] = [7, 7, 7, 7, 7, 7, 7, 9, 9];
+
+pub const BACKPACK_SLOT_BASE: i32 = 12;
+pub const BACKPACK_SLOTS_PER_SDU: i32 = 3;
+pub const BANK_SLOT_BASE: i32 = 6;
+pub const BANK_SLOTS_PER_SDU: i32 = 2;
+
+impl SaveGame {
+    /// `BlackMarketUpgrades` (field 36) as a list of SDU levels (0–…), padded
+    /// to nine entries.
+    pub fn black_market_upgrades(&self) -> [i32; 9] {
+        let values = self.get_int_list(36);
+        let mut out = [0i32; 9];
+        for (i, v) in out.iter_mut().enumerate() {
+            *v = values.get(i).copied().unwrap_or(0);
+        }
+        out
+    }
+
+    /// Replace the whole `BlackMarketUpgrades` list.
+    pub fn set_black_market_upgrades(&mut self, levels: &[i32; 9]) {
+        self.set_int_list(36, levels);
+    }
+
+    /// `InventorySlotData` (field 13): `(backpack max, weapon-ready max, quick
+    /// slots used)`; `None` when the field is missing.
+    pub fn inventory_slots(&self) -> Option<(i32, i32, i32)> {
+        let sub = self
+            .message
+            .get(13)
+            .and_then(|f| f.as_message().ok().flatten())?;
+        Some((
+            sub.get(1).and_then(|f| f.as_i32()).unwrap_or(0),
+            sub.get(2).and_then(|f| f.as_i32()).unwrap_or(0),
+            sub.get(3).and_then(|f| f.as_i32()).unwrap_or(0),
+        ))
+    }
+
+    /// Set the backpack's slot max (field 13's first int, keeping the rest);
+    /// creates the field when the save has none.
+    pub fn set_backpack_slot_max(&mut self, slots: i32) -> Result<()> {
+        let mut sub = self
+            .message
+            .get(13)
+            .and_then(|f| f.as_message().ok().flatten())
+            .unwrap_or_default();
+        sub.set(Field::varint(1, slots.max(0) as u64));
+        self.message.set(Field::bytes(13, &sub.to_bytes()));
+        Ok(())
+    }
+
+    /// Set one Black Market SDU level, with consistency writes: the backpack
+    /// SDU (index 7) rewrites `InventorySlotData`'s slot max (12 + 3·level),
+    /// and the bank SDU (index 8) rewrites `MaxBankSlots` (6 + 2·level).
+    pub fn set_sdu(&mut self, index: usize, level: i32) -> Result<()> {
+        if index >= 9 {
+            return Err(Error::Proto(format!("no SDU #{index}")));
+        }
+        let mut levels = self.black_market_upgrades();
+        levels[index] = level.max(0);
+        self.set_black_market_upgrades(&levels);
+        match index {
+            7 => self.set_backpack_slot_max(
+                BACKPACK_SLOT_BASE + BACKPACK_SLOTS_PER_SDU * levels[7].max(0),
+            )?,
+            8 => self.set_i32(56, BANK_SLOT_BASE + BANK_SLOTS_PER_SDU * levels[8].max(0)),
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Set every SDU to its vanilla cap and apply the consistent slot counts
+    /// (backpack 39, bank 24).
+    pub fn max_all_sdus(&mut self) -> Result<()> {
+        let mut levels = [0i32; 9];
+        for (i, level) in levels.iter_mut().enumerate() {
+            *level = SDU_LEVEL_MAX[i];
+        }
+        self.set_black_market_upgrades(&levels);
+        self.set_backpack_slot_max(
+            BACKPACK_SLOT_BASE + BACKPACK_SLOTS_PER_SDU * levels[7],
+        )?;
+        self.set_i32(56, BANK_SLOT_BASE + BANK_SLOTS_PER_SDU * levels[8]);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod sdu_tests {
+    use super::*;
+
+    #[test]
+    fn sdu_edits_keep_sizes_consistent() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_i32(56, 6);
+
+        save.set_sdu(7, 5).expect("backpack sdu");
+        assert_eq!(save.black_market_upgrades()[7], 5);
+        assert_eq!(save.inventory_slots().map(|i| i.0), Some(27), "12 + 3·5");
+
+        save.set_sdu(8, 7).expect("bank sdu");
+        assert_eq!(save.black_market_upgrades()[8], 7);
+        assert_eq!(save.max_bank_slots(), Some(20), "6 + 2·7");
+
+        // Untouched entries stay zero; untouched sizes unchanged.
+        assert_eq!(save.black_market_upgrades()[0], 0);
+        assert_eq!(save.inventory_slots().map(|i| i.1), Some(2), "weapon-ready untouched");
+    }
+
+    #[test]
+    fn max_all_sdus_hits_vanilla_caps() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.max_all_sdus().expect("max");
+        let levels = save.black_market_upgrades();
+        assert_eq!(levels[..7], [7; 7]);
+        assert_eq!(levels[7], 9);
+        assert_eq!(levels[8], 9);
+        assert_eq!(save.inventory_slots().map(|i| i.0), Some(39));
+        assert_eq!(save.max_bank_slots(), Some(24));
+    }
+
+    #[test]
+    fn round_trip_preserves_the_list_shape() {
+        // A real-shaped save must survive a max-all write + reparse.
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        save.set_i32(7, 72);
+        save.max_all_sdus().expect("max");
+        let bytes = save.to_bytes();
+        let parsed = SaveGame::parse(&bytes).expect("reparse");
+        assert_eq!(parsed.black_market_upgrades(), save.black_market_upgrades());
     }
 }

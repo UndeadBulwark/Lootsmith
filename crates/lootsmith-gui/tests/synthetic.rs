@@ -7,7 +7,10 @@ use lootsmith_core::fixture;
 use lootsmith_gui::app::LootsmithApp;
 
 fn harness_with_synthetic() -> Harness<'static, LootsmithApp> {
-    let path = std::env::temp_dir().join("lootsmith-synthetic.sav");
+    static COUNTER: std::sync::atomic::AtomicUsize =
+        std::sync::atomic::AtomicUsize::new(0);
+    let unique = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let path = std::env::temp_dir().join(format!("lootsmith-synthetic-{unique}.sav"));
     let file = fixture::write_synthetic_save(&path).expect("synthetic save");
     let save = file.save_game().expect("parse");
     assert_eq!(save.exp_level(), Some(40));
@@ -89,5 +92,45 @@ fn ammo_tab_edits_pool_amounts() {
     assert_eq!(pools.len(), 3);
     assert_eq!(pools[0].amount, 999.0, "amount edited");
     assert_eq!(pools[0].upgrade_level, 4, "sdu edited");
+    let _ = std::fs::remove_file(&out);
+}
+
+#[test]
+fn sdu_edits_and_max_all_stay_consistent() {
+    let mut h = harness_with_synthetic();
+    h.run();
+    h.get_by_label("Ammo").click();
+    h.run();
+    assert_eq!(h.state().sdus, [0; 9], "the synthetic save starts un-upgraded");
+
+    // Consistent per-SDU edit: the backpack grows to 12 + 3·2 = 18.
+    h.state_mut().set_sdu(8, 2);
+    h.run();
+    assert_eq!(h.state().sdus[7], 2);
+    assert_eq!(h.state().backpack_slots, 18);
+    assert_eq!(h.state().bank_size, 6, "bank untouched");
+
+    // Slot-size edits derive the SDU level the other way.
+    h.state_mut().set_bank_size(24);
+    h.run();
+    assert_eq!(h.state().sdus[8], 9);
+    assert_eq!(h.state().bank_size, 24);
+
+    h.state_mut().max_all_sdus();
+    h.run();
+    let out = std::env::temp_dir().join("lootsmith-synthetic-sdus.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = lootsmith_core::container::unpack(
+        &std::fs::read(&out).expect("read edited save"),
+        lootsmith_core::Platform::PC,
+    )
+    .expect("reparse");
+    let save = reopened.save_game().expect("save game");
+    let levels = save.black_market_upgrades();
+    assert_eq!(levels[..7], [7; 7]);
+    assert_eq!(levels[7], 9);
+    assert_eq!(levels[8], 9);
+    assert_eq!(save.inventory_slots().map(|i| i.0), Some(39));
+    assert_eq!(save.max_bank_slots(), Some(24));
     let _ = std::fs::remove_file(&out);
 }

@@ -24,6 +24,7 @@ fn usage() -> ExitCode {
                           [--unlock-customizations] [--out OUT]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith ammo    <file.sav> [--platform <id>]\n  \
+         lootsmith sdus    <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
          lootsmith vehicles <file.sav> [--customizations FILE]\n  \
          lootsmith missions <file.sav> [--missions-json FILE]\n  \
@@ -33,6 +34,8 @@ fn usage() -> ExitCode {
          lootsmith edit    <file.sav> [--travel-add NAME] [--travel-remove NAME] [--travel-last NAME] [--out OUT]\n  \
          lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --ammo N [--amount F] [--sdu N] [--out OUT]\n  \
+         lootsmith edit    <file.sav> --market NAME --sdu-level L [--max-sdus] --out OUT\n  \
+         lootsmith edit    <file.sav> [--backpack-slots S] [--bank-size S] --out OUT\n  \
          lootsmith edit    <file.sav> [--plot-mission N] [--active-mission N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --mission-playthrough P --mission-index I --mission-status NAME [--out OUT]\n\
          \n\
@@ -86,6 +89,11 @@ struct Args {
     ammo: Option<usize>,
     amount: Option<f32>,
     sdu: Option<i32>,
+    sdu_level: Option<i32>,
+    market: Option<String>,
+    backpack_slots: Option<i32>,
+    bank_slots_flag: Option<i32>,
+    max_sdus: bool,
     badass_rank: Option<i64>,
     badass_tokens: Option<i64>,
     unlock_customizations: bool,
@@ -156,6 +164,11 @@ fn parse_args() -> Option<Args> {
         ammo: None,
         amount: None,
         sdu: None,
+        sdu_level: None,
+        market: None,
+        backpack_slots: None,
+        bank_slots_flag: None,
+        max_sdus: false,
         badass_rank: None,
         badass_tokens: None,
         unlock_customizations: false,
@@ -200,6 +213,11 @@ fn parse_args() -> Option<Args> {
             "--ammo" => args.ammo = Some(it.next()?.parse().ok()?),
             "--amount" => args.amount = Some(it.next()?.parse().ok()?),
             "--sdu" => args.sdu = Some(it.next()?.parse().ok()?),
+            "--sdu-level" => args.sdu_level = Some(it.next()?.parse().ok()?),
+            "--market" => args.market = Some(it.next()?),
+            "--backpack-slots" => args.backpack_slots = Some(it.next()?.parse().ok()?),
+            "--bank-size" => args.bank_slots_flag = Some(it.next()?.parse().ok()?),
+            "--max-sdus" => args.max_sdus = true,
             "--badass-rank" => args.badass_rank = Some(it.next()?.parse().ok()?),
             "--badass-tokens" => args.badass_tokens = Some(it.next()?.parse().ok()?),
             "--unlock-customizations" => args.unlock_customizations = true,
@@ -791,6 +809,28 @@ fn main() -> ExitCode {
             println!("total: {} pools", resources.len());
             ExitCode::SUCCESS
         }
+        "sdus" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let levels = save_game.black_market_upgrades();
+            for (i, (name, level)) in lootsmith_core::savegame::BLACK_MARKET_KEYS
+                .iter()
+                .zip(levels.iter())
+                .enumerate()
+            {
+                println!("#{} {:16} level={}", i + 1, name, level);
+            }
+            if let Some(slots) = save_game.inventory_slots() {
+                println!("backpack max = {} slots; weapon-ready = {}; quick = {}", slots.0, slots.1, slots.2);
+            }
+            println!("MaxBankSlots = {:?}", save_game.max_bank_slots());
+            ExitCode::SUCCESS
+        }
         "skills" => {
             let save_game = match save.save_game() {
                 Ok(s) => s,
@@ -1108,6 +1148,46 @@ fn main() -> ExitCode {
                 save_game.set_vehicle_steering_mode(mode);
                 println!("vehicle steering mode = {mode}");
                 changes += 1;
+            }
+            if args.max_sdus {
+                for (index, cap) in lootsmith_core::savegame::SDU_LEVEL_MAX.iter().enumerate() {
+                    save_game.set_sdu(index, *cap).expect("max sdu");
+                }
+                println!("all SDUs maxed (ammo 7 / backpack 9 = 39 slots / bank 9 = 24 slots)");
+                changes += 1;
+            }
+            if let Some(slots) = args.backpack_slots {
+                let sdus = ((slots - 12) as f32 / 3.0).ceil().max(0.0) as i32;
+                let slots = 12 + sdus * 3;
+                save_game.set_sdu(7, sdus).expect("backpack sdu");
+                println!("backpack = {slots} slots (SDU level {sdus})");
+                changes += 1;
+            }
+            if let Some(slots) = args.bank_slots_flag {
+                let sdus = ((slots - 6) as f32 / 2.0).ceil().clamp(0.0, 255.0) as i32;
+                let slots = 6 + sdus * 2;
+                save_game.set_sdu(8, sdus).expect("bank sdu");
+                println!("bank = {slots} slots (SDU level {sdus})");
+                changes += 1;
+            }
+            if let Some(name) = args.market.clone() {
+                let Some(level) = args.sdu_level else {
+                    eprintln!("error: --market NAME needs --sdu-level L");
+                    return ExitCode::FAILURE;
+                };
+                let keys = lootsmith_core::savegame::BLACK_MARKET_KEYS;
+                let position = keys.iter().position(|k| k.eq_ignore_ascii_case(&name));
+                let index = position
+                    .or_else(|| name.parse::<usize>().ok().map(|one| one.max(1) - 1));
+                match index {
+                    Some(index) if index < keys.len() => {
+                        save_game.set_sdu(index, level).expect("sdu");
+                        println!("{} SDU = level {level}", keys[index]);
+                        changes += 1;
+                    }
+                    Some(_) => eprintln!("error: SDU index out of range (use 1..9)"),
+                    None => eprintln!("error: unknown SDU '{name}' (use one of {keys:?} or 1..9)"),
+                }
             }
             if let Some(pool) = args.ammo {
                 let index = pool.max(1) - 1; // `--ammo` takes the 1-based list number

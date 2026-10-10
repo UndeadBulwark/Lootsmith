@@ -5,6 +5,82 @@ use crate::app::*;
 
 impl LootsmithApp {
     pub(crate) fn ui_ammo(&mut self, ui: &mut egui::Ui) {
+        // ---- SDU table (Black Market upgrades) ----
+        theme::section(ui, "Storage Deck Upgrades (Black Market)");
+        ui.add_space(4.0);
+        let mut max_all = false;
+        let mut sdu_edit: Option<(usize, i32)> = None;
+        let mut backpack_edit: Option<i32> = None;
+        let mut bank_edit: Option<i32> = None;
+        egui::Grid::new("sdu_grid")
+            .num_columns(2)
+            .striped(true)
+            .spacing([20.0, 6.0])
+            .show(ui, |ui| {
+                ui.strong("Upgrade");
+                ui.strong("Level");
+                ui.end_row();
+                for (i, (name, level)) in lootsmith_core::savegame::BLACK_MARKET_KEYS
+                    .iter()
+                    .zip(self.sdus.iter_mut())
+                    .enumerate()
+                {
+                    ui.label(format!("{} ({})", i + 1, name));
+                    if ui
+                        .add(
+                            egui::DragValue::new(level)
+                                .range(0..=if i >= 7 { 9 } else { 127 }),
+                        )
+                        .changed()
+                    {
+                        sdu_edit = Some((i + 1, *level));
+                    }
+                    ui.end_row();
+                }
+            });
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.label("Backpack slots");
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.backpack_slots)
+                        .range(12..=255)
+                        .speed(1.0),
+                )
+                .changed()
+            {
+                backpack_edit = Some(self.backpack_slots);
+            }
+            ui.label("Bank slots");
+            if ui
+                .add(egui::DragValue::new(&mut self.bank_size).range(6..=255).speed(1.0))
+                .changed()
+            {
+                bank_edit = Some(self.bank_size);
+            }
+            if ui
+                .button("Max all SDUs")
+                .on_hover_text("Ammo to 7; backpack 39; bank 24 (vanilla caps)")
+                .clicked()
+            {
+                max_all = true;
+            }
+        });
+        if let Some((pool, level)) = sdu_edit {
+            self.set_sdu(pool, level);
+        }
+        if let Some(slots) = backpack_edit {
+            self.set_backpack_slots(slots);
+        }
+        if let Some(slots) = bank_edit {
+            self.set_bank_size(slots);
+        }
+        if max_all {
+            self.max_all_sdus();
+        }
+        ui.add_space(10.0);
+
+        // ---- ammo pools ----
         if self.ammo.is_empty() {
             theme::muted(ui, "No ammo pools in this save.");
             return;

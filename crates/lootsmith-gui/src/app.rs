@@ -328,6 +328,12 @@ pub struct LootsmithApp {
     /// Ammo/resource pools (field 11) and their origin snapshot.
     pub ammo: Vec<Resource>,
     ammo_orig: Vec<(f32, i32)>,
+    /// Black Market SDU levels (field 36), mirrored for editing.
+    pub sdus: [i32; 9],
+    sdu_orig: [i32; 9],
+    /// Desired backpack/bank slot sizes (consistent with `sdus`)
+    pub backpack_slots: i32,
+    pub bank_size: i32,
     /// Missions (field 18) and challenge list (field 38).
     pub mission_rows: Vec<MissionRow>,
     pub plot_mission: i32,
@@ -401,6 +407,10 @@ impl LootsmithApp {
             dlc_titles: None,
             ammo: Vec::new(),
             ammo_orig: Vec::new(),
+            sdus: [0; 9],
+            sdu_orig: [0; 9],
+            backpack_slots: 12,
+            bank_size: 6,
             mission_rows: Vec::new(),
             plot_mission: 0,
             active_mission: 0,
@@ -550,6 +560,7 @@ impl LootsmithApp {
         self.refresh_travel();
         self.refresh_vehicles();
         self.refresh_ammo();
+        self.refresh_sdus();
         self.refresh_missions();
         self.refresh_raw();
         self.dirty = false;
@@ -789,6 +800,85 @@ impl LootsmithApp {
     }
 
     /// Snapshot the ammo pools (field 11).
+    pub(crate) fn refresh_sdus(&mut self) {
+        let levels = self
+            .save_game
+            .as_ref()
+            .map(SaveGame::black_market_upgrades)
+            .unwrap_or([0; 9]);
+        self.sdus = levels;
+        self.sdu_orig = levels;
+        let (backpack, ..) = self
+            .save_game
+            .as_ref()
+            .and_then(SaveGame::inventory_slots)
+            .unwrap_or((12, 0, 0));
+        self.backpack_slots = backpack;
+        self.bank_size = self
+            .save_game
+            .as_ref()
+            .and_then(SaveGame::max_bank_slots)
+            .unwrap_or(6);
+        // The form drives MaxBankSlots (56) on save; keep it in sync so the
+        // SDU editors' writes survive `apply_form`.
+        self.form.bank_slots = self.bank_size;
+    }
+
+    /// Set one SDU level (1-based `pool`), consistent slot counts included.
+    pub fn set_sdu(&mut self, pool: usize, level: i32) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        if let Err(e) = save_game.set_sdu(pool.max(1) - 1, level) {
+            self.status = format!("sdu error: {e}");
+            return;
+        }
+        self.refresh_sdus();
+        self.dirty = true;
+    }
+
+    /// Set the backpack's slot size, deriving the SDU level (12 + 3/level).
+    pub fn set_backpack_slots(&mut self, slots: i32) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let sdus = ((slots as f32 - 12.0) / 3.0).ceil().max(0.0) as i32;
+        if let Err(e) = save_game.set_sdu(7, sdus) {
+            self.status = format!("sdu error: {e}");
+            return;
+        }
+        self.refresh_sdus();
+        self.dirty = true;
+    }
+
+    /// Set the bank's slot size, deriving the SDU level (6 + 2/level).
+    pub fn set_bank_size(&mut self, slots: i32) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let sdus = ((slots as f32 - 6.0) / 2.0).ceil().clamp(0.0, 255.0) as i32;
+        if let Err(e) = save_game.set_sdu(8, sdus) {
+            self.status = format!("sdu error: {e}");
+            return;
+        }
+        self.refresh_sdus();
+        self.dirty = true;
+    }
+
+    /// Set every SDU to its vanilla cap (backpack 39, bank 24).
+    pub fn max_all_sdus(&mut self) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        if let Err(e) = save_game.max_all_sdus() {
+            self.status = format!("sdu error: {e}");
+            return;
+        }
+        self.refresh_sdus();
+        self.dirty = true;
+        self.status = "all SDUs maxed (backpack 39, bank 24)".into();
+    }
+
     pub(crate) fn refresh_ammo(&mut self) {
         self.ammo = self
             .save_game
