@@ -17,6 +17,7 @@ pub(crate) use std::path::PathBuf;
 pub(crate) use std::sync::Arc;
 
 pub(crate) use crate::theme;
+use crate::ui::widgets::Glyph;
 pub(crate) use egui_extras::{Column, TableBuilder};
 
 pub use crate::theme::Theme;
@@ -2121,13 +2122,11 @@ impl LootsmithApp {
                 });
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
+                    let loaded = self.save_game.is_some();
                     status_dot(
                         ui,
-                        if self.save_game.is_some() {
-                            p.gold
-                        } else {
-                            p.dim
-                        },
+                        if loaded { Glyph::Check } else { Glyph::Ring },
+                        if loaded { p.gold } else { p.dim },
                     );
                     ui.label(egui::RichText::new("Save file").color(p.dim).size(11.5));
                     crate::ui::widgets::num_scope(ui, 15.0, |ui| {
@@ -2138,13 +2137,11 @@ impl LootsmithApp {
                         )
                     });
                     toolbar_sep(ui);
+                    let data = self.manager.is_some();
                     status_dot(
                         ui,
-                        if self.manager.is_some() {
-                            p.gold
-                        } else {
-                            p.dng
-                        },
+                        if data { Glyph::Check } else { Glyph::Cross },
+                        if data { p.gold } else { p.dng },
                     );
                     ui.label(egui::RichText::new("Game data").color(p.dim).size(11.5));
                     crate::ui::widgets::num_scope(ui, 15.0, |ui| {
@@ -2177,7 +2174,11 @@ impl LootsmithApp {
             )
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    status_dot(ui, if self.dirty { p.acc } else { p.gold });
+                    status_dot(
+                        ui,
+                        if self.dirty { Glyph::Dot } else { Glyph::Check },
+                        if self.dirty { p.acc } else { p.gold },
+                    );
                     ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
                         &self.status,
                         p.fg,

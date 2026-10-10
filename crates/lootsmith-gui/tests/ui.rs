@@ -616,6 +616,37 @@ fn ui_scale_setter_clamps() {
 }
 
 #[test]
+fn apply_item_button_appears_only_with_pending_edits() {
+    let mut h = harness_isolated(&synthetic_save_path());
+    h.run();
+    h.get_by_label("Backpack (5)").click();
+    h.run();
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    assert!(
+        h.query_by_label("Apply item changes").is_none(),
+        "no pending edits -> no button"
+    );
+
+    // Make a part edit through the programmatic path the dropdown uses.
+    let _ = h
+        .state_mut()
+        .set_selected_part("barrel", "GD_Weap_Pistol.Barrel.Pistol_Barrel_Dahl");
+    h.run();
+    assert!(
+        h.query_by_label("Apply item changes").is_some(),
+        "pending edit -> button appears"
+    );
+
+    h.get_by_label("Apply item changes").click();
+    h.run();
+    assert!(
+        h.query_by_label("Apply item changes").is_none(),
+        "after apply -> button disappears"
+    );
+}
+
+#[test]
 fn require_fixtures_is_off_by_default_here() {
     // The suite must need no external data: the synthetic save plus the bundled
     // tables are always enough (a clean clone with no fixtures still tests).

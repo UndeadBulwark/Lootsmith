@@ -342,6 +342,9 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
         style.spacing.item_spacing = egui::vec2(8.0, 6.0);
         style.spacing.button_padding = egui::vec2(10.0, 4.0);
         style.spacing.interact_size.y = 26.0;
+        // Spec §2.1.1: no gradients. egui fades the edges of a scroll area with
+        // a gradient mesh; disable it (strength 0.0 = off).
+        style.spacing.scroll.fade.strength = 0.0;
         // Spec §2.4: 15 px body, 13 px small labels, 18–24 px headings; VT323 at
         // 19 px for numbers and item codes.
         style.text_styles.insert(

@@ -287,10 +287,14 @@ pub(crate) fn toolbar_sep(ui: &mut egui::Ui) {
     ui.add_space(4.0);
 }
 
-/// A filled status dot.
-pub(crate) fn status_dot(ui: &mut egui::Ui, color: egui::Color32) {
-    let (rect, _) = ui.allocate_exact_size(egui::vec2(9.0, 9.0), egui::Sense::hover());
-    ui.painter().circle_filled(rect.center(), 4.0, color);
+/// A status glyph (shape carries the meaning too, not just colour).
+pub(crate) fn status_dot(
+    ui: &mut egui::Ui,
+    glyph: crate::ui::widgets::Glyph,
+    color: egui::Color32,
+) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+    crate::ui::widgets::paint_glyph(ui.painter(), rect.center(), glyph, color, 1.0);
 }
 
 /// A grouped surface card of a fixed width.

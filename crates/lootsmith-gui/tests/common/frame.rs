@@ -151,3 +151,68 @@ pub const SCREENS: [Tab; 13] = [
     Tab::Raw,
     Tab::About,
 ];
+
+/// The design's hard rules (spec §2.1), scanned from a frame's shapes: no
+/// gradient meshes (shadows and the scroll-area fade are meshes whose vertices
+/// differ in colour) and no non-integer physical border widths. Rounded
+/// rectangles are **not** checked yet — `card`/`tree_card`/`skill_tile` still use
+/// `CornerRadius`, and step (d) replaces them with notched primitives.
+pub fn rule_violations(output: &egui::FullOutput, ppp: f32) -> Vec<String> {
+    use egui::Shape;
+    let mut out = Vec::new();
+    let mut gradient = 0usize;
+    let mut borders = 0usize;
+    for cs in &output.shapes {
+        match &cs.shape {
+            Shape::Mesh(mesh) => {
+                let colours: std::collections::HashSet<(u8, u8, u8)> = mesh
+                    .vertices
+                    .iter()
+                    .map(|v| (v.color.r(), v.color.g(), v.color.b()))
+                    .collect();
+                if colours.len() > 1 {
+                    gradient += 1;
+                }
+            }
+            Shape::Rect(r) => {
+                let w = r.stroke.width * ppp;
+                if (w - w.round()).abs() > 1e-3 {
+                    borders += 1;
+                }
+            }
+            Shape::Path(p) => {
+                let w = p.stroke.width * ppp;
+                if (w - w.round()).abs() > 1e-3 {
+                    borders += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    if gradient > 0 {
+        out.push(format!("{gradient} gradient mesh(es)"));
+    }
+    if borders > 0 {
+        out.push(format!("{borders} non-integer border width(s)"));
+    }
+    out
+}
+
+/// Rule violations for one rendered screen.
+pub fn screen_rule_violations(tab: Tab, theme: Theme) -> Vec<String> {
+    let save = super::synthetic_save_path();
+    let mut h = super::harness_isolated(&save);
+    h.state_mut().set_theme(theme);
+    h.state_mut().set_tab(tab);
+    match tab {
+        Tab::Backpack => {
+            h.state_mut().select_entry(Container::BackpackWeapon, 0);
+        }
+        Tab::Bank => {
+            h.state_mut().select_entry(Container::Bank, 0);
+        }
+        _ => {}
+    }
+    h.run();
+    rule_violations(h.output(), 1.0)
+}

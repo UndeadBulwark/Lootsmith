@@ -82,6 +82,60 @@ pub fn label_num(
     ui.label(num(text, size).color(color))
 }
 
+/// A distinct status glyph, so state is readable by shape as well as colour.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Glyph {
+    /// OK / loaded.
+    Check,
+    /// Missing / error.
+    Cross,
+    /// Unsaved / dirty.
+    Dot,
+    /// Inactive / neutral.
+    Ring,
+}
+
+/// Paint a [`Glyph`] centred on `center` (about 12x12 px at `scale` 1.0).
+pub fn paint_glyph(
+    painter: &egui::Painter,
+    center: egui::Pos2,
+    glyph: Glyph,
+    color: egui::Color32,
+    scale: f32,
+) {
+    let width = (2.0 * scale).round().max(1.0);
+    let stroke = egui::Stroke::new(width, color);
+    match glyph {
+        Glyph::Dot => {
+            painter.circle_filled(center, 3.2 * scale, color);
+        }
+        Glyph::Ring => {
+            painter.circle_stroke(center, 3.2 * scale, stroke);
+        }
+        Glyph::Check => {
+            painter.add(egui::Shape::line(
+                vec![
+                    center + egui::vec2(-4.0 * scale, 0.5 * scale),
+                    center + egui::vec2(-1.2 * scale, 3.4 * scale),
+                    center + egui::vec2(4.0 * scale, -3.6 * scale),
+                ],
+                stroke,
+            ));
+        }
+        Glyph::Cross => {
+            let s = 3.4 * scale;
+            painter.line_segment(
+                [center + egui::vec2(-s, -s), center + egui::vec2(s, s)],
+                stroke,
+            );
+            painter.line_segment(
+                [center + egui::vec2(-s, s), center + egui::vec2(s, -s)],
+                stroke,
+            );
+        }
+    }
+}
+
 /// Run `add` with the body/button font set to VT323 at `size`, for pure-number
 /// input widgets (`DragValue`, numeric `TextEdit`) that pick their font from the
 /// style.
