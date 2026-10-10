@@ -233,7 +233,7 @@ mod tests {
                 "GD_Weap_Pistol.A_Weapons.Pistol_Dahl_4_VeryRare",
                 Rarity::VeryRare,
             ),
-            ("GD_Weap_Pistol.A_Weapons.Pistol_Dahl", Rarity::Unknown),
+            ("GD_Weap_Pistol.A_Weapons.Pistol_Dahl", Rarity::Common),
             (
                 "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Dahl_5_Emperor",
                 Rarity::Legendary,

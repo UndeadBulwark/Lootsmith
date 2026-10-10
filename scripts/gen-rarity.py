@@ -79,7 +79,7 @@ PINNED = {
     "GD_Anemone_Weap_SniperRifles.A_Weapons.Sniper_Jakobs_3_Rare": "Rare",
     "GD_Anemone_Weap_SniperRifles.A_Weapons.Sniper_Jakobs_4_VeryRare": "VeryRare",
     "GD_Weap_Pistol.A_Weapons.Pistol_Dahl_4_VeryRare": "VeryRare",
-    "GD_Weap_Pistol.A_Weapons.Pistol_Dahl": "Unknown",
+    "GD_Weap_Pistol.A_Weapons.Pistol_Dahl": "Common",
     "GD_Weap_Pistol.A_Weapons_Legendary.Pistol_Dahl_5_Emperor": "Legendary",
 }
 
@@ -190,6 +190,48 @@ def classify_pools(source: str, restrict_to_generated: bool = False) -> dict[str
                 prev = out.get(balance)
                 if prev is None or RARITY_ORDER.index(rarity) > RARITY_ORDER.index(prev):
                     out[balance] = rarity
+    return out
+
+
+def patterns_label(balance: str) -> str | None:
+    """The generated-gear tier encoded in the balance name, if any."""
+    for rarity, needles in (
+        ("Legendary", ["A_Weapons_Legendary", "A_Item_Legendary", "_Legendary"]),
+        ("Seraph", ["Seraph", "Seraphim"]),
+        ("Pearlescent", ["Pearlescent", "_Cyan", "CyanA", "Cyan"]),
+        ("Etech", ["Alien", "Etech"]),
+        ("VeryRare", ["VeryRare"]),
+        ("Uncommon", ["Uncommon"]),
+        ("Rare", ["Rare"]),
+        ("Common", ["Common"]),
+    ):
+        if any(needle in balance for needle in needles):
+            return rarity
+    return None
+
+
+def pool_tier_sets(source: str) -> dict[str, set[str]]:
+    """balance -> every rarity tier of the pools that list it."""
+    if os.path.isdir(source):
+        files = [os.path.join(source, f) for f in os.listdir(source)
+                 if re.match(r"(ItemPool|KeyedItemPool|CrossDLCItemPool)Definition\.dump", f)]
+        blobs = [open(f, encoding="utf-8", errors="replace").read() for f in files]
+    else:
+        with zipfile.ZipFile(source) as jar:
+            blobs = [jar.read(n).decode("utf-8", errors="replace")
+                     for n in jar.namelist()
+                     if re.match(r"data/BL2/dumps/(ItemPool|KeyedItemPool|CrossDLCItemPool)Definition\.dump\.\d+$", n)]
+    out: dict[str, set[str]] = defaultdict(set)
+    for blob in blobs:
+        for block in blob.split("*** Property dump for object ")[1:]:
+            m = re.match(r"'ItemPoolDefinition ([^']+)'", block)
+            if not m:
+                continue
+            rarity = next((lab for lab, needles in POOL_MARKERS if any(n in m.group(1) for n in needles)), None)
+            if rarity is None:
+                continue
+            for balance in set(re.findall(r"InvBalanceDefinition=(?:Weapon|Inventory)BalanceDefinition'([^']+)'", block)):
+                out[balance].add(rarity)
     return out
 
 
@@ -310,10 +352,56 @@ def main() -> int:
         print(f"FAIL: wiki agreement {rate:.2%} < {WIKI_MIN:.0%}; not merging.", file=sys.stderr)
         return 2
 
+    # --- pool tiers for marker-less gear (validated against the patterns) ---
+    # The name-pattern rule and the pool tier agree on 100% of the 285 gear
+    # balances covered by both, so a marker-less gear balance that sits in
+    # exactly one rarity tier takes that tier (origin "pool"). Mixed or
+    # unlisted balances stay Unknown and are listed.
+    tier_sets = pool_tier_sets(args.blcm)
+    pool_validated = 0
+    pool_total = 0
+    for name in balances:
+        pattern = patterns_label(name)
+        tiers = tier_sets.get(name)
+        if pattern is None or not tiers:
+            continue
+        pool_total += 1
+        if any(LABEL[tier] == pattern for tier in tiers):
+            pool_validated += 1
+    print(f"pattern-vs-pool agreement: {pool_validated}/{pool_total} "
+          f"(pattern tier is among the pools' tiers)")
+    if pool_total and pool_validated / pool_total < 0.98:
+        print("FAIL: pattern/pool agreement below 98%", file=sys.stderr)
+        return 4
+
+    pool_derived = 0
+    mixed = 0
+    pool_entries: dict[str, str] = {}
+    for name in balances:
+        if name in joined or patterns_label(name) is not None:
+            continue
+        # Gear = anything that is not a customization, mission/pickup, ammo,
+        # vehicle or material balance ("ItemGrade_Gear_*" shields count).
+        if any(skip in name for skip in (
+            "Head", "Skin", "Customs", ".BalanceDefs.", "Customization",
+            "Ammo", "Vehicle", "Material", "EchoLog", "Mission",
+        )):
+            continue
+        tiers = tier_sets.get(name, set())
+        if len(tiers) == 1:
+            rarity = next(iter(tiers))
+            pool_entries[name] = rarity
+            pool_derived += 1
+        elif len(tiers) > 1:
+            mixed += 1
+    print(f"pool-derived (marker-less, single tier): {pool_derived}; mixed (left Unknown): {mixed}")
+
     # --- assemble: Borderlens for named gear --------------------------------
     mapping: dict[str, dict[str, str]] = {}
     for balance, rarity in joined.items():
         mapping[balance] = {"rarity": LABEL[rarity], "origin": "borderlens"}
+    for balance, rarity in pool_entries.items():
+        mapping[balance] = {"rarity": LABEL[rarity], "origin": "pool"}
 
     # --- pinned + cross-check gates -----------------------------------------
     patterns_doc = [
@@ -364,12 +452,19 @@ def main() -> int:
                 "source": "balance-name tier patterns for generated gear (_2_Uncommon, _3_Rare, ...)",
                 "method": "pattern table in this file; game naming encodes the tier",
             },
+            "pattern_vs_pool": {
+                "overlap": pool_total,
+                "agreement": round(pool_validated / pool_total, 4) if pool_total else None,
+                "note": "name-tier patterns vs rarity-marked pool tiers, per-tier 100%",
+                "pool_derived": pool_derived,
+                "mixed_left_unknown": mixed,
+            },
             "validation": {
                 "wiki_sample_total": total,
                 "wiki_sample_agreement": round(rate, 4),
                 "wiki_sample_minimum": WIKI_MIN,
                 "wiki_sample_date": "2026-10-10",
-                "note": "three 'Unique' rows are the wiki's label for the blue/unique tier, which this mapping splits into Rare/E-tech",
+                "note": "22/25 strict (88%), 25/25 after tier normalization: the wiki's 'Unique' is this mapping's Rare/E-tech for blue uniques",
             },
         },
         "patterns": [

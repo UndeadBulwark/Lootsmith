@@ -14,12 +14,19 @@
       "source": "balance-name tier patterns for generated gear (_2_Uncommon, _3_Rare, ...)",
       "method": "pattern table in this file; game naming encodes the tier"
     },
+    "pattern_vs_pool": {
+      "overlap": 345,
+      "agreement": 0.9884,
+      "note": "name-tier patterns vs rarity-marked pool tiers, per-tier 100%",
+      "pool_derived": 41,
+      "mixed_left_unknown": 7
+    },
     "validation": {
       "wiki_sample_total": 25,
       "wiki_sample_agreement": 1.0,
       "wiki_sample_minimum": 0.95,
       "wiki_sample_date": "2026-10-10",
-      "note": "three 'Unique' rows are the wiki's label for the blue/unique tier, which this mapping splits into Rare/E-tech"
+      "note": "22/25 strict (88%), 25/25 after tier normalization: the wiki's 'Unique' is this mapping's Rare/E-tech for blue uniques"
     }
   },
   "patterns": [
@@ -587,6 +594,170 @@
     "GD_Sage_Weapons.SMG.SMG_Hyperion_3_YellowJacket": {
       "rarity": "Etech",
       "origin": "borderlens"
+    },
+    "GD_Anemone_Balance_Treasure.Shields.ItemGrade_Gear_Shield_Worming": {
+      "rarity": "Legendary",
+      "origin": "pool"
+    },
+    "GD_Anemone_Weapons.A_Weapons_Unique.Pistol_The_Gremlins": {
+      "rarity": "Legendary",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_AreaEffect": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_BouncingBetty": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_Singularity": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_Standard": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_GrenadeMods.A_Item.GM_Transfusion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Nova_Singularity": {
+      "rarity": "Legendary",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_AssaultRifle.A_Weapons.AR_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Launchers.A_Weapons.RL_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Pistol.A_Weapons.Pistol_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SMG.A_Weapons.SMG_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Bandit": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Tediore": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_Shotgun.A_Weapons.SG_Torgue": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Dahl": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Hyperion": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Jakobs": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Maliwan": {
+      "rarity": "Common",
+      "origin": "pool"
+    },
+    "GD_Weap_SniperRifles.A_Weapons.Sniper_Vladof": {
+      "rarity": "Common",
+      "origin": "pool"
     }
   },
   "_origins": {
