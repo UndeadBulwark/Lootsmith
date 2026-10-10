@@ -7,7 +7,7 @@ pub(crate) use eframe::egui;
 pub(crate) use lootsmith_core::savegame::Kind;
 pub(crate) use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
-    AssetLibraryManager, Container, Customizations, Missions, NameParts, PackedEntry, PartLists, Platform,
+    AssetLibraryManager, Container, Customizations, Missions, NameParts, Resource, PackedEntry, PartLists, Platform,
     Profile, SaveCandidate, SaveGame, TravelStations, DlcTitles, VehicleCustomization, MISSION_STATUSES,
     PLAYER_MARKS, STAT_NAMES, VEHICLE_FAMILIES,
 };
@@ -34,6 +34,7 @@ pub enum Tab {
     General,
     Character,
     Currency,
+    Ammo,
     Skills,
     Travel,
     Vehicles,
@@ -192,6 +193,7 @@ fn tab_key(tab: Tab) -> &'static str {
         Tab::General => "general",
         Tab::Character => "character",
         Tab::Currency => "currency",
+        Tab::Ammo => "ammo",
         Tab::Skills => "skills",
         Tab::Travel => "travel",
         Tab::Vehicles => "vehicles",
@@ -208,6 +210,7 @@ fn tab_from_key(key: &str) -> Option<Tab> {
         "general" => Some(Tab::General),
         "character" => Some(Tab::Character),
         "currency" => Some(Tab::Currency),
+        "ammo" => Some(Tab::Ammo),
         "skills" => Some(Tab::Skills),
         "travel" => Some(Tab::Travel),
         "vehicles" => Some(Tab::Vehicles),
@@ -281,10 +284,11 @@ enum ItemAction {
 }
 
 /// The tab list, in order.
-const TABS: [(Tab, &str); 11] = [
+const TABS: [(Tab, &str); 12] = [
     (Tab::General, "General"),
     (Tab::Character, "Character"),
     (Tab::Currency, "Currency"),
+    (Tab::Ammo, "Ammo"),
     (Tab::Skills, "Skills"),
     (Tab::Travel, "Fast Travel"),
     (Tab::Vehicles, "Vehicles"),
@@ -321,6 +325,9 @@ pub struct LootsmithApp {
     pub name_parts: Option<Arc<NameParts>>,
     /// DLC chapter titles, for grouping fast-travel stations.
     pub dlc_titles: Option<Arc<DlcTitles>>,
+    /// Ammo/resource pools (field 11) and their origin snapshot.
+    pub ammo: Vec<Resource>,
+    ammo_orig: Vec<(f32, i32)>,
     /// Missions (field 18) and challenge list (field 38).
     pub mission_rows: Vec<MissionRow>,
     pub plot_mission: i32,
@@ -392,6 +399,8 @@ impl LootsmithApp {
             part_lists: None,
             name_parts: None,
             dlc_titles: None,
+            ammo: Vec::new(),
+            ammo_orig: Vec::new(),
             mission_rows: Vec::new(),
             plot_mission: 0,
             active_mission: 0,
@@ -540,6 +549,7 @@ impl LootsmithApp {
         self.refresh_skills();
         self.refresh_travel();
         self.refresh_vehicles();
+        self.refresh_ammo();
         self.refresh_missions();
         self.refresh_raw();
         self.dirty = false;
@@ -776,6 +786,41 @@ impl LootsmithApp {
             }
         }
         self.stations = None;
+    }
+
+    /// Snapshot the ammo pools (field 11).
+    pub(crate) fn refresh_ammo(&mut self) {
+        self.ammo = self
+            .save_game
+            .as_ref()
+            .map(SaveGame::resources)
+            .unwrap_or_default();
+        self.ammo_orig = self
+            .ammo
+            .iter()
+            .map(|r| (r.amount, r.upgrade_level))
+            .collect();
+    }
+
+    /// Set one ammo pool's amount / SDU level (1-based `pool` as shown).
+    pub fn set_ammo(&mut self, pool: usize, amount: Option<f32>, sdu: Option<i32>) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let index = pool.max(1) - 1;
+        if let Err(e) = save_game.mutate_resource(index, |resource| {
+            if let Some(amount) = amount {
+                resource.amount = amount;
+            }
+            if let Some(sdu) = sdu {
+                resource.upgrade_level = sdu;
+            }
+        }) {
+            self.status = format!("ammo error: {e}");
+            return;
+        }
+        self.refresh_ammo();
+        self.dirty = true;
     }
 
     pub(crate) fn refresh_travel(&mut self) {
@@ -1749,6 +1794,7 @@ impl LootsmithApp {
                 Tab::General => self.ui_general(ui),
                 Tab::Character => self.ui_character(ui),
                 Tab::Currency => self.ui_currency(ui),
+                Tab::Ammo => self.ui_ammo(ui),
                 Tab::Skills => self.ui_skills(ui),
                 Tab::Travel => self.ui_travel(ui),
                 Tab::Vehicles => self.ui_vehicles(ui),

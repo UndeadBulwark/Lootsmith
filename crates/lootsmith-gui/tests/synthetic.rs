@@ -63,3 +63,31 @@ fn synthetic_save_skills_click_and_save_round_trip() {
     assert_eq!(sentry.grade, 4, "clicked through to grade 4 of 5");
     let _ = std::fs::remove_file(&out);
 }
+
+#[test]
+fn ammo_tab_edits_pool_amounts() {
+    let mut h = harness_with_synthetic();
+    h.run();
+    h.get_by_label("Ammo").click();
+    h.run();
+    assert_eq!(h.state().ammo.len(), 3, "the synthetic save has 3 pools");
+
+    // Edit the first pool's amount and SDU (the tab's drag values call the
+    // same mutator).
+    h.state_mut().set_ammo(1, Some(999.0), Some(4));
+    h.run();
+    assert!(h.state().dirty, "the ammo edit flows through to the model");
+    let out = std::env::temp_dir().join("lootsmith-synthetic-ammo.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = lootsmith_core::container::unpack(
+        &std::fs::read(&out).expect("read edited save"),
+        lootsmith_core::Platform::PC,
+    )
+    .expect("reparse");
+    let save = reopened.save_game().expect("save game");
+    let pools = save.resources();
+    assert_eq!(pools.len(), 3);
+    assert_eq!(pools[0].amount, 999.0, "amount edited");
+    assert_eq!(pools[0].upgrade_level, 4, "sdu edited");
+    let _ = std::fs::remove_file(&out);
+}

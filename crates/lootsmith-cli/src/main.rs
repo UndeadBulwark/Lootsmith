@@ -23,7 +23,7 @@ fn usage() -> ExitCode {
           \
                           [--unlock-customizations] [--out OUT]\n  \
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
-         lootsmith skills  <file.sav> [--platform <id>]\n  \
+         lootsmith ammo    <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
          lootsmith vehicles <file.sav> [--customizations FILE]\n  \
          lootsmith missions <file.sav> [--missions-json FILE]\n  \
@@ -32,6 +32,7 @@ fn usage() -> ExitCode {
          lootsmith edit    <file.sav> --skill N [--grade G] [--points P] [--out OUT]\n  \
          lootsmith edit    <file.sav> [--travel-add NAME] [--travel-remove NAME] [--travel-last NAME] [--out OUT]\n  \
          lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n  \
+         lootsmith edit    <file.sav> --ammo N [--amount F] [--sdu N] [--out OUT]\n  \
          lootsmith edit    <file.sav> [--plot-mission N] [--active-mission N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --mission-playthrough P --mission-index I --mission-status NAME [--out OUT]\n\
          \n\
@@ -82,6 +83,9 @@ struct Args {
     mission_index: Option<usize>,
     mission_status: Option<String>,
     class: Option<String>,
+    ammo: Option<usize>,
+    amount: Option<f32>,
+    sdu: Option<i32>,
     badass_rank: Option<i64>,
     badass_tokens: Option<i64>,
     unlock_customizations: bool,
@@ -149,6 +153,9 @@ fn parse_args() -> Option<Args> {
         mission_index: None,
         mission_status: None,
         class: None,
+        ammo: None,
+        amount: None,
+        sdu: None,
         badass_rank: None,
         badass_tokens: None,
         unlock_customizations: false,
@@ -190,6 +197,9 @@ fn parse_args() -> Option<Args> {
             "--mission-index" => args.mission_index = Some(it.next()?.parse().ok()?),
             "--mission-status" => args.mission_status = Some(it.next()?),
             "--class" => args.class = Some(it.next()?),
+            "--ammo" => args.ammo = Some(it.next()?.parse().ok()?),
+            "--amount" => args.amount = Some(it.next()?.parse().ok()?),
+            "--sdu" => args.sdu = Some(it.next()?.parse().ok()?),
             "--badass-rank" => args.badass_rank = Some(it.next()?.parse().ok()?),
             "--badass-tokens" => args.badass_tokens = Some(it.next()?.parse().ok()?),
             "--unlock-customizations" => args.unlock_customizations = true,
@@ -756,6 +766,31 @@ fn main() -> ExitCode {
             println!("total: {count} packed blobs (backpack {backpack}, bank {bank})");
             ExitCode::SUCCESS
         }
+        "ammo" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let resources = save_game.resources();
+            if resources.is_empty() {
+                println!("(no ammo/resource pools in this save)");
+            }
+            for (i, pool) in resources.iter().enumerate() {
+                println!(
+                    "#{:<2} {:18} amount={:>7.1} sdu={} ({})",
+                    i + 1,
+                    pool.label(),
+                    pool.amount,
+                    pool.upgrade_level,
+                    pool.pool
+                );
+            }
+            println!("total: {} pools", resources.len());
+            ExitCode::SUCCESS
+        }
         "skills" => {
             let save_game = match save.save_game() {
                 Ok(s) => s,
@@ -1073,6 +1108,23 @@ fn main() -> ExitCode {
                 save_game.set_vehicle_steering_mode(mode);
                 println!("vehicle steering mode = {mode}");
                 changes += 1;
+            }
+            if let Some(pool) = args.ammo {
+                let index = pool.max(1) - 1; // `--ammo` takes the 1-based list number
+                match save_game.mutate_resource(index, |r| {
+                    if let Some(amount) = args.amount {
+                        r.amount = amount;
+                    }
+                    if let Some(level) = args.sdu {
+                        r.upgrade_level = level;
+                    }
+                }) {
+                    Ok(()) => {
+                        println!("ammo pool #{pool} updated");
+                        changes += 1;
+                    }
+                    Err(e) => eprintln!("note: {e}"),
+                }
             }
             if let Some(value) = args.plot_mission {
                 save_game.set_plot_mission_number(value);

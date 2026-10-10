@@ -118,6 +118,20 @@ pub fn synthetic_save() -> SaveGame {
         save.message.push(Field::bytes(8, &sub.to_bytes()));
     }
 
+    // Ammo pools (field 11).
+    for (pool, amount, level) in [
+        ("D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool", 273.0f32, 2),
+        ("D_Resourcepools.AmmoPools.Ammo_Pistol_Pool", 150.0, 1),
+        ("D_Resourcepools.AmmoPools.Ammo_Grenade_Protean_Pool", 4.0, 0),
+    ] {
+        let mut sub = Message::default();
+        sub.push(Field::string(1, "D_Resources.AmmoResources.Ammo_Test"));
+        sub.push(Field::string(2, pool));
+        sub.push(Field::fixed32(3, amount.to_bits()));
+        sub.push(Field::varint(4, level as u64));
+        save.message.push(Field::bytes(11, &sub.to_bytes()));
+    }
+
     // Travel: a few visited stations + the last one.
     save.set_visited_teleporters(&[
         "SouthernShelfBay".to_string(),
@@ -156,6 +170,7 @@ mod tests {
         assert_eq!(save.packed_entries().len(), 3);
         assert_eq!(save.bank_entries().len(), 1);
         assert_eq!(save.skills().len(), 3);
+        assert_eq!(save.resources().len(), 3);
         assert_eq!(
             save.visited_teleporters(),
             ["SouthernShelfBay", "Sanctuary", "ThreeHornsValley"]

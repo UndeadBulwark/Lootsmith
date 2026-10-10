@@ -37,7 +37,7 @@ pub use platform::{CompressionScheme, Endian, Platform};
 pub use profile::{Profile, ProfileEntry, ProfileValue, STAT_NAMES};
 pub use savegame::{
     mission_status_name, player_mark_name, Challenge, Container, MissionEntry, MissionPlaythrough,
-    PackedEntry, SaveGame, Skill, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
+    PackedEntry, Resource, SaveGame, Skill, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS,
     VEHICLE_FAMILIES,
 };
 pub use travel::{DlcTitles, TravelStation, TravelStations};

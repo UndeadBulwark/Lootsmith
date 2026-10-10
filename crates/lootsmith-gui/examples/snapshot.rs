@@ -17,10 +17,20 @@ fn main() {
         .cloned()
         .unwrap_or_else(|| "/tmp/opencode/shots".to_string());
     let save = args.get(2).cloned().unwrap_or_else(|| {
-        format!(
+        let personal = format!(
             "{}/../../tests/fixtures/pc_Save0001.sav",
             env!("CARGO_MANIFEST_DIR")
-        )
+        );
+        if std::path::Path::new(&personal).exists() {
+            personal
+        } else {
+            // No user save available: render the synthetic fixture instead.
+            let path = std::path::Path::new(&out_dir).join("synthetic-save.sav");
+            match lootsmith_core::fixture::write_synthetic_save(&path) {
+                Ok(_) => path.display().to_string(),
+                Err(_) => personal,
+            }
+        }
     });
     let dumps = args.get(3).cloned().or_else(|| {
         std::env::var("LOOTSMITH_ASSET_LIBRARY")
@@ -45,10 +55,11 @@ fn main() {
         harness
     };
 
-    let shots: [Shot; 10] = [
+    let shots: [Shot; 11] = [
         ("general", Tab::General, None),
         ("character", Tab::Character, None),
         ("currency", Tab::Currency, None),
+        ("ammo", Tab::Ammo, None),
         ("skills", Tab::Skills, None),
         ("travel", Tab::Travel, None),
         ("vehicles", Tab::Vehicles, None),

@@ -1,6 +1,7 @@
 //! One module per Lootsmith tab, split out of the former single-file `app.rs`.
 
 pub mod about;
+pub mod ammo;
 pub mod backpack;
 pub mod character;
 pub mod currency;

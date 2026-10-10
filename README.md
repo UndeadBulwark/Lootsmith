@@ -65,6 +65,13 @@ cargo run -p lootsmith-cli -- skills  /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- travel  /path/to/Save0001.sav --stations "/path/Travel Stations.json"
 cargo run -p lootsmith-cli -- vehicles /path/to/Save0001.sav --customizations "/path/Customizations.json"
 cargo run -p lootsmith-cli -- missions /path/to/Save0001.sav --missions-json "/path/Missions.json"
+cargo run -p lootsmith-cli -- ammo    /path/to/Save0001.sav
+```
+
+Edit an ammo pool's current amount and SDU upgrade level:
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav --ammo 5 --amount 999 --sdu 3 --out /path/to/edited.sav
 ```
 
 Start a fresh save, and convert saves to/from wire-faithful JSON:
@@ -178,8 +185,8 @@ bonus stats, and the head/skin unlock list (unlock everything, or set keys;
 `lootsmith profile <profile.bin> --golden-keys N --badass-rank N
 --badass-tokens N --unlock-customizations`.
 
-Tabs: **General**, **Character** (name, level, head & skin), **Currency**
-(named money/eridium/seraph/torgue), **Skills**, **Fast Travel**, **Vehicles**,
+Tabs: **General**, **Character** (name, level, class, overpower), **Currency**
+(named money/eridium/seraph/torgue), **Ammo** (per-pool amount + SDU level), **Skills**, **Fast Travel**, **Vehicles**,
 **Missions**, **Backpack**, **Bank**, and **Raw** (edit any scalar top-level
 field). The **General** tab has Max / OP-max level buttons (72 / 80).
 **Backpack/Bank rows and the item inspector show the item's composed display

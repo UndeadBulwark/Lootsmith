@@ -1483,3 +1483,141 @@ mod raw_list_tests {
         assert_eq!(values, [7, 8]);
     }
 }
+
+/// One ammo/resource pool entry (field 11 `ResourceData`): the resource path,
+/// its pool, the current amount, and the SDU upgrade level.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Resource {
+    pub resource: String,
+    pub pool: String,
+    pub amount: f32,
+    pub upgrade_level: i32,
+}
+
+impl Resource {
+    /// Player-facing name (`D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool`
+    /// → "Combat Rifle").
+    pub fn label(&self) -> String {
+        let last = self.pool.rsplit('.').next().unwrap_or(&self.pool);
+        let name = last.strip_suffix("_Pool").unwrap_or(last);
+        name.strip_prefix("Ammo_").unwrap_or(name)
+            .replace('_', " ")
+    }
+}
+
+impl SaveGame {
+    /// All `ResourceData` entries (field 11), in order.
+    pub fn resources(&self) -> Vec<Resource> {
+        self.message
+            .get_all(11)
+            .filter_map(|field| field.as_message().ok().flatten())
+            .map(|sub| Resource {
+                resource: sub
+                    .get(1)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                pool: sub
+                    .get(2)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                amount: sub
+                    .get(3)
+                    .and_then(|f| f.as_fixed32())
+                    .map(f32::from_bits)
+                    .unwrap_or(0.0),
+                upgrade_level: sub
+                    .get(4)
+                    .and_then(|f| f.as_i32())
+                    .unwrap_or(0),
+            })
+            .collect()
+    }
+
+    /// Mutate the `ResourceData` entry at `index`, re-encoding it in place.
+    pub fn mutate_resource(
+        &mut self,
+        index: usize,
+        change: impl FnOnce(&mut Resource),
+    ) -> Result<()> {
+        for (seen, field) in self
+            .message
+            .fields
+            .iter_mut()
+            .filter(|f| f.number == 11)
+            .enumerate()
+        {
+            if seen != index {
+                continue;
+            }
+            let Some(mut sub) = field.as_message().ok().flatten() else {
+                return Err(Error::Proto("resource entry is not a message".into()));
+            };
+            let mut resource = Resource {
+                resource: sub
+                    .get(1)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                pool: sub
+                    .get(2)
+                    .and_then(|f| f.as_str())
+                    .map(|s| s.into_owned())
+                    .unwrap_or_default(),
+                amount: sub
+                    .get(3)
+                    .and_then(|f| f.as_fixed32())
+                    .map(f32::from_bits)
+                    .unwrap_or(0.0),
+                upgrade_level: sub.get(4).and_then(|f| f.as_i32()).unwrap_or(0),
+            };
+            change(&mut resource);
+            sub.set(Field::string(1, &resource.resource));
+            sub.set(Field::string(2, &resource.pool));
+            sub.set(Field::fixed32(3, resource.amount.to_bits()));
+            sub.set(Field::varint(4, resource.upgrade_level as u32 as u64));
+            *field = Field::bytes(11, &sub.to_bytes());
+            return Ok(());
+        }
+        Err(Error::Proto(format!("no resource entry #{index}")))
+    }
+}
+
+#[cfg(test)]
+mod resource_tests {
+    use super::*;
+
+    #[test]
+    fn resources_round_trip_and_edit_in_place() {
+        let mut save = SaveGame::blank("GD_Soldier.Character.CharClass_Soldier");
+        for (pool, amount, level) in [
+            ("D_Resourcepools.AmmoPools.Ammo_Combat_Rifle_Pool", 273.0f32, 2),
+            ("D_Resourcepools.AmmoPools.Ammo_Grenade_Protean_Pool", 4.0, 0),
+        ] {
+            let mut sub = Message::default();
+            sub.push(Field::string(1, "D_Resources.AmmoResources.Ammo_Test"));
+            sub.push(Field::string(2, pool));
+            sub.push(Field::fixed32(3, amount.to_bits()));
+            sub.push(Field::varint(4, level as u32 as u64));
+            save.message.push(Field::bytes(11, &sub.to_bytes()));
+        }
+        let loaded = save.resources();
+        assert_eq!(loaded.len(), 2);
+        assert_eq!(loaded[0].label(), "Combat Rifle");
+        assert_eq!(loaded[0].upgrade_level, 2);
+
+        save.mutate_resource(1, |r| {
+            r.amount = 7.5;
+            r.upgrade_level = 4;
+        })
+        .expect("edit");
+
+        let reload = save.resources();
+        assert_eq!(reload[1].amount, 7.5);
+        assert_eq!(reload[1].upgrade_level, 4);
+        // The other entry is untouched.
+        assert_eq!(reload[0].amount, 273.0);
+        assert_eq!(reload[0].upgrade_level, 2);
+    }
+}
