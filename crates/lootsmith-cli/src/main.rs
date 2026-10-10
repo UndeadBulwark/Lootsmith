@@ -1,6 +1,6 @@
 //! Lootsmith CLI: `inspect`, `verify`, and `dump`.
 
-use lootsmith_core::{container, Platform};
+use lootsmith_core::{container, items, proto::Message, AssetLibraryConfigs, Platform};
 use std::process::ExitCode;
 
 fn usage() -> ExitCode {
@@ -10,9 +10,11 @@ fn usage() -> ExitCode {
          USAGE:\n  \
          lootsmith inspect <file.sav> [--platform <id>]\n  \
          lootsmith verify  <file.sav> [--platform <id>]\n  \
-         lootsmith dump    <file.sav> [--platform <id>]\n\
+         lootsmith dump    <file.sav> [--platform <id>]\n  \
+         lootsmith items   <file.sav> [--platform <id>]\n\
          \n\
-         Platforms: pc (default), x360, ps3, psvita, shield, switch"
+         Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
+         Set LOOTSMITH_ASSET_LIBRARY to an 'Asset Library Manager.json' to override the built-in config."
     );
     ExitCode::from(2)
 }
@@ -139,6 +141,72 @@ fn main() -> ExitCode {
             for line in save_game.describe() {
                 println!("{line}");
             }
+            ExitCode::SUCCESS
+        }
+        "items" => {
+            let configs = match std::env::var("LOOTSMITH_ASSET_LIBRARY") {
+                Ok(p) => match AssetLibraryConfigs::from_path(std::path::Path::new(&p)) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("error: cannot load {p}: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                },
+                Err(_) => AssetLibraryConfigs::pc_default(),
+            };
+            let top = match Message::parse(&save.proto) {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let mut count = 0usize;
+            for (field, kind) in [(53u32, "item"), (54u32, "weapon")] {
+                for entry in top.get_all(field) {
+                    let sub = match entry.as_message() {
+                        Ok(Some(m)) => m,
+                        _ => continue,
+                    };
+                    let Some(serial) = sub.get(1).and_then(|f| f.as_bytes()) else {
+                        continue;
+                    };
+                    let quantity = sub.get(2).and_then(|f| f.as_i32());
+                    let equipped = sub.get(3).and_then(|f| f.as_bool());
+                    count += 1;
+                    match items::unpack(serial, &configs) {
+                        Ok(decoded) => match &decoded.slot {
+                            items::PackedSlot::Weapon(w) => println!(
+                                "{kind:>6} #{count} len={} id={} set={} type={:?} balance={:?} \
+                                 mfr={:?} grade={} stage={}",
+                                serial.len(),
+                                decoded.unique_id,
+                                decoded.asset_library_set_id,
+                                w.weapon_type,
+                                w.balance,
+                                w.manufacturer,
+                                w.manufacturer_grade_index,
+                                w.game_stage
+                            ),
+                            items::PackedSlot::Item(it) => println!(
+                                "{kind:>6} #{count} len={} id={} set={} qty={:?} equipped={:?} \
+                                 balance={:?} mfr={:?} grade={} stage={}",
+                                serial.len(),
+                                decoded.unique_id,
+                                decoded.asset_library_set_id,
+                                quantity,
+                                equipped,
+                                it.balance,
+                                it.manufacturer,
+                                it.manufacturer_grade_index,
+                                it.game_stage
+                            ),
+                        },
+                        Err(e) => println!("{kind:>6} #{count} decode error: {e}"),
+                    }
+                }
+            }
+            println!("total: {count} packed items/weapons");
             ExitCode::SUCCESS
         }
         _ => usage(),

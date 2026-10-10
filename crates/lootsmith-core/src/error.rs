@@ -26,6 +26,8 @@ pub enum Error {
     },
     Huffman(String),
     Proto(String),
+    GameData(String),
+    PackedData(String),
     EndOfStream,
     UnsupportedPlatform,
     Xbox360ConFile,
@@ -54,6 +56,8 @@ impl fmt::Display for Error {
             }
             Error::Huffman(m) => write!(f, "huffman codec error: {m}"),
             Error::Proto(m) => write!(f, "protobuf error: {m}"),
+            Error::GameData(m) => write!(f, "game data error: {m}"),
+            Error::PackedData(m) => write!(f, "packed item error: {m}"),
             Error::EndOfStream => write!(f, "unexpected end of bit stream"),
             Error::UnsupportedPlatform => write!(f, "unsupported platform"),
             Error::Xbox360ConFile => write!(

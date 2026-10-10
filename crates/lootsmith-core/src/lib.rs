@@ -7,12 +7,16 @@ pub mod bitio;
 pub mod container;
 pub mod crc32;
 pub mod error;
+pub mod gameinfo;
 pub mod huffman;
+pub mod items;
 pub mod platform;
 pub mod proto;
 pub mod savegame;
 
 pub use container::{pack_inner, unpack, SaveFile, BLOCK_SIZE};
 pub use error::{Error, Result};
+pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs};
+pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use savegame::SaveGame;
