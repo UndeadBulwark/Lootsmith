@@ -369,13 +369,15 @@ def main() -> int:
         if any(LABEL[tier] == pattern for tier in tiers):
             pool_validated += 1
     print(f"pattern-vs-pool agreement: {pool_validated}/{pool_total} "
-          f"(pattern tier is among the pools' tiers)")
+          f"(name-marked items only; the marker-less extension is an inference "
+          f"validated per tier, not a comparison)")
     if pool_total and pool_validated / pool_total < 0.98:
         print("FAIL: pattern/pool agreement below 98%", file=sys.stderr)
         return 4
 
     pool_derived = 0
     mixed = 0
+    legendary_pool_only: list[str] = []
     pool_entries: dict[str, str] = {}
     for name in balances:
         if name in joined or patterns_label(name) is not None:
@@ -390,11 +392,21 @@ def main() -> int:
         tiers = tier_sets.get(name, set())
         if len(tiers) == 1:
             rarity = next(iter(tiers))
+            if rarity == "Legendary":
+                # Legendary pools are the one tier proven to hold non-legendary
+                # items (Badaboom/Deadly Bloom/Kiss of Death), so a pool alone
+                # never makes something Legendary: leave it Unknown.
+                legendary_pool_only.append(name)
+                continue
             pool_entries[name] = rarity
             pool_derived += 1
         elif len(tiers) > 1:
             mixed += 1
-    print(f"pool-derived (marker-less, single tier): {pool_derived}; mixed (left Unknown): {mixed}")
+    print(f"pool-derived (marker-less, single tier, non-Legendary): {pool_derived}; "
+          f"mixed (left Unknown): {mixed}")
+    print(f"Legendary pool-only, left Unknown unless Borderlens confirms ({len(legendary_pool_only)}):")
+    for name in legendary_pool_only:
+        print(f"  {name}")
 
     # --- assemble: Borderlens for named gear --------------------------------
     mapping: dict[str, dict[str, str]] = {}
@@ -451,6 +463,10 @@ def main() -> int:
             "fallback": {
                 "source": "balance-name tier patterns for generated gear (_2_Uncommon, _3_Rare, ...)",
                 "method": "pattern table in this file; game naming encodes the tier",
+            },
+            "rules": {
+                "legendary_pool_only": "never classified from pools alone; Unknown unless Borderlens confirms exactly",
+                "marker_less": "a single non-Legendary pool tier classifies marker-less gear (origin pool)",
             },
             "pattern_vs_pool": {
                 "overlap": pool_total,

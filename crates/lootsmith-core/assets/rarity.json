@@ -14,11 +14,15 @@
       "source": "balance-name tier patterns for generated gear (_2_Uncommon, _3_Rare, ...)",
       "method": "pattern table in this file; game naming encodes the tier"
     },
+    "rules": {
+      "legendary_pool_only": "never classified from pools alone; Unknown unless Borderlens confirms exactly",
+      "marker_less": "a single non-Legendary pool tier classifies marker-less gear (origin pool)"
+    },
     "pattern_vs_pool": {
       "overlap": 345,
       "agreement": 0.9884,
       "note": "name-tier patterns vs rarity-marked pool tiers, per-tier 100%",
-      "pool_derived": 41,
+      "pool_derived": 38,
       "mixed_left_unknown": 7
     },
     "validation": {
@@ -595,14 +599,6 @@
       "rarity": "Etech",
       "origin": "borderlens"
     },
-    "GD_Anemone_Balance_Treasure.Shields.ItemGrade_Gear_Shield_Worming": {
-      "rarity": "Legendary",
-      "origin": "pool"
-    },
-    "GD_Anemone_Weapons.A_Weapons_Unique.Pistol_The_Gremlins": {
-      "rarity": "Legendary",
-      "origin": "pool"
-    },
     "GD_GrenadeMods.A_Item.GM_AreaEffect": {
       "rarity": "Common",
       "origin": "pool"
@@ -621,10 +617,6 @@
     },
     "GD_GrenadeMods.A_Item.GM_Transfusion": {
       "rarity": "Common",
-      "origin": "pool"
-    },
-    "GD_ItemGrades.Shields.ItemGrade_Gear_Shield_Nova_Singularity": {
-      "rarity": "Legendary",
       "origin": "pool"
     },
     "GD_Weap_AssaultRifle.A_Weapons.AR_Bandit": {
