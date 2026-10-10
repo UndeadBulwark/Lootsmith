@@ -190,3 +190,37 @@ fn challenge_stats_edit_through_the_missions_tab() {
     );
     let _ = std::fs::remove_file(&out);
 }
+
+#[test]
+fn world_tab_edits_discoveries_and_clears() {
+    let mut h = harness_with_synthetic();
+    h.run();
+    h.get_by_label("World").click();
+    h.run();
+    assert_eq!(h.state().world_discoveries.len(), 2);
+    assert_eq!(h.state().discoveries_uncovered(), 1);
+    assert_eq!(h.state().world_lockouts.len(), 1);
+    assert_eq!(h.state().world_lockouts[0].time, 123_456);
+
+    h.state_mut().mark_all_discovered();
+    h.state_mut().clear_all_lockouts();
+    h.run();
+    assert_eq!(
+        h.state().discoveries_uncovered(),
+        2,
+        "both discoveries uncovered"
+    );
+    assert_eq!(h.state().world_lockouts[0].time, 0);
+
+    let out = std::env::temp_dir().join("lootsmith-synthetic-world.sav");
+    h.state_mut().save_to(out.to_str().unwrap());
+    let reopened = lootsmith_core::container::unpack(
+        &std::fs::read(&out).expect("read edited save"),
+        lootsmith_core::Platform::PC,
+    )
+    .expect("reparse");
+    let save = reopened.save_game().expect("save game");
+    assert_eq!(save.discoveries_uncovered(), 2);
+    assert_eq!(save.lockouts()[0].time, 0, "lockout zeroed on disk");
+    let _ = std::fs::remove_file(&out);
+}

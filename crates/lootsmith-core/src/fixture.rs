@@ -145,6 +145,31 @@ pub fn synthetic_save() -> SaveGame {
         save.message.push(Field::bytes(11, &sub.to_bytes()));
     }
 
+    // World progress: region 29, discoveries 30, lockouts 43.
+    {
+        let mut region = Message::default();
+        region.push(Field::string(1, "GD_GameStages.Zone1.SouthernShelf"));
+        region.push(Field::varint(2, 30));
+        region.push(Field::varint(3, 0));
+        region.push(Field::varint(4, 0));
+        region.push(Field::varint(5, 0));
+        save.message.push(Field::bytes(29, &region.to_bytes()));
+
+        for (name, uncovered) in [("SOUTHERNSHELF_PWDA_0", false), ("CLIFFS_VISTA", true)] {
+            let mut sub = Message::default();
+            sub.push(Field::string(1, name));
+            sub.push(Field::varint(2, u64::from(uncovered)));
+            save.message.push(Field::bytes(30, &sub.to_bytes()));
+        }
+
+        let mut lockout = Message::default();
+        lockout.push(Field::string(1, "D_RaidBoss.Lockout.Rawr"));
+        lockout.push(Field::varint(2, 123_456));
+        lockout.push(Field::varint(3, 0));
+        lockout.push(Field::varint(4, 0));
+        save.message.push(Field::bytes(43, &lockout.to_bytes()));
+    }
+
     // Challenge-progress blob (field 15) with two entries.
     let mut blob = Vec::new();
     blob.extend_from_slice(&4u32.to_le_bytes());
@@ -199,6 +224,8 @@ mod tests {
         assert_eq!(save.bank_entries().len(), 1);
         assert_eq!(save.skills().len(), 3);
         assert_eq!(save.resources().len(), 3);
+        assert_eq!(save.world_discoveries().len(), 2);
+        assert_eq!(save.lockouts().len(), 1);
         assert_eq!(save.challenge_stats().expect("blob").entries.len(), 2);
         assert_eq!(save.level_challenge_unlocks(), [1, 2, 5]);
         assert_eq!(

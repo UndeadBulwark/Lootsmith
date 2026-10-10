@@ -36,6 +36,7 @@ pub enum Tab {
     Character,
     Currency,
     Ammo,
+    World,
     Skills,
     Travel,
     Vehicles,
@@ -195,6 +196,7 @@ fn tab_key(tab: Tab) -> &'static str {
         Tab::Character => "character",
         Tab::Currency => "currency",
         Tab::Ammo => "ammo",
+        Tab::World => "world",
         Tab::Skills => "skills",
         Tab::Travel => "travel",
         Tab::Vehicles => "vehicles",
@@ -212,6 +214,7 @@ fn tab_from_key(key: &str) -> Option<Tab> {
         "character" => Some(Tab::Character),
         "currency" => Some(Tab::Currency),
         "ammo" => Some(Tab::Ammo),
+        "world" => Some(Tab::World),
         "skills" => Some(Tab::Skills),
         "travel" => Some(Tab::Travel),
         "vehicles" => Some(Tab::Vehicles),
@@ -285,11 +288,12 @@ enum ItemAction {
 }
 
 /// The tab list, in order.
-const TABS: [(Tab, &str); 12] = [
+const TABS: [(Tab, &str); 13] = [
     (Tab::General, "General"),
     (Tab::Character, "Character"),
     (Tab::Currency, "Currency"),
     (Tab::Ammo, "Ammo"),
+    (Tab::World, "World"),
     (Tab::Skills, "Skills"),
     (Tab::Travel, "Fast Travel"),
     (Tab::Vehicles, "Vehicles"),
@@ -335,6 +339,13 @@ pub struct LootsmithApp {
     /// Desired backpack/bank slot sizes (consistent with `sdus`)
     pub backpack_slots: i32,
     pub bank_size: i32,
+    /// World progress (fields 29/30/43/46/27), mirrored for editing.
+    pub world_regions: Vec<lootsmith_core::world::RegionGameStage>,
+    pub world_discoveries: Vec<lootsmith_core::world::WorldDiscovery>,
+    pub world_lockouts: Vec<lootsmith_core::world::Lockout>,
+    pub world_expansions: Vec<lootsmith_core::world::DlcExpansion>,
+    /// Memento counts `(weapons, items)` (fields 32/33).
+    pub mementos: (usize, usize),
     /// Challenge-progress stats (field 15) mirrored for editing.
     pub challenge_stats: Vec<ChallengeStat>,
     challenge_stat_orig: Vec<(u16, i32)>,
@@ -419,6 +430,11 @@ impl LootsmithApp {
             sdu_orig: [0; 9],
             backpack_slots: 12,
             bank_size: 6,
+            world_regions: Vec::new(),
+            world_discoveries: Vec::new(),
+            world_lockouts: Vec::new(),
+            world_expansions: Vec::new(),
+            mementos: (0, 0),
             challenge_stats: Vec::new(),
             challenge_stat_orig: Vec::new(),
             challenge_filter: String::new(),
@@ -574,6 +590,7 @@ impl LootsmithApp {
         self.refresh_ammo();
         self.refresh_sdus();
         self.refresh_challenge_stats();
+        self.refresh_world();
         self.refresh_missions();
         self.refresh_raw();
         self.dirty = false;
@@ -831,6 +848,86 @@ impl LootsmithApp {
             save_game.set_i32(42, level.max(0));
         }
         self.prestiges = level.max(0);
+        self.dirty = true;
+    }
+
+    /// Uncovered discoveries count (for the tab header / tests).
+    pub fn discoveries_uncovered(&self) -> usize {
+        self.world_discoveries.iter().filter(|d| d.uncovered).count()
+    }
+
+    pub(crate) fn refresh_world(&mut self) {
+        let Some(save_game) = &self.save_game else {
+            self.world_regions.clear();
+            self.world_discoveries.clear();
+            self.world_lockouts.clear();
+            self.world_expansions.clear();
+            self.mementos = (0, 0);
+            return;
+        };
+        self.world_regions = save_game.region_game_stages();
+        self.world_discoveries = save_game.world_discoveries();
+        self.world_lockouts = save_game.lockouts();
+        self.world_expansions = save_game.dlc_expansions();
+        self.mementos = save_game.memento_counts();
+    }
+
+    /// Mark every world discovery explored, then refresh the mirrors.
+    pub fn mark_all_discovered(&mut self) {
+        if let Some(save_game) = self.save_game.as_mut() {
+            match save_game.mark_all_discovered() {
+                Ok(count) => self.status = format!("marked {count} discoveries explored"),
+                Err(e) => self.status = format!("discovery error: {e}"),
+            }
+        }
+        self.refresh_world();
+        self.dirty = true;
+    }
+
+    /// Zero every lockout timer, then refresh the mirrors.
+    pub fn clear_all_lockouts(&mut self) {
+        if let Some(save_game) = self.save_game.as_mut() {
+            let count = save_game.clear_all_lockouts();
+            self.status = format!("cleared {count} lockout timers");
+        }
+        self.refresh_world();
+        self.dirty = true;
+    }
+
+    /// Drop every weapon/item memento.
+    pub fn clear_mementos(&mut self) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        let (weapons, items) = save_game.clear_mementos();
+        self.status = format!("cleared mementos (weapons {weapons}, items {items})");
+        self.refresh_world();
+        self.dirty = true;
+    }
+
+    /// Set one region's game stage (1-based as shown).
+    pub fn set_world_stage(&mut self, pool: usize, stage: i32) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        if let Err(e) = save_game.set_region_game_stage(pool.max(1) - 1, stage) {
+            self.status = format!("world error: {e}");
+            return;
+        }
+        self.refresh_world();
+        self.dirty = true;
+    }
+
+    /// Set one discovery by index (1-based as shown).
+    pub fn set_discovery(&mut self, index: usize, uncovered: bool) {
+        let Some(save_game) = self.save_game.as_mut() else {
+            return;
+        };
+        if let Err(e) = save_game.set_discovery(index.max(1) - 1, uncovered) {
+            self.status = format!("world error: {e}");
+            return;
+        }
+        self.refresh_world();
         self.dirty = true;
     }
 
@@ -1991,6 +2088,7 @@ impl LootsmithApp {
                 Tab::Character => self.ui_character(ui),
                 Tab::Currency => self.ui_currency(ui),
                 Tab::Ammo => self.ui_ammo(ui),
+                Tab::World => self.ui_world(ui),
                 Tab::Skills => self.ui_skills(ui),
                 Tab::Travel => self.ui_travel(ui),
                 Tab::Vehicles => self.ui_vehicles(ui),

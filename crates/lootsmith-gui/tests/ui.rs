@@ -60,6 +60,7 @@ fn loads_and_switches_tabs_by_label() {
     for (label, tab) in [
         ("Character", Tab::Character),
         ("Currency", Tab::Currency),
+        ("World", Tab::World),
         ("Skills", Tab::Skills),
         ("Fast Travel", Tab::Travel),
         ("Vehicles", Tab::Vehicles),

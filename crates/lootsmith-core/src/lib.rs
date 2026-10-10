@@ -22,6 +22,7 @@ pub mod proto;
 pub mod savegame;
 pub mod savejson;
 pub mod travel;
+pub mod world;
 
 pub use container::{pack_inner, serialize, unpack, wrap, SaveFile, BLOCK_SIZE};
 pub use customizations::{usage_for_player_class, Customization, Customizations};
@@ -41,3 +42,4 @@ pub use savegame::{
     MISSION_STATUSES, PLAYER_MARKS, VEHICLE_FAMILIES,
 };
 pub use travel::{DlcTitles, TravelStation, TravelStations};
+pub use world::{DlcExpansion, Lockout, RegionGameStage, WorldDiscovery};

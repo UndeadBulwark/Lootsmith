@@ -25,6 +25,7 @@ fn usage() -> ExitCode {
          lootsmith items   <file.sav> [--platform <id>] [--container bag|bank]\n  \
          lootsmith ammo    <file.sav> [--platform <id>]\n  \
          lootsmith challenges <file.sav> [--platform <id>]\n  \
+         lootsmith world     <file.sav> [--platform <id>]\n  \
          lootsmith sdus    <file.sav> [--platform <id>]\n  \
          lootsmith travel  <file.sav> [--stations FILE]\n  \
          lootsmith vehicles <file.sav> [--customizations FILE]\n  \
@@ -36,7 +37,11 @@ fn usage() -> ExitCode {
          lootsmith edit    <file.sav> [--steering-mode N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --ammo N [--amount F] [--sdu N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --market NAME --sdu-level L [--max-sdus] --out OUT\n  \
-         lootsmith edit    <file.sav> --challenge-stat ID --value V [--prestige N] --out OUT\n  \
+         lootsmith edit    <file.sav> --challenge-stat ID --value V [--prestige N]\n  \
+                          [--explore-all] [--clear-lockouts] [--clear-mementos]\n  \
+                          [--complete-all-missions] [--reset-all-missions]\n  \
+                          [--unlock-all-travel --stations FILE] --out OUT\n  \
+         lootsmith edit    <file.sav> --game-stage REGION --stage N --out OUT\n  \
          lootsmith edit    <file.sav> [--backpack-slots S] [--bank-size S] --out OUT\n  \
          lootsmith edit    <file.sav> [--plot-mission N] [--active-mission N] [--out OUT]\n  \
          lootsmith edit    <file.sav> --mission-playthrough P --mission-index I --mission-status NAME [--out OUT]\n\
@@ -94,6 +99,13 @@ struct Args {
     sdu_level: Option<i32>,
     market: Option<String>,
     challenge_stat: Option<String>,
+    stage: Option<i32>,
+    explore_all: bool,
+    clear_lockouts: bool,
+    clear_mementos: bool,
+    complete_all_missions: bool,
+    reset_all_missions: bool,
+    unlock_all_travel: bool,
     value: Option<f32>,
     prestige: Option<i32>,
     backpack_slots: Option<i32>,
@@ -172,6 +184,13 @@ fn parse_args() -> Option<Args> {
         sdu_level: None,
         market: None,
         challenge_stat: None,
+        stage: None,
+        explore_all: false,
+        clear_lockouts: false,
+        clear_mementos: false,
+        complete_all_missions: false,
+        reset_all_missions: false,
+        unlock_all_travel: false,
         value: None,
         prestige: None,
         backpack_slots: None,
@@ -226,6 +245,13 @@ fn parse_args() -> Option<Args> {
             "--challenge-stat" => args.challenge_stat = Some(it.next()?),
             "--value" => args.value = Some(it.next()?.parse().ok()?),
             "--prestige" => args.prestige = Some(it.next()?.parse().ok()?),
+            "--stage" => args.stage = Some(it.next()?.parse().ok()?),
+            "--explore-all" => args.explore_all = true,
+            "--clear-lockouts" => args.clear_lockouts = true,
+            "--clear-mementos" => args.clear_mementos = true,
+            "--complete-all-missions" => args.complete_all_missions = true,
+            "--reset-all-missions" => args.reset_all_missions = true,
+            "--unlock-all-travel" => args.unlock_all_travel = true,
             "--backpack-slots" => args.backpack_slots = Some(it.next()?.parse().ok()?),
             "--bank-size" => args.bank_slots_flag = Some(it.next()?.parse().ok()?),
             "--max-sdus" => args.max_sdus = true,
@@ -343,6 +369,26 @@ fn load_customizations(args: &Args) -> Option<Customizations> {
                 eprintln!("loaded customizations from {}", candidate.display());
                 return Some(customizations);
             }
+        }
+    }
+    None
+}
+
+fn load_stations_file(args: &Args) -> Option<TravelStations> {
+    let candidates: Vec<String> = {
+        let mut out = Vec::new();
+        if let Some(path) = &args.stations {
+            out.push(path.clone());
+        }
+        if let Ok(env) = std::env::var("LOOTSMITH_TRAVEL_STATIONS") {
+            out.push(env);
+        }
+        out
+    };
+    for candidate in candidates {
+        match TravelStations::from_path(std::path::Path::new(&candidate)) {
+            Ok(stations) => return Some(stations),
+            Err(e) => eprintln!("warning: cannot load {candidate}: {e}"),
         }
     }
     None
@@ -822,6 +868,64 @@ fn main() -> ExitCode {
             println!("total: {} pools", resources.len());
             ExitCode::SUCCESS
         }
+        "world" => {
+            let save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let regions = save_game.region_game_stages();
+            println!("region game stages ({}):", regions.len());
+            for (i, region) in regions.iter().enumerate() {
+                println!(
+                    "#{:<2} {} stage={} playthrough={} dlc={}",
+                    i + 1,
+                    region.region,
+                    region.game_stage,
+                    region.playthrough_index,
+                    region.dlc_package_id
+                );
+            }
+            let (discovered, total) = {
+                let discoveries = save_game.world_discoveries();
+                let total = discoveries.len();
+                (discoveries.iter().filter(|d| d.uncovered).count(), total)
+            };
+            println!(
+                "world discoveries: {discovered}/{total} uncovered"
+            );
+            for (i, discovery) in save_game.world_discoveries().iter().enumerate() {
+                println!(
+                    "#{:<2} {} {}",
+                    i + 1,
+                    if discovery.uncovered { "x" } else { " " },
+                    discovery.name
+                );
+            }
+            let lockouts = save_game.lockouts();
+            println!("lockouts ({}):", lockouts.len());
+            for lockout in &lockouts {
+                println!("  {} ({} = {})", lockout.label(), lockout.lockout, lockout.time);
+            }
+            let expansions = save_game.dlc_expansions();
+            println!("dlc expansions ({}):", expansions.len());
+            for expansion in &expansions {
+                println!("  tag={} data={} bytes", expansion.tag, expansion.data.len());
+            }
+            let (weapons, items) = save_game.memento_counts();
+            println!("mementos: weapons={weapons} items={items}");
+            println!(
+                "fully explored = {:?}",
+                save_game
+                    .message
+                    .get_all(46)
+                    .filter_map(|f| f.as_str().map(|s| s.into_owned()))
+                    .collect::<Vec<_>>()
+            );
+            ExitCode::SUCCESS
+        }
         "challenges" => {
             let save_game = match save.save_game() {
                 Ok(s) => s,
@@ -1239,6 +1343,89 @@ fn main() -> ExitCode {
                     }
                     Some(_) => eprintln!("error: SDU index out of range (use 1..9)"),
                     None => eprintln!("error: unknown SDU '{name}' (use one of {keys:?} or 1..9)"),
+                }
+            }
+            if args.explore_all {
+                let changed = save_game.mark_all_discovered().expect("explore");
+                println!("marked {changed} discoveries explored");
+                changes += 1;
+            }
+            if args.clear_lockouts {
+                let changed = save_game.clear_all_lockouts();
+                println!("cleared {changed} lockout timers");
+                changes += 1;
+            }
+            if args.clear_mementos {
+                let (weapons, items) = save_game.clear_mementos();
+                println!("cleared mementos (weapons {weapons}, items {items})");
+                changes += 1;
+            }
+            if args.complete_all_missions || args.reset_all_missions {
+                let status = if args.complete_all_missions {
+                    "Complete".to_string()
+                } else {
+                    "NotStarted".to_string()
+                };
+                let Some(value) = parse_status(&status) else {
+                    eprintln!("error: bad status {status}");
+                    return ExitCode::FAILURE;
+                };
+                let mut changed = 0usize;
+                for (playthrough, list) in save_game
+                    .mission_playthroughs()
+                    .iter()
+                    .map(|pt| pt.missions.len())
+                    .enumerate()
+                {
+                    for mission in 0..list {
+                        if save_game
+                            .set_mission_status(playthrough, mission, value)
+                            .is_ok()
+                        {
+                            changed += 1;
+                        }
+                    }
+                }
+                println!("{status} applied to {changed} missions");
+                changes += 1;
+            }
+            if args.unlock_all_travel {
+                let stations = load_stations_file(&args);
+                match stations {
+                    Some(stations) => {
+                        let mut added = 0usize;
+                        for entry in stations.all() {
+                            if save_game.add_visited_teleporter(&entry.resource_name) {
+                                added += 1;
+                            }
+                        }
+                        println!("travel: added {added} stations");
+                        changes += 1;
+                    }
+                    None => {
+                        eprintln!("error: --unlock-all-travel needs --stations <Travel Stations.json>");
+                        return ExitCode::FAILURE;
+                    }
+                }
+            }
+            if let Some(stage) = args.stage {
+                let region_text = args.market.clone().unwrap_or_default();
+                let key = region_text.trim().to_string();
+                let regions = save_game.region_game_stages();
+                let index = regions.iter().position(|region| {
+                    region.region.eq_ignore_ascii_case(&key)
+                        || region.region.to_lowercase().contains(&key.to_lowercase())
+                });
+                match index {
+                    Some(index) => {
+                        save_game.set_region_game_stage(index, stage).expect("stage");
+                        println!("{} game stage = {stage}", regions[index].region);
+                        changes += 1;
+                    }
+                    None => {
+                        eprintln!("error: no region matching '{region_text}'");
+                        return ExitCode::FAILURE;
+                    }
                 }
             }
             if let Some(level) = args.prestige {
