@@ -179,8 +179,18 @@ fn customization_combo(
         });
 }
 
-/// One skill tile for the calculator: the icon fills the tile and the rank is a
-/// badge in the bottom-right corner (matching the community calculator).
+/// Blend `accent` into `base` by `t` (0..1).
+fn tint(base: egui::Color32, accent: egui::Color32, t: f32) -> egui::Color32 {
+    let mix = |a: u8, b: u8| (a as f32 * (1.0 - t) + b as f32 * t).round() as u8;
+    egui::Color32::from_rgb(
+        mix(base.r(), accent.r()),
+        mix(base.g(), accent.g()),
+        mix(base.b(), accent.b()),
+    )
+}
+
+/// One skill tile: icon-centred with a metal frame and a rank badge, matching the
+/// community calculator. Partial/full/locked/hover states are all visualised.
 fn skill_tile(
     ui: &mut egui::Ui,
     node: &crate::skills::SkillNode,
@@ -190,48 +200,84 @@ fn skill_tile(
     unlocked: bool,
     accent: egui::Color32,
 ) -> egui::Response {
-    let border = if grade > 0 {
-        accent
-    } else if unlocked {
-        Tokens::BORDER
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(66.0, 66.0), egui::Sense::click());
+    let hovered = response.hovered();
+    let painter = ui.painter_at(rect);
+    let full = max > 1 && grade >= max;
+
+    // Soft glow when maxed.
+    if full && unlocked {
+        painter.rect_filled(
+            rect.expand(2.0),
+            egui::CornerRadius::same(10),
+            accent.gamma_multiply(0.30),
+        );
+    }
+    // Metal edge + inner plate (brightens on hover).
+    painter.rect_filled(rect, egui::CornerRadius::same(8), Tokens::BG);
+    let plate = if !unlocked {
+        Tokens::BG
+    } else if hovered {
+        tint(Tokens::SURFACE, accent, 0.06)
     } else {
         Tokens::SURFACE_ALT
     };
-    let frame = egui::Frame::default()
-        .fill(if unlocked {
-            Tokens::SURFACE_ALT
+    painter.rect_filled(rect.shrink(2.0), egui::CornerRadius::same(7), plate);
+
+    // Border: accent when invested, dim when locked.
+    let (width, color) = if !unlocked {
+        (1.0, Tokens::SURFACE_ALT)
+    } else if grade > 0 {
+        (2.0, accent)
+    } else {
+        (1.0, Tokens::BORDER)
+    };
+    painter.rect_stroke(
+        rect.shrink(width / 2.0),
+        egui::CornerRadius::same(8),
+        egui::Stroke::new(width, color),
+        egui::StrokeKind::Inside,
+    );
+
+    // Icon.
+    if let Some(texture) = texture {
+        let icon = egui::Rect::from_center_size(
+            rect.center() - egui::vec2(0.0, 4.0),
+            egui::vec2(44.0, 44.0),
+        );
+        let icon_tint = if unlocked {
+            egui::Color32::WHITE
         } else {
-            Tokens::BG
-        })
-        .stroke(egui::Stroke::new(if grade > 0 { 2.0 } else { 1.0 }, border))
-        .corner_radius(egui::CornerRadius::same(6))
-        .inner_margin(egui::Margin::same(5));
-    let inner = frame.show(ui, |ui| {
-        ui.set_min_size(egui::vec2(52.0, 52.0));
-        if let Some(texture) = texture {
-            let tint = if unlocked {
-                egui::Color32::WHITE
-            } else {
-                egui::Color32::from_gray(96)
-            };
-            ui.add(
-                egui::Image::new(texture)
-                    .fit_to_exact_size(egui::vec2(52.0, 52.0))
-                    .tint(tint),
-            );
-        } else {
-            ui.allocate_exact_size(egui::vec2(52.0, 52.0), egui::Sense::hover());
-        }
-    });
-    let rect = inner.response.rect;
+            egui::Color32::from_gray(88)
+        };
+        painter.image(
+            texture.id(),
+            icon,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            icon_tint,
+        );
+    }
+    // Locked marker.
+    if !unlocked {
+        painter.circle_filled(
+            rect.left_top() + egui::vec2(10.0, 10.0),
+            3.0,
+            Tokens::TEXT_FAINT,
+        );
+    }
 
     // Rank badge, bottom-right.
-    let painter = ui.painter_at(rect);
-    let color = if grade >= max { accent } else { Tokens::TEXT };
+    let badge_color = if !unlocked {
+        Tokens::TEXT_FAINT
+    } else if full {
+        accent
+    } else {
+        Tokens::TEXT
+    };
     let galley = painter.layout_no_wrap(
         format!("{grade}/{max}"),
-        egui::FontId::proportional(11.0),
-        color,
+        egui::FontId::proportional(11.5),
+        badge_color,
     );
     let pad = egui::vec2(4.0, 2.0);
     let badge_size = galley.size() + pad * 2.0;
@@ -245,11 +291,10 @@ fn skill_tile(
     painter.rect_filled(
         badge,
         egui::CornerRadius::same(3),
-        egui::Color32::from_black_alpha(205),
+        egui::Color32::from_black_alpha(210),
     );
-    painter.galley(badge.min + pad, galley, color);
+    painter.galley(badge.min + pad, galley, badge_color);
 
-    let response = ui.interact(rect, ui.id().with(&node.skill), egui::Sense::click());
     response.widget_info(|| {
         egui::WidgetInfo::labeled(egui::WidgetType::Button, unlocked, &node.skill)
     });
@@ -2194,10 +2239,37 @@ impl LootsmithApp {
             }
         }
 
+        // Reserve the pinned description bar before laying out content.
+        let mut hover_desc: Option<(String, String)> = None;
+        egui::Panel::bottom("skill_desc")
+            .frame(
+                egui::Frame::default()
+                    .fill(Tokens::SURFACE)
+                    .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
+                    .corner_radius(egui::CornerRadius::same(6))
+                    .inner_margin(egui::Margin::symmetric(10, 6)),
+            )
+            .show(ui, |ui| {
+                ui.set_min_height(44.0);
+                match &hover_desc {
+                    Some((name, desc)) if !desc.is_empty() => {
+                        ui.label(
+                            egui::RichText::new(name)
+                                .strong()
+                                .size(13.0)
+                                .color(Tokens::ACCENT),
+                        );
+                        ui.label(egui::RichText::new(desc).size(12.0).color(Tokens::TEXT_DIM));
+                    }
+                    _ => theme::faint(ui, "Hover a skill to see what it does."),
+                }
+            });
+
+        // Header.
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             if let Some(texture) = &portrait {
-                ui.add(egui::Image::new(texture).max_height(140.0));
+                ui.add(egui::Image::new(texture).max_height(132.0));
                 ui.add_space(12.0);
             }
             ui.vertical(|ui| {
@@ -2234,140 +2306,163 @@ impl LootsmithApp {
                 );
             });
         });
-        ui.add_space(8.0);
+        ui.add_space(6.0);
 
         let mut edit: Option<(usize, i32)> = None;
 
         egui::ScrollArea::vertical()
             .id_salt("skill_trees")
-            .auto_shrink([false, true])
+            .auto_shrink([false, false])
             .show(ui, |ui| {
-                ui.columns(3, |cols| {
-                    for (ti, tree) in class.trees.iter().enumerate() {
-                        let col = &mut cols[ti];
-                        let accent = crate::skills::tree_accent(&tree.color);
-                        let tree_total: i32 = tree
-                            .tiers
-                            .iter()
-                            .flat_map(|t| &t.skills)
-                            .filter_map(|n| grade_of(&n.skill))
-                            .map(|i| grades[i].max(0))
-                            .sum();
-                        egui::Frame::default()
-                            .fill(Tokens::SURFACE)
-                            .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
-                            .corner_radius(egui::CornerRadius::same(8))
-                            .inner_margin(egui::Margin::same(8))
-                            .show(col, |ui| {
-                                // Coloured top accent, like the calculator's tree plate.
-                                let (bar, _) = ui.allocate_exact_size(
-                                    egui::vec2(ui.available_width(), 3.0),
-                                    egui::Sense::hover(),
-                                );
-                                ui.painter()
-                                    .rect_filled(bar, egui::CornerRadius::same(2), accent);
-                                ui.add_space(8.0);
-                                for tier in &tree.tiers {
-                                    let unlocked =
-                                        crate::skills::tier_unlocked(tree_total, tier.level);
-                                    ui.horizontal_wrapped(|ui| {
-                                        for node in &tier.skills {
-                                            let idx = grade_of(&node.skill);
-                                            let grade = idx.map(|i| grades[i]).unwrap_or(0);
-                                            let max = node.max.max(1);
-                                            let tex = textures.get(&node.icon).cloned().flatten();
-                                            let response = skill_tile(
-                                                ui,
-                                                node,
-                                                tex.as_ref(),
-                                                grade,
-                                                max,
-                                                unlocked,
-                                                accent,
+                let width = (ui.available_width() - 6.0).max(240.0);
+                ui.allocate_ui_with_layout(
+                    egui::vec2(width, 0.0),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.columns(3, |cols| {
+                            for (ti, tree) in class.trees.iter().enumerate() {
+                                let col = &mut cols[ti];
+                                let accent = crate::skills::tree_accent(&tree.color);
+                                let tree_total: i32 = tree
+                                    .tiers
+                                    .iter()
+                                    .flat_map(|t| &t.skills)
+                                    .filter_map(|n| grade_of(&n.skill))
+                                    .map(|i| grades[i].max(0))
+                                    .sum();
+                                egui::Frame::default()
+                                    .fill(tint(Tokens::SURFACE, accent, 0.05))
+                                    .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
+                                    .corner_radius(egui::CornerRadius::same(8))
+                                    .inner_margin(egui::Margin::same(8))
+                                    .show(col, |ui| {
+                                        let (bar, _) = ui.allocate_exact_size(
+                                            egui::vec2(ui.available_width(), 3.0),
+                                            egui::Sense::hover(),
+                                        );
+                                        ui.painter().rect_filled(
+                                            bar,
+                                            egui::CornerRadius::same(2),
+                                            accent,
+                                        );
+                                        ui.add_space(8.0);
+                                        for tier in &tree.tiers {
+                                            let unlocked = crate::skills::tier_unlocked(
+                                                tree_total,
+                                                tier.level,
                                             );
-                                            if unlocked {
-                                                if let Some(i) = idx {
-                                                    if response.clicked() && grade < max {
-                                                        edit = Some((i, grade + 1));
-                                                    } else if response.secondary_clicked()
-                                                        && grade > 0
-                                                    {
-                                                        edit = Some((i, grade - 1));
+                                            ui.horizontal_wrapped(|ui| {
+                                                for node in &tier.skills {
+                                                    let idx = grade_of(&node.skill);
+                                                    let grade =
+                                                        idx.map(|i| grades[i]).unwrap_or(0);
+                                                    let max = node.max.max(1);
+                                                    let tex =
+                                                        textures.get(&node.icon).cloned().flatten();
+                                                    let response = skill_tile(
+                                                        ui,
+                                                        node,
+                                                        tex.as_ref(),
+                                                        grade,
+                                                        max,
+                                                        unlocked,
+                                                        accent,
+                                                    );
+                                                    if response.hovered() && !node.desc.is_empty() {
+                                                        hover_desc = Some((
+                                                            node.skill.clone(),
+                                                            node.desc.clone(),
+                                                        ));
+                                                    }
+                                                    if unlocked {
+                                                        if let Some(i) = idx {
+                                                            if response.clicked() && grade < max {
+                                                                edit = Some((i, grade + 1));
+                                                            } else if response.secondary_clicked()
+                                                                && grade > 0
+                                                            {
+                                                                edit = Some((i, grade - 1));
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                            }
+                                            });
+                                            ui.add_space(8.0);
                                         }
-                                    });
-                                    ui.add_space(8.0);
-                                }
-                                ui.add_space(2.0);
-                                ui.horizontal(|ui| {
-                                    ui.label(
-                                        egui::RichText::new(tree.name.to_uppercase())
-                                            .strong()
-                                            .size(14.0)
-                                            .color(accent),
-                                    );
-                                    ui.with_layout(
-                                        egui::Layout::right_to_left(egui::Align::Center),
-                                        |ui| {
+                                        ui.add_space(2.0);
+                                        ui.horizontal(|ui| {
                                             ui.label(
-                                                egui::RichText::new(tree_total.to_string())
+                                                egui::RichText::new(tree.name.to_uppercase())
                                                     .strong()
                                                     .size(14.0)
                                                     .color(accent),
                                             );
-                                        },
-                                    );
-                                });
-                            });
-                        col.add_space(8.0);
-                    }
-                });
-            });
+                                            ui.with_layout(
+                                                egui::Layout::right_to_left(egui::Align::Center),
+                                                |ui| {
+                                                    ui.label(
+                                                        egui::RichText::new(tree_total.to_string())
+                                                            .strong()
+                                                            .size(14.0)
+                                                            .color(accent),
+                                                    );
+                                                },
+                                            );
+                                        });
+                                    });
+                                col.add_space(8.0);
+                            }
+                        });
+                    },
+                );
 
-        // Save skills not matched to a tree node (e.g. the action skill).
-        let matched: std::collections::HashSet<usize> = class
-            .trees
-            .iter()
-            .flat_map(|t| &t.tiers)
-            .flat_map(|t| &t.skills)
-            .filter_map(|n| grade_of(&n.skill))
-            .collect();
-        let extras: Vec<usize> = (0..self.skills.len())
-            .filter(|i| !matched.contains(i))
-            .collect();
-        if !extras.is_empty() {
-            ui.add_space(6.0);
-            theme::section(ui, "Other skills");
-            ui.horizontal_wrapped(|ui| {
-                for i in extras {
-                    let leaf = self
-                        .skills[i]
-                        .name
-                        .rsplit('.')
-                        .next()
-                        .unwrap_or("?")
-                        .to_string();
-                    let display = if leaf.starts_with("Skill_") {
-                        "Action Skill".to_string()
-                    } else {
-                        leaf
-                    };
-                    let grade = grades[i];
-                    let label = egui::RichText::new(format!("{display}   {grade}/1")).size(12.0);
-                    let label = if grade > 0 { label.color(Tokens::ACCENT) } else { label };
-                    if ui
-                        .button(label)
-                        .on_hover_text(&self.skills[i].name)
-                        .clicked()
-                        && grade < 1
-                    {
-                        edit = Some((i, grade + 1));
-                    }
+                // Save skills not matched to a tree node (e.g. the action skill).
+                let matched: std::collections::HashSet<usize> = class
+                    .trees
+                    .iter()
+                    .flat_map(|t| &t.tiers)
+                    .flat_map(|t| &t.skills)
+                    .filter_map(|n| grade_of(&n.skill))
+                    .collect();
+                let extras: Vec<usize> = (0..grades.len())
+                    .filter(|i| !matched.contains(i))
+                    .collect();
+                if !extras.is_empty() {
+                    ui.add_space(10.0);
+                    theme::section(ui, "Other skills");
+                    ui.horizontal_wrapped(|ui| {
+                        for i in extras {
+                            let leaf = self.skills[i]
+                                .name
+                                .rsplit('.')
+                                .next()
+                                .unwrap_or("?")
+                                .to_string();
+                            let display = if leaf.starts_with("Skill_") {
+                                "Action Skill".to_string()
+                            } else {
+                                leaf
+                            };
+                            let grade = grades[i];
+                            let label =
+                                egui::RichText::new(format!("{display}   {grade}/1")).size(12.0);
+                            let label = if grade > 0 {
+                                label.color(Tokens::ACCENT)
+                            } else {
+                                label
+                            };
+                            if ui
+                                .button(label)
+                                .on_hover_text(&self.skills[i].name)
+                                .clicked()
+                                && grade < 1
+                            {
+                                edit = Some((i, grade + 1));
+                            }
+                        }
+                    });
                 }
             });
-        }
 
         // Apply a click: set the grade and keep the point budget consistent.
         if let Some((i, new_grade)) = edit {
