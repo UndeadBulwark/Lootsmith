@@ -236,29 +236,24 @@ pub fn contrast(a: egui::Color32, b: egui::Color32) -> f32 {
     (hi + 0.05) / (lo + 0.05)
 }
 
-/// The palette currently installed by [`apply`] (helpers paint with it).
-static ACTIVE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+/// The palette lives in the `Context` (spec: helpers paint with the installed
+/// palette). Storing it in `ctx.data` keeps two contexts — e.g. two test
+/// harnesses running in parallel — from ever sharing or racing on a palette.
+fn palette_id() -> egui::Id {
+    egui::Id::new("lootsmith.palette")
+}
 
-pub fn active() -> &'static Palette {
-    match ACTIVE.load(std::sync::atomic::Ordering::Relaxed) {
-        1 => &LIGHT,
+/// The palette installed in this `Context` (defaults to dark until [`apply`]).
+pub fn active(ctx: &egui::Context) -> &'static Palette {
+    match ctx.data(|d| d.get_temp::<Theme>(palette_id())) {
+        Some(Theme::Light) => &LIGHT,
         _ => &DARK,
     }
 }
 
-fn set_active(theme: Theme) {
-    ACTIVE.store(
-        match theme {
-            Theme::Dark => 0,
-            Theme::Light => 1,
-        },
-        std::sync::atomic::Ordering::Relaxed,
-    );
-}
-
 /// Install visuals, spacing and typography for the chosen theme.
 pub fn apply(ctx: &egui::Context, theme: Theme) {
-    set_active(theme);
+    ctx.data_mut(|d| d.insert_temp(palette_id(), theme));
     let p = Palette::for_theme(theme);
     let mut visuals = match theme {
         Theme::Dark => egui::Visuals::dark(),
@@ -353,32 +348,22 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
 
 /// A section heading.
 pub fn section(ui: &mut egui::Ui, title: &str) {
+    let gold = active(ui.ctx()).gold;
     ui.add_space(2.0);
-    ui.label(
-        egui::RichText::new(title)
-            .strong()
-            .size(15.0)
-            .color(active().gold),
-    );
+    ui.label(egui::RichText::new(title).strong().size(15.0).color(gold));
     ui.add_space(2.0);
 }
 
 /// A dimmed secondary label.
 pub fn muted(ui: &mut egui::Ui, text: impl Into<String>) {
-    ui.label(
-        egui::RichText::new(text.into())
-            .color(active().dim)
-            .size(12.0),
-    );
+    let dim = active(ui.ctx()).dim;
+    ui.label(egui::RichText::new(text.into()).color(dim).size(12.0));
 }
 
 /// A faint label (paths, ids).
 pub fn faint(ui: &mut egui::Ui, text: impl Into<String>) {
-    ui.label(
-        egui::RichText::new(text.into())
-            .color(active().dim)
-            .size(11.5),
-    );
+    let dim = active(ui.ctx()).dim;
+    ui.label(egui::RichText::new(text.into()).color(dim).size(11.5));
 }
 
 /// Monospaced text for ids.
@@ -388,11 +373,12 @@ pub fn mono(text: impl Into<String>) -> egui::RichText {
 
 /// A modern tab. Returns true when clicked.
 pub fn tab(ui: &mut egui::Ui, selected: bool, label: &str) -> bool {
+    let p = active(ui.ctx());
     let text = egui::RichText::new(label).size(13.0);
     let text = if selected {
-        text.strong().color(active().fg)
+        text.strong().color(p.fg)
     } else {
-        text.color(active().dim)
+        text.color(p.dim)
     };
     let response = ui.add(
         egui::Button::new(text)
@@ -401,9 +387,9 @@ pub fn tab(ui: &mut egui::Ui, selected: bool, label: &str) -> bool {
     );
     let rect = response.rect;
     let underline = if selected {
-        Some(active().acc)
+        Some(p.acc)
     } else if response.hovered() {
-        Some(active().wd)
+        Some(p.wd)
     } else {
         None
     };
@@ -507,9 +493,17 @@ mod tests {
 
     #[test]
     fn active_palette_follows_the_installed_theme() {
-        set_active(Theme::Light);
-        assert_eq!(active().name, "Light");
-        set_active(Theme::Dark);
-        assert_eq!(active().name, "Dark");
+        let ctx = egui::Context::default();
+        apply(&ctx, Theme::Light);
+        assert_eq!(active(&ctx).name, "Light");
+        apply(&ctx, Theme::Dark);
+        assert_eq!(active(&ctx).name, "Dark");
+
+        // The palette is per-Context: two contexts never share one.
+        let other = egui::Context::default();
+        assert_eq!(active(&other).name, "Dark");
+        apply(&other, Theme::Light);
+        assert_eq!(active(&other).name, "Light");
+        assert_eq!(active(&ctx).name, "Dark", "the first context is untouched");
     }
 }

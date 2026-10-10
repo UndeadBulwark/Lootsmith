@@ -16,7 +16,6 @@ use lootsmith_core::fixture;
 use lootsmith_gui::app::LootsmithApp;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Mutex, MutexGuard};
 
 /// Whether missing fixtures must fail the test rather than skip it.
 pub fn require_fixtures() -> bool {
@@ -68,18 +67,6 @@ pub fn dumps_path() -> Option<String> {
 /// The synthetic save with dumps when available (the common case).
 pub fn harness() -> Harness<'static, LootsmithApp> {
     harness_with(&synthetic_save_path(), dumps_path().as_deref())
-}
-
-/// Serialises snapshot rendering. The active palette lives in a process-global
-/// (`theme::ACTIVE`), so two snapshot tests rendering concurrently in the same
-/// binary could paint with each other's theme. Hold this for the whole
-/// render-and-compare of every snapshot test.
-static SNAPSHOT_LOCK: Mutex<()> = Mutex::new(());
-
-/// Acquire the snapshot serialisation lock (recovers from a poisoned lock so a
-/// prior failure does not cascade).
-pub fn snapshot_lock() -> MutexGuard<'static, ()> {
-    SNAPSHOT_LOCK.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// A harness over an explicit save (and optional dumps).
