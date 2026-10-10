@@ -55,10 +55,21 @@ on the whole file.
 ```sh
 cargo run -p lootsmith-cli -- inspect /path/to/Save0001.sav
 cargo run -p lootsmith-cli -- verify  /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- dump    /path/to/Save0001.sav
+cargo run -p lootsmith-cli -- items   /path/to/Save0001.sav --dumps "/path/Asset Library Manager.json"
 ```
 
-Both default to the PC platform (`--platform pc`); other platforms are
-accepted but only PC is tested today.
+Edit and write (in place with a `.bak` backup, or with `--out`):
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
+    --level 61 --currency 1234567 --golden-keys 42 --out /path/to/edited.sav
+```
+
+Every command defaults to the PC platform (`--platform pc`); other platforms are
+accepted but only PC is tested today. `--dumps` (or `LOOTSMITH_ASSET_LIBRARY`)
+points at the Gibbed `Asset Library Manager.json` so asset indices resolve to
+names; without it the CLI prints raw indices.
 
 ## Tests
 

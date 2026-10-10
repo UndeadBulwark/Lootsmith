@@ -275,3 +275,64 @@ pub fn pack_inner(proto: &[u8], platform: Platform) -> Result<Vec<u8>> {
         Ok(inner)
     }
 }
+
+fn compress_block(input: &[u8], scheme: CompressionScheme) -> Result<Vec<u8>> {
+    match scheme {
+        CompressionScheme::Lzo => lzokay::compress::compress(input).map_err(|e| Error::Compress {
+            scheme: "lzo",
+            detail: format!("{e:?}"),
+        }),
+        CompressionScheme::Zlib => {
+            use flate2::write::ZlibEncoder;
+            use std::io::Write;
+            let mut encoder = ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+            encoder.write_all(input)?;
+            Ok(encoder.finish()?)
+        }
+        CompressionScheme::None => Ok(input.to_vec()),
+    }
+}
+
+/// Wrap an inner buffer in the outer container (SHA1 + `u32BE` length +
+/// LZO/zlib, single block or block table). Switch (`None`) is written raw.
+pub fn wrap(inner: &[u8], platform: Platform) -> Result<Vec<u8>> {
+    let scheme = platform.compression_scheme();
+    if scheme == CompressionScheme::None {
+        return Ok(inner.to_vec());
+    }
+
+    let compressed = if inner.len() <= BLOCK_SIZE {
+        compress_block(inner, scheme)?
+    } else {
+        let block_count = inner.len().div_ceil(BLOCK_SIZE);
+        let mut blocks = Vec::with_capacity(block_count);
+        for chunk in inner.chunks(BLOCK_SIZE) {
+            blocks.push(compress_block(chunk, scheme)?);
+        }
+        let mut table = Vec::new();
+        push_u32(&mut table, block_count as u32, Endian::Big);
+        for block in &blocks {
+            push_u32(&mut table, block.len() as u32, Endian::Big);
+            push_u32(&mut table, BLOCK_SIZE as u32, Endian::Big);
+        }
+        for block in &blocks {
+            table.extend_from_slice(block);
+        }
+        table
+    };
+
+    let mut wrapper = Vec::with_capacity(4 + compressed.len());
+    push_u32(&mut wrapper, inner.len() as u32, Endian::Big);
+    wrapper.extend_from_slice(&compressed);
+
+    let mut out = Vec::with_capacity(20 + wrapper.len());
+    out.extend_from_slice(&sha1(&wrapper));
+    out.extend_from_slice(&wrapper);
+    Ok(out)
+}
+
+/// Serialize a protobuf payload into a complete save file for `platform`.
+pub fn serialize(proto: &[u8], platform: Platform) -> Result<Vec<u8>> {
+    let inner = pack_inner(proto, platform)?;
+    wrap(&inner, platform)
+}

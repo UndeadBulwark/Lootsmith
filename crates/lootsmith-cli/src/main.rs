@@ -14,10 +14,12 @@ fn usage() -> ExitCode {
          lootsmith inspect <file.sav> [--platform <id>]\n  \
          lootsmith verify  <file.sav> [--platform <id>]\n  \
          lootsmith dump    <file.sav> [--platform <id>]\n  \
-         lootsmith items   <file.sav> [--platform <id>]\n\
+         lootsmith items   <file.sav> [--platform <id>]\n  \
+         lootsmith edit    <file.sav> [--level N] [--currency N] [--golden-keys N] [--out OUT]\n\
          \n\
          Platforms: pc (default), x360, ps3, psvita, shield, switch\n\
-         --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY)."
+         --dumps <Asset Library Manager.json> resolves asset names (or set LOOTSMITH_ASSET_LIBRARY).\n\
+         edit writes in place with a <file>.bak backup unless --out is given."
     );
     ExitCode::from(2)
 }
@@ -27,32 +29,56 @@ struct Args {
     file: String,
     platform: Platform,
     dumps: Option<String>,
+    out: Option<String>,
+    backup: bool,
+    level: Option<i32>,
+    exp_points: Option<i32>,
+    general_skill_points: Option<i32>,
+    specialist_skill_points: Option<i32>,
+    playthroughs: Option<i32>,
+    currency: Option<i32>,
+    golden_keys: Option<i32>,
+    bank_slots: Option<i32>,
 }
 
 fn parse_args() -> Option<Args> {
     let mut it = std::env::args().skip(1);
-    let command = it.next()?;
-    let file = it.next()?;
-    let mut platform = Platform::PC;
-    let mut dumps = None;
+    let mut args = Args {
+        command: it.next()?,
+        file: it.next()?,
+        platform: Platform::PC,
+        dumps: None,
+        out: None,
+        backup: true,
+        level: None,
+        exp_points: None,
+        general_skill_points: None,
+        specialist_skill_points: None,
+        playthroughs: None,
+        currency: None,
+        golden_keys: None,
+        bank_slots: None,
+    };
     while let Some(arg) = it.next() {
         match arg.as_str() {
-            "--platform" | "-p" => {
-                let id = it.next()?;
-                platform = Platform::from_id(&id)?;
+            "--platform" | "-p" => args.platform = Platform::from_id(&it.next()?)?,
+            "--dumps" | "-d" => args.dumps = Some(it.next()?),
+            "--out" | "-o" => args.out = Some(it.next()?),
+            "--no-backup" => args.backup = false,
+            "--level" => args.level = Some(it.next()?.parse().ok()?),
+            "--exp-points" => args.exp_points = Some(it.next()?.parse().ok()?),
+            "--general-skill-points" => args.general_skill_points = Some(it.next()?.parse().ok()?),
+            "--specialist-skill-points" => {
+                args.specialist_skill_points = Some(it.next()?.parse().ok()?)
             }
-            "--dumps" | "-d" => {
-                dumps = Some(it.next()?);
-            }
+            "--playthroughs" => args.playthroughs = Some(it.next()?.parse().ok()?),
+            "--currency" => args.currency = Some(it.next()?.parse().ok()?),
+            "--golden-keys" => args.golden_keys = Some(it.next()?.parse().ok()?),
+            "--bank-slots" => args.bank_slots = Some(it.next()?.parse().ok()?),
             _ => return None,
         }
     }
-    Some(Args {
-        command,
-        file,
-        platform,
-        dumps,
-    })
+    Some(args)
 }
 
 fn main() -> ExitCode {
@@ -270,6 +296,118 @@ fn main() -> ExitCode {
             }
             println!("total: {count} packed items/weapons");
             ExitCode::SUCCESS
+        }
+        "edit" => {
+            let mut save_game = match save.save_game() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("error: cannot parse protobuf: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            let mut changes = 0u32;
+            if let Some(v) = args.level {
+                save_game.set_i32(2, v);
+                changes += 1;
+            }
+            if let Some(v) = args.exp_points {
+                save_game.set_i32(3, v);
+                changes += 1;
+            }
+            if let Some(v) = args.general_skill_points {
+                save_game.set_i32(4, v);
+                changes += 1;
+            }
+            if let Some(v) = args.specialist_skill_points {
+                save_game.set_i32(5, v);
+                changes += 1;
+            }
+            if let Some(v) = args.playthroughs {
+                save_game.set_i32(7, v);
+                changes += 1;
+            }
+            if let Some(v) = args.currency {
+                let mut list = save_game.get_int_list(6);
+                if list.is_empty() {
+                    list.push(v);
+                } else {
+                    list[0] = v;
+                }
+                save_game.set_int_list_packed(6, &list);
+                changes += 1;
+            }
+            if let Some(v) = args.golden_keys {
+                save_game.set_i32(48, v);
+                changes += 1;
+            }
+            if let Some(v) = args.bank_slots {
+                save_game.set_i32(56, v);
+                changes += 1;
+            }
+
+            if changes == 0 {
+                eprintln!("error: no edits specified (see --level, --currency, ...)");
+                return usage();
+            }
+
+            let bytes = match container::serialize(&save_game.to_bytes(), args.platform) {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            let out = args.out.clone().unwrap_or_else(|| args.file.clone());
+            if out == args.file && args.backup {
+                let bak = format!("{}.bak", args.file);
+                if let Err(e) = std::fs::copy(&args.file, &bak) {
+                    eprintln!("error: cannot create backup {bak}: {e}");
+                    return ExitCode::FAILURE;
+                }
+                println!("backup: {bak}");
+            }
+            if let Err(e) = std::fs::write(&out, &bytes) {
+                eprintln!("error: cannot write {out}: {e}");
+                return ExitCode::FAILURE;
+            }
+
+            // Re-read and verify the written file.
+            let verified = std::fs::read(&out).and_then(|d| {
+                container::unpack(&d, args.platform).map_err(|e| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())
+                })
+            });
+            match verified {
+                Ok(check) => {
+                    let level = check.save_game().ok().and_then(|s| s.exp_level());
+                    println!("wrote {} bytes to {out} ({changes} change(s))", bytes.len());
+                    println!(
+                        "verify: crc32={} huffman={} proto={} level={level:?}",
+                        if check.crc32_valid() {
+                            "ok"
+                        } else {
+                            "MISMATCH"
+                        },
+                        if check.huffman_stable() {
+                            "ok"
+                        } else {
+                            "unstable"
+                        },
+                        if check.proto_stable() {
+                            "ok"
+                        } else {
+                            "unstable"
+                        },
+                    );
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("error: verification failed: {e}");
+                    ExitCode::FAILURE
+                }
+            }
         }
         _ => usage(),
     }

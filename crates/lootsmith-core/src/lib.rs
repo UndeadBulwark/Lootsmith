@@ -14,7 +14,7 @@ pub mod platform;
 pub mod proto;
 pub mod savegame;
 
-pub use container::{pack_inner, unpack, SaveFile, BLOCK_SIZE};
+pub use container::{pack_inner, serialize, unpack, wrap, SaveFile, BLOCK_SIZE};
 pub use error::{Error, Result};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};
 pub use items::{pack as pack_item, unpack as unpack_item, PackedData, PackedSlot};
