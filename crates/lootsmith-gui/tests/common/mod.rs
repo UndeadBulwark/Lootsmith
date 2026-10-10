@@ -16,6 +16,7 @@ use lootsmith_core::fixture;
 use lootsmith_gui::app::LootsmithApp;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, MutexGuard};
 
 /// Whether missing fixtures must fail the test rather than skip it.
 pub fn require_fixtures() -> bool {
@@ -69,6 +70,18 @@ pub fn harness() -> Harness<'static, LootsmithApp> {
     harness_with(&synthetic_save_path(), dumps_path().as_deref())
 }
 
+/// Serialises snapshot rendering. The active palette lives in a process-global
+/// (`theme::ACTIVE`), so two snapshot tests rendering concurrently in the same
+/// binary could paint with each other's theme. Hold this for the whole
+/// render-and-compare of every snapshot test.
+static SNAPSHOT_LOCK: Mutex<()> = Mutex::new(());
+
+/// Acquire the snapshot serialisation lock (recovers from a poisoned lock so a
+/// prior failure does not cascade).
+pub fn snapshot_lock() -> MutexGuard<'static, ()> {
+    SNAPSHOT_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// A harness over an explicit save (and optional dumps).
 pub fn harness_with(save: &str, dumps: Option<&str>) -> Harness<'static, LootsmithApp> {
     Harness::builder()
@@ -76,6 +89,19 @@ pub fn harness_with(save: &str, dumps: Option<&str>) -> Harness<'static, Lootsmi
         .build_ui_state(
             |ui, app: &mut LootsmithApp| app.build(ui),
             LootsmithApp::new(Some(save.to_string()), dumps.map(str::to_string)),
+        )
+}
+
+/// A harness whose app is **isolated** from the host (`LootsmithApp::new_isolated`):
+/// it ignores every `LOOTSMITH_*` variable, never runs first-run discovery, and
+/// always uses the bundled tables. Use this for the "no folder" tests so a
+/// variable set in the developer's shell cannot change the result.
+pub fn harness_isolated(save: &str) -> Harness<'static, LootsmithApp> {
+    Harness::builder()
+        .with_size(Vec2::new(1280.0, 800.0))
+        .build_ui_state(
+            |ui, app: &mut LootsmithApp| app.build(ui),
+            LootsmithApp::new_isolated(Some(save.to_string())),
         )
 }
 

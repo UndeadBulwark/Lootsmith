@@ -8,7 +8,10 @@
 
 mod common;
 
-use common::{dumps_or_none, harness, harness_with, reopen, require_fixtures, synthetic_save_path};
+use common::{
+    dumps_or_none, harness, harness_isolated, harness_with, reopen, require_fixtures,
+    synthetic_save_path,
+};
 use egui::Vec2;
 use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
@@ -553,21 +556,16 @@ fn profile_editor_round_trips_values() {
 #[test]
 fn bundled_tables_resolve_names_with_no_game_data_folder() {
     // No user folder: the bundled tables must still resolve part names, so a
-    // fresh install needs no setup and shows no picker.
+    // fresh install needs no setup and shows no picker. The harness is
+    // *isolated* (`new_isolated`), so a LOOTSMITH_* variable set in the shell
+    // cannot change this result — see `tests/isolation.rs` for the proof.
     let save = synthetic_save_path();
-    let mut h = harness_with(&save, None);
+    let mut h = harness_isolated(&save);
     h.run();
     let state = h.state();
+    assert!(state.ignores_env(), "the harness is isolated from the host");
     assert!(state.manager.is_some(), "bundled asset library is loaded");
     assert!(state.dumps_bundled, "and it is flagged as bundled");
-    eprintln!(
-        "DEBUG dumps={:?} bundled={} manager={} names={:?} status={}",
-        state.dumps,
-        state.dumps_bundled,
-        state.manager.is_some(),
-        state.name_parts.as_ref().map(|p| p.len()),
-        state.status
-    );
     assert!(state.name_parts.is_some(), "bundled name parts");
     assert!(state.part_lists.is_some(), "bundled balance part lists");
     assert!(state.stations.is_some(), "bundled travel stations");

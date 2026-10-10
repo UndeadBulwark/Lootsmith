@@ -399,6 +399,9 @@ pub struct LootsmithApp {
     pub profile_path: String,
     pub profile_form: ProfileForm,
     loaded_once: bool,
+    /// Test/tool isolation: when set, never read `LOOTSMITH_*` variables and
+    /// never run first-run save/dump discovery (see [`LootsmithApp::new_isolated`]).
+    ignore_env: bool,
     pub tab: Tab,
     /// Selected entry as (container, occurrence).
     pub selected: Option<(Container, usize)>,
@@ -473,6 +476,7 @@ impl LootsmithApp {
             profile_path: String::new(),
             profile_form: ProfileForm::default(),
             loaded_once: false,
+            ignore_env: false,
             tab: Tab::General,
             selected: None,
             item_edit: None,
@@ -482,6 +486,35 @@ impl LootsmithApp {
             app.load_dumps();
         }
         app
+    }
+
+    /// Construct an app for **tests and tools** that must be isolated from the
+    /// host. It never reads `LOOTSMITH_*` environment variables, never runs the
+    /// first-run save/dump discovery, and never touches persisted settings
+    /// (those live in `main.rs` via eframe `Storage`, not here). The bundled
+    /// game-data tables are always used; the save at `open` still opens.
+    pub fn new_isolated(open: Option<String>) -> Self {
+        let mut app = Self::new(open, None);
+        app.ignore_env = true;
+        // The constructor skips loading when the dumps path is empty, so load
+        // here: with `ignore_env` set this resolves to the bundled tables.
+        app.load_dumps();
+        app
+    }
+
+    /// True when this app ignores `LOOTSMITH_*` variables (tests/tools).
+    pub fn ignores_env(&self) -> bool {
+        self.ignore_env
+    }
+
+    /// Read a `LOOTSMITH_*` variable, or `None` when the app is isolated. Every
+    /// environment read in this crate goes through here, so `new_isolated`
+    /// turns them all off in one place.
+    fn env_var(&self, name: &str) -> Option<String> {
+        if self.ignore_env {
+            return None;
+        }
+        std::env::var(name).ok().filter(|v| !v.trim().is_empty())
     }
 
     /// Switch theme and force it to be applied on the next frame.
@@ -628,7 +661,7 @@ impl LootsmithApp {
     /// either a directory or the `Asset Library Manager.json` file.
     pub fn load_dumps(&mut self) {
         let raw = if self.dumps.trim().is_empty() {
-            std::env::var("LOOTSMITH_ASSET_LIBRARY").unwrap_or_default()
+            self.env_var("LOOTSMITH_ASSET_LIBRARY").unwrap_or_default()
         } else {
             self.dumps.clone()
         };
@@ -724,12 +757,10 @@ impl LootsmithApp {
                 return Some(Arc::new(parts));
             }
         }
-        if let Ok(path) = std::env::var("LOOTSMITH_NAME_PARTS") {
-            if !path.trim().is_empty() {
-                if let Ok(parts) = NameParts::from_path(std::path::Path::new(&path)) {
-                    if !parts.is_empty() {
-                        return Some(Arc::new(parts));
-                    }
+        if let Some(path) = self.env_var("LOOTSMITH_NAME_PARTS") {
+            if let Ok(parts) = NameParts::from_path(std::path::Path::new(&path)) {
+                if !parts.is_empty() {
+                    return Some(Arc::new(parts));
                 }
             }
         }
@@ -740,11 +771,9 @@ impl LootsmithApp {
     /// Load the balance part lists (from the game-data folder or
     /// `LOOTSMITH_PART_LISTS`) for the balance-constrained pickers.
     fn load_part_lists(&self) -> Option<Arc<PartLists>> {
-        if let Ok(path) = std::env::var("LOOTSMITH_PART_LISTS") {
-            if !path.trim().is_empty() {
-                if let Ok(lists) = PartLists::from_path(std::path::Path::new(&path)) {
-                    return Some(Arc::new(lists));
-                }
+        if let Some(path) = self.env_var("LOOTSMITH_PART_LISTS") {
+            if let Ok(lists) = PartLists::from_path(std::path::Path::new(&path)) {
+                return Some(Arc::new(lists));
             }
         }
         if let Some(dir) = self.dumps_dir() {
@@ -855,7 +884,7 @@ impl LootsmithApp {
         if !self.stations_path.trim().is_empty() {
             candidates.push(std::path::PathBuf::from(self.stations_path.trim()));
         }
-        if let Ok(env) = std::env::var("LOOTSMITH_TRAVEL_STATIONS") {
+        if let Some(env) = self.env_var("LOOTSMITH_TRAVEL_STATIONS") {
             candidates.push(std::path::PathBuf::from(env));
         }
         if let Some(dir) = self.dumps_dir() {
@@ -1202,7 +1231,7 @@ impl LootsmithApp {
 
     fn load_customizations(&mut self) {
         let mut candidates: Vec<std::path::PathBuf> = Vec::new();
-        if let Ok(env) = std::env::var("LOOTSMITH_CUSTOMIZATIONS") {
+        if let Some(env) = self.env_var("LOOTSMITH_CUSTOMIZATIONS") {
             candidates.push(std::path::PathBuf::from(env));
         }
         if let Some(dir) = self.dumps_dir() {
@@ -1289,7 +1318,7 @@ impl LootsmithApp {
 
     fn load_missions_data(&mut self) {
         let mut candidates: Vec<std::path::PathBuf> = Vec::new();
-        if let Ok(env) = std::env::var("LOOTSMITH_MISSIONS") {
+        if let Some(env) = self.env_var("LOOTSMITH_MISSIONS") {
             candidates.push(std::path::PathBuf::from(env));
         }
         if let Some(dir) = self.dumps_dir() {
@@ -1920,19 +1949,27 @@ impl LootsmithApp {
 
         if !self.loaded_once {
             self.loaded_once = true;
-            if self.path.trim().is_empty() {
-                // First run: auto-open the newest save we can find.
-                self.scan_saves();
-                if let Some(newest) = self.saves.first() {
-                    self.path = newest.path.display().to_string();
+            // Isolated apps (tests/tools) never run first-run discovery, which
+            // would read `LOOTSMITH_DUMP_DIRS` / `LOOTSMITH_SAVE_ROOTS` and the
+            // host's save folders. They use the bundled tables and the given
+            // save only.
+            if !self.ignore_env {
+                if self.path.trim().is_empty() {
+                    // First run: auto-open the newest save we can find.
+                    self.scan_saves();
+                    if let Some(newest) = self.saves.first() {
+                        self.path = newest.path.display().to_string();
+                    }
+                }
+                if self.dumps.trim().is_empty() {
+                    // First run: adopt a game-data folder when one is obvious,
+                    // else the bundled tables are used (no picker).
+                    if let Some(dir) = lootsmith_core::find_dump_dirs().first() {
+                        self.dumps = dir.display().to_string();
+                    }
                 }
             }
             if self.dumps.trim().is_empty() {
-                // First run: adopt a game-data folder when one is obvious, else
-                // the bundled tables are used (no picker).
-                if let Some(dir) = lootsmith_core::find_dump_dirs().first() {
-                    self.dumps = dir.display().to_string();
-                }
                 self.load_dumps();
             }
             if !self.path.trim().is_empty() {
