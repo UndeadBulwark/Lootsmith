@@ -19,6 +19,7 @@ pub mod partlists;
 pub mod platform;
 pub mod profile;
 pub mod proto;
+pub mod rarity;
 pub mod savegame;
 pub mod savejson;
 pub mod travel;
@@ -36,6 +37,7 @@ pub use nameparts::NameParts;
 pub use partlists::PartLists;
 pub use platform::{CompressionScheme, Endian, Platform};
 pub use profile::{Profile, ProfileEntry, ProfileValue, STAT_NAMES};
+pub use rarity::{classify_all, Rarity, RarityReport, Rules as RarityRules};
 pub use savegame::{
     mission_status_name, player_mark_name, Challenge, ChallengeStat, ChallengeStats, Container,
     MissionEntry, MissionPlaythrough, PackedEntry, Resource, SaveGame, Skill, VehicleCustomization,

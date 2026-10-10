@@ -199,3 +199,38 @@ tab-bar labels include counts ("Backpack (14)") — kittest queries must match e
 `ebcce76` icon · `84a1f2c` discovery · earlier phases (0–6) as in git log.
 
 Archives: `~/Downloads/lootsmith-0.0.1-2192c08.tar.gz` — predates the last 7 commits; re-roll on request.
+
+---
+
+## 8. UI overhaul ("Homestead") — spec, workflow, status
+
+The GUI work is now driven by two documents (alongside this plan):
+- `LOOTSMITH_UI_SPEC.md` — the target design (flat pixel-art cabin: plank bars, stitched
+  panels, ribbons, dither; two full palettes; hard rules: no shadow/gradient/rounded corners;
+  hover/focus change borders only; integer scale 100/150/200; WCAG ≥ 4.5:1 test).
+- `LOOTSMITH_UI_WORKFLOW.md` — the testing loop (tests first, `LOOTSMITH_REQUIRE_FIXTURES=1`,
+  snapshot baselines in `tests/snapshots/`, never hide a failure, report template).
+
+### Step 1 (this commit) — done
+- `tests/common/mod.rs`: synthetic-save harness (never a personal fixture), dumps via
+  `LOOTSMITH_ASSET_LIBRARY`, `require_fixtures()` panics under `LOOTSMITH_REQUIRE_FIXTURES=1`.
+- `tests/ui.rs` ported: all GUI tests now run on the synthetic save (24 tests, 0 skipped);
+  the old `tests/synthetic.rs` was folded in and deleted; the fixture's GUID is pinned so
+  synthetic saves are byte-identical between runs.
+- `tests/snapshots.rs` + `tests/snapshots/smoke_backpack.png`: **one smoke snapshot only**
+  (real baselines land after the shell exists, per the approved sequence change).
+- Rarity groundwork: `crates/lootsmith-core/src/rarity.rs` + `assets/rarity.json` (data-driven;
+  rules are path-aware and order-sensitive), `Unknown` is never guessed; report at
+  `~/Downloads/lootsmith-rarity-report.md` (1372 balances: 369 classified, 694 are non-gear
+  mission/pickup defs, 55 uniques await the override list, 245 need review).
+- `AGENTS.md` and this file refreshed to match the code.
+
+### Step order from here
+2. `theme.rs` rewrite (`Palette` + contrast test) · 3. fonts + UI scale · 4. `ui/pixel.rs` ·
+5. `ui/widgets.rs` · 6. shell (plank bar, sidebar, status bar) **then commit the real snapshot
+baselines** · 7. QoL P0 (close guard, undo/redo, rotating backups, confirmations, pre-save diff) ·
+8. item screens (table + workbench + rarity diamonds) · 9. P1→P3.
+
+Skills build string (approved): `LS2:<class>:<t1>.<t2>.<t3>`, one digit per skill in
+`skills.json` order, version prefix + short check suffix; import enforces class match and tier
+gating, warns when over budget, never writes an invalid build. No bl2skills link format.

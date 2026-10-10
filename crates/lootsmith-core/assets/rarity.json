@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "_notes": [
+    "Derives item rarity from a balance asset name. The Gibbed dumps expose no rarity field.",
+    "Rules are checked IN ORDER: the most specific first (VeryRare before Rare, path markers before suffixes).",
+    "Anything unmatched is Rarity::Unknown: the UI shows a neutral diamond and the text 'Unknown'.",
+    "overrides pin exact balance names (unique legendaries) to a rarity; add them as they are identified."
+  ],
+  "patterns": [
+    { "rarity": "Legendary", "contains": ["A_Weapons_Legendary", "A_Item_Legendary", "_Legendary"] },
+    { "rarity": "Seraph", "contains": ["Seraph", "Seraphim"] },
+    { "rarity": "Pearlescent", "contains": ["Pearlescent", "_Cyan", "CyanA", "Cyan"] },
+    { "rarity": "Etech", "contains": ["Alien", "Etech"] },
+    { "rarity": "VeryRare", "contains": ["VeryRare"] },
+    { "rarity": "Uncommon", "contains": ["Uncommon"] },
+    { "rarity": "Rare", "contains": ["Rare"] },
+    { "rarity": "Common", "contains": ["Common"] }
+  ],
+  "overrides": []
+}

@@ -66,7 +66,15 @@ pub fn synthetic_save() -> SaveGame {
     save.set_i32(48, 3); // golden keys notified
     save.set_int_list_packed(6, &[12_345, 30, 4, 9]);
     save.set_i32(20, 7); // SaveGameId
-    save.refresh_guid();
+                         // A *fixed* GUID: synthetic saves must be byte-identical between runs so
+                         // snapshots and byte-level tests stay deterministic.
+    save.message.set(Field::bytes(
+        34,
+        &[
+            0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE, 0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A,
+            0x69, 0x78,
+        ],
+    ));
     save.set_str(26, "20260101000001");
 
     let configs = crate::gameinfo::AssetLibraryConfigs::pc_default();
@@ -185,6 +193,44 @@ pub fn synthetic_save() -> SaveGame {
     save.set_bytes(15, &blob);
     save.set_int_list_packed(39, &[1, 2, 5]);
 
+    // One mission playthrough with two missions (field 18).
+    {
+        let mut playthrough = Message::default();
+        playthrough.push(Field::varint(1, 1)); // PlayThroughNumber
+        playthrough.push(Field::string(2, "GD_Episode01.M_Ep1_Champion"));
+        for (mission, status) in [
+            ("GD_Episode01.M_Ep1_Champion", 4), // Complete
+            ("GD_Episode02.M_Ep2_Henchman", 0), // NotStarted
+        ] {
+            let mut entry = Message::default();
+            entry.push(Field::string(1, mission));
+            entry.push(Field::varint(2, status));
+            entry.push(Field::varint(3, 0));
+            entry.push(Field::varint(4, 0));
+            entry.push(Field::varint(6, 0));
+            entry.push(Field::varint(8, 0));
+            entry.push(Field::varint(10, 0));
+            entry.push(Field::varint(11, 40));
+            playthrough.push(Field::bytes(3, &entry.to_bytes()));
+        }
+        save.message.push(Field::bytes(18, &playthrough.to_bytes()));
+        save.set_i32(21, 18); // PlotMissionNumber
+        save.set_i32(37, 18); // ActiveMissionNumber
+    }
+
+    // One vehicle family with two skins (field 57) + steering mode (58).
+    {
+        let mut vehicle = Message::default();
+        vehicle.push(Field::string(
+            1,
+            "GD_Globals.VehicleSpawnStation.VehicleFamily_Runner",
+        ));
+        vehicle.push(Field::string(2, "GD_VehicleCustomizations.Runner.Skin_A"));
+        vehicle.push(Field::string(2, "GD_VehicleCustomizations.Runner.Skin_B"));
+        save.message.push(Field::bytes(57, &vehicle.to_bytes()));
+        save.set_i32(58, 0);
+    }
+
     // Travel: a few visited stations + the last one.
     save.set_visited_teleporters(&[
         "SouthernShelfBay".to_string(),
@@ -224,6 +270,9 @@ mod tests {
         assert_eq!(save.bank_entries().len(), 1);
         assert_eq!(save.skills().len(), 3);
         assert_eq!(save.resources().len(), 3);
+        assert_eq!(save.mission_playthroughs().len(), 1);
+        assert_eq!(save.mission_playthroughs()[0].missions.len(), 2);
+        assert_eq!(save.vehicles().len(), 1);
         assert_eq!(save.world_discoveries().len(), 2);
         assert_eq!(save.lockouts().len(), 1);
         assert_eq!(save.challenge_stats().expect("blob").entries.len(), 2);

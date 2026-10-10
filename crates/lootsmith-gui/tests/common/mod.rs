@@ -1,0 +1,96 @@
+//! Shared test harness: always the synthetic save, plus the game-data dumps
+//! when the environment provides them.
+//!
+//! Per `LOOTSMITH_UI_WORKFLOW.md`:
+//! - tests never depend on a personal save — `synthetic_save_path()` builds one
+//!   from `SaveGame::blank` on first use;
+//! - dumps-dependent tests call [`dumps_path`]; under
+//!   `LOOTSMITH_REQUIRE_FIXTURES=1` a missing dumps folder is a **hard panic**
+//!   instead of a silent skip, so a green run always proved something.
+
+#![allow(dead_code)]
+
+use egui::Vec2;
+use egui_kittest::Harness;
+use lootsmith_core::fixture;
+use lootsmith_gui::app::LootsmithApp;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// Whether missing fixtures must fail the test rather than skip it.
+pub fn require_fixtures() -> bool {
+    matches!(
+        std::env::var("LOOTSMITH_REQUIRE_FIXTURES").as_deref(),
+        Ok("1") | Ok("true")
+    )
+}
+
+/// A private copy of the synthetic save, unique per call so tests can run in
+/// parallel.
+pub fn synthetic_save_path() -> String {
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+    let unique = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let path = std::env::temp_dir().join(format!(
+        "lootsmith-test-{}-{unique}.sav",
+        std::process::id()
+    ));
+    fixture::write_synthetic_save(&path).expect("write synthetic save");
+    path.display().to_string()
+}
+
+/// The game-data dumps folder (`LOOTSMITH_ASSET_LIBRARY` or the well-known
+/// local checkout), or `None`. Panics under `LOOTSMITH_REQUIRE_FIXTURES=1`.
+pub fn dumps_path() -> Option<String> {
+    let from_env = std::env::var("LOOTSMITH_ASSET_LIBRARY").ok();
+    let local = format!(
+        "{}/../../../bl2-rogue/data/gibbed/Asset Library Manager.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let candidate = from_env
+        .filter(|p| !p.trim().is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            PathBuf::from(&local)
+                .exists()
+                .then(|| PathBuf::from(&local))
+        });
+    match candidate {
+        Some(path) if path.exists() => Some(path.display().to_string()),
+        _ if require_fixtures() => panic!(
+            "LOOTSMITH_REQUIRE_FIXTURES=1 but no game-data dumps found; \
+             set LOOTSMITH_ASSET_LIBRARY to an Asset Library Manager.json"
+        ),
+        _ => None,
+    }
+}
+
+/// The synthetic save with dumps when available (the common case).
+pub fn harness() -> Harness<'static, LootsmithApp> {
+    harness_with(&synthetic_save_path(), dumps_path().as_deref())
+}
+
+/// A harness over an explicit save (and optional dumps).
+pub fn harness_with(save: &str, dumps: Option<&str>) -> Harness<'static, LootsmithApp> {
+    Harness::builder()
+        .with_size(Vec2::new(1280.0, 800.0))
+        .build_ui_state(
+            |ui, app: &mut LootsmithApp| app.build(ui),
+            LootsmithApp::new(Some(save.to_string()), dumps.map(str::to_string)),
+        )
+}
+
+/// Re-open a written save from disk.
+pub fn reopen(path: &std::path::Path) -> lootsmith_core::SaveFile {
+    let bytes = std::fs::read(path).expect("read saved file");
+    lootsmith_core::container::unpack(&bytes, lootsmith_core::Platform::PC).expect("reopen")
+}
+
+/// A dumps-path-or-skip guard for name-dependent tests: panics under
+/// `LOOTSMITH_REQUIRE_FIXTURES=1`, prints a skip note otherwise.
+pub fn dumps_or_none(tag: &str) -> Option<String> {
+    let dumps = dumps_path();
+    if dumps.is_none() {
+        eprintln!("{tag}: skipped (no game-data dumps)");
+    }
+    dumps
+}
