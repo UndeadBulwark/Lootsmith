@@ -71,6 +71,24 @@ accepted but only PC is tested today. `--dumps` (or `LOOTSMITH_ASSET_LIBRARY`)
 points at the Gibbed `Asset Library Manager.json` so asset indices resolve to
 names; without it the CLI prints raw indices.
 
+Edit a weapon part by name:
+
+```sh
+cargo run -p lootsmith-cli -- edit /path/to/Save0001.sav \
+    --item 6 --part elemental --set "GD_Weap_Pistol.elemental.Pistol_Elemental_Fire" \
+    --dumps "/path/Asset Library Manager.json" --out /path/to/edited.sav
+```
+
+## GUI
+
+```sh
+cargo run -p lootsmith-gui
+```
+
+A minimal `egui` window: type a save path, **Load**, edit the common scalars,
+see the item list, and **Save** (writes in place, creating a `.bak` backup).
+The Asset Library path field enables item names.
+
 ## Tests
 
 A real save is expected at `tests/fixtures/pc_Save0001.sav` (git-ignored). With

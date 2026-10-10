@@ -5,5 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "lootsmith-gui"
+path = "src/main.rs"
+
 [dependencies]
 lootsmith-core = { workspace = true }
+eframe = "0.36"
