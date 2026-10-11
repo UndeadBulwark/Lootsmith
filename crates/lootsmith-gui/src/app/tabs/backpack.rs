@@ -311,9 +311,13 @@ impl LootsmithApp {
         }
         self.item_edit = edit_opt;
 
-        // ---- inventory table ----
+        // ---- inventory list (mockup item table, spec §2.2 item 4) ----
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().fill(p.bg))
+            .frame(
+                egui::Frame::default()
+                    .fill(p.bg)
+                    .inner_margin(egui::Margin::same(8)),
+            )
             .show(ui, |ui| {
                 if visible.is_empty() {
                     ui.add_space(12.0);
@@ -327,135 +331,30 @@ impl LootsmithApp {
                     );
                     return;
                 }
-                TableBuilder::new(ui)
-                    .striped(true)
-                    .resizable(true)
-                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                    .column(Column::exact(48.0))
-                    .column(Column::exact(96.0))
-                    .column(Column::exact(124.0))
-                    .column(Column::exact(52.0))
-                    .column(Column::exact(44.0))
-                    .column(Column::exact(56.0))
-                    .column(Column::exact(90.0))
-                    .column(Column::remainder().at_least(180.0))
-                    .header(26.0, |mut header| {
-                        for name in [
-                            "#",
-                            "Type",
-                            "ID",
-                            "Qty",
-                            "Eq",
-                            "Quick",
-                            "Mark",
-                            "Balance / Name",
-                        ] {
-                            header.col(|ui| {
-                                ui.label(
-                                    egui::RichText::new(name).strong().size(11.5).color(p.dim),
-                                );
-                            });
-                        }
+                let items: Vec<crate::ui::item_table::ItemRow> = visible
+                    .iter()
+                    .map(|r| crate::ui::item_table::ItemRow {
+                        name: if r.name.is_empty() {
+                            r.balance.clone()
+                        } else {
+                            r.name.clone()
+                        },
+                        kind: r.kind.clone(),
+                        id: r.id,
+                        level: r.level,
+                        marked: r.mark != 0,
+                        rarity: r.rarity,
                     })
-                    .body(|mut body| {
-                        for (i, row) in visible.iter().enumerate() {
-                            let is_selected = selected == Some((row.container, row.occurrence));
-                            let cell = |base: egui::Color32| if is_selected { p.on } else { base };
-                            body.row(24.0, |mut tr| {
-                                tr.set_selected(is_selected);
-                                tr.col(|ui| {
-                                    ui.label(
-                                        crate::ui::widgets::num((i + 1).to_string(), 15.0)
-                                            .color(cell(p.dim)),
-                                    );
-                                });
-                                tr.col(|ui| {
-                                    ui.label(
-                                        egui::RichText::new(&row.kind)
-                                            .color(cell(if row.is_weapon { p.gold } else { p.dim }))
-                                            .size(12.0),
-                                    );
-                                });
-                                tr.col(|ui| {
-                                    if ui
-                                        .selectable_label(
-                                            is_selected,
-                                            crate::ui::widgets::num(format!("id={}", row.id), 15.0)
-                                                .color(cell(p.fg)),
-                                        )
-                                        .clicked()
-                                    {
-                                        clicked = Some((row.container, row.occurrence));
-                                    }
-                                });
-                                tr.col(|ui| {
-                                    if row.is_weapon || row.container == Container::Bank {
-                                        ui.label("");
-                                    } else {
-                                        ui.label(
-                                            crate::ui::widgets::num(row.quantity.to_string(), 15.0)
-                                                .color(cell(p.fg)),
-                                        );
-                                    }
-                                });
-                                tr.col(|ui| {
-                                    if row.is_weapon || row.container == Container::Bank {
-                                        ui.label("");
-                                    } else {
-                                        let (rect, _) = ui.allocate_exact_size(
-                                            egui::vec2(11.0, 11.0),
-                                            egui::Sense::hover(),
-                                        );
-                                        if row.equipped {
-                                            crate::ui::widgets::paint_glyph(
-                                                ui.painter(),
-                                                rect.center(),
-                                                crate::ui::widgets::Glyph::Check,
-                                                cell(p.fg),
-                                                1.0,
-                                            );
-                                        }
-                                    }
-                                });
-                                tr.col(|ui| {
-                                    if row.is_weapon {
-                                        ui.label(
-                                            crate::ui::widgets::num(
-                                                row.quick_slot.to_string(),
-                                                15.0,
-                                            )
-                                            .color(cell(p.fg)),
-                                        );
-                                    } else {
-                                        ui.label("");
-                                    }
-                                });
-                                tr.col(|ui| {
-                                    ui.label(
-                                        egui::RichText::new(player_mark_name(row.mark))
-                                            .color(cell(p.fg)),
-                                    );
-                                });
-                                tr.col(|ui| {
-                                    let (text, color) = if row.empty || row.name.is_empty() {
-                                        (row.balance.clone(), cell(p.dim))
-                                    } else {
-                                        (row.name.clone(), cell(p.fg))
-                                    };
-                                    let tip = if row.name.is_empty() {
-                                        row.balance.clone()
-                                    } else {
-                                        format!("{} — {}", row.name, row.balance)
-                                    };
-                                    crate::ui::widgets::label_nums(ui, &text, color, 15.0)
-                                        .on_hover_text(tip);
-                                });
-                                if tr.response().clicked() {
-                                    clicked = Some((row.container, row.occurrence));
-                                }
-                            });
-                        }
-                    });
+                    .collect();
+                let selected_index = selected.and_then(|(c, o)| {
+                    visible
+                        .iter()
+                        .position(|r| r.container == c && r.occurrence == o)
+                });
+                if let Some(i) = crate::ui::item_table::item_table(ui, &p, &items, selected_index) {
+                    let row = &visible[i];
+                    clicked = Some((row.container, row.occurrence));
+                }
             });
 
         if let Some((container, occurrence)) = clicked {

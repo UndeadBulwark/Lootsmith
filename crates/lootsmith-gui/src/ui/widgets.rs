@@ -8,7 +8,7 @@ use eframe::egui;
 /// Without it, mixed text shows digits as small, low subscripts.
 pub const NUM_SCALE: f32 = 19.0 / 15.0;
 
-fn num_font(size: f32) -> egui::FontId {
+pub(crate) fn num_font(size: f32) -> egui::FontId {
     egui::FontId::monospace(size * NUM_SCALE)
 }
 

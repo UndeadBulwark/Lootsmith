@@ -152,6 +152,8 @@ pub(crate) fn row_for(
             };
             let balance = resolve_balance(manager, &decoded);
             let name = item_name(&decoded, manager, name_parts);
+            let rarity = lootsmith_core::RarityRules::embedded().classify(&balance);
+            let level = decoded.game_stage();
             Row {
                 container: entry.container,
                 occurrence: entry.occurrence,
@@ -169,6 +171,8 @@ pub(crate) fn row_for(
                 quick_slot: entry.quick_slot,
                 is_weapon: decoded.is_weapon,
                 empty: decoded.unique_id == 0,
+                level,
+                rarity,
             }
         }
         Err(e) => Row {
@@ -185,6 +189,8 @@ pub(crate) fn row_for(
             quick_slot: entry.quick_slot,
             is_weapon: matches!(entry.container, Container::BackpackWeapon),
             empty: false,
+            level: 0,
+            rarity: lootsmith_core::Rarity::Unknown,
         },
     }
 }

@@ -18,7 +18,6 @@ pub(crate) use std::sync::Arc;
 
 pub(crate) use crate::theme;
 use crate::ui::widgets::Glyph;
-pub(crate) use egui_extras::{Column, TableBuilder};
 
 pub use crate::theme::Theme;
 
@@ -121,6 +120,10 @@ pub struct Row {
     pub is_weapon: bool,
     /// The blob is a blank placeholder (unique id 0).
     pub empty: bool,
+    /// The item's game stage (the level the item is tuned to).
+    pub level: i32,
+    /// Rarity from the balance definition (never guessed; `Unknown` otherwise).
+    pub rarity: lootsmith_core::Rarity,
 }
 
 /// One editable skill row (a `SkillData` entry, field 8).
