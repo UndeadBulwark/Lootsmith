@@ -16,3 +16,6 @@ Cargo.lock.orig
 
 # Review/design artifacts (mockups, bundles)
 /artifacts/
+
+# Stray snapshot archive (kept on disk, not tracked)
+snapshots.zip
