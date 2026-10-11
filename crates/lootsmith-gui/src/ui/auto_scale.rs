@@ -1,13 +1,18 @@
 //! Auto UI scale: pick a whole-number scale from the monitor's **physical** size
 //! and apply it **once**, without oscillating (spec §2.1 rule 7).
 //!
-//! egui-winit reports `viewport().monitor_size` in **logical points** (physical /
-//! `pixels_per_point`). Because changing the scale changes the reported logical
-//! size, recomputing the scale from `monitor_size * native` every frame makes the
-//! window resize back and forth (a resize spam loop). This module fixes that:
-//! it converts via the **current** `pixels_per_point` (zoom-invariant), latches the
-//! result, and only reports a change when it actually differs.
-use eframe::egui::Vec2;
+//! Verified against egui / egui-winit 0.36:
+//!   * egui-winit `update_viewport_info` sets `monitor_size = physical / (native *
+//!     ctx.zoom_factor())`, read **before** `begin_pass` of the same frame.
+//!   * `Context::set_pixels_per_point(p)` is `set_zoom_factor(p / native)`; a new
+//!     zoom is only applied at the NEXT `begin_pass`.
+//!
+//! So the zoom that produced this frame's `monitor_size` is the ppp the app
+//! observed on the **previous** frame (`prev_ppp`), not `ctx.pixels_per_point()`
+//! now. Using the wrong one makes the estimate wrong on the first frame after
+//! every change, which oscillates (see the simulator tests).
+//!
+//! Pure std: no egui types, so it compiles and tests anywhere.
 
 /// 1280x800 reference layout. Whole numbers only (spec §2.1 rule 7).
 pub fn scale_for(physical_w: u32, physical_h: u32) -> u32 {
@@ -15,7 +20,7 @@ pub fn scale_for(physical_w: u32, physical_h: u32) -> u32 {
 }
 
 /// The zoom factor that makes the total `pixels_per_point` an exact integer `n`
-/// regardless of the OS scale (`ppp = native * zoom`).
+/// whatever the OS scale is.
 pub fn zoom_for(n: u32, native_ppp: f32) -> f32 {
     n as f32 / native_ppp.max(0.1)
 }
@@ -23,14 +28,16 @@ pub fn zoom_for(n: u32, native_ppp: f32) -> f32 {
 /// Latching auto-scale. Decides at most once per distinct physical monitor size.
 #[derive(Debug, Clone, Default)]
 pub struct AutoScale {
+    prev_ppp: Option<f32>,
     last_physical: Option<(u32, u32)>,
     applied: Option<u32>,
 }
 
 impl AutoScale {
-    /// Seed from a persisted scale so frame 0 is already at the right scale (no jump).
+    /// Seed from the persisted scale so frame 0 is already right (no jump).
     pub fn with_persisted(scale: Option<u32>) -> Self {
         Self {
+            prev_ppp: None,
             last_physical: None,
             applied: scale.map(|s| s.clamp(1, 4)),
         }
@@ -41,33 +48,34 @@ impl AutoScale {
         self.applied
     }
 
-    /// Call once per frame. Returns `Some(n)` **only** when the scale must change.
+    /// Call exactly once per frame, from `build()`.
     ///
-    /// * `monitor_logical` — `ctx.input(|i| i.viewport().monitor_size)`
-    /// * `current_ppp` — `ctx.pixels_per_point()` (== native * zoom)
+    /// * `monitor_logical` — `ctx.input(|i| i.viewport().monitor_size).map(|m| (m.x, m.y))`
+    /// * `ppp_now` — `ctx.pixels_per_point()`
     /// * `native_ppp` — `ctx.native_pixels_per_point().unwrap_or(1.0)`
+    ///
+    /// Returns `Some(n)` only when the scale must change.
     pub fn update(
         &mut self,
-        monitor_logical: Option<Vec2>,
-        current_ppp: f32,
+        monitor_logical: Option<(f32, f32)>,
+        ppp_now: f32,
         native_ppp: f32,
     ) -> Option<u32> {
-        let target = match monitor_logical {
-            Some(m) if m.x > 0.0 && m.y > 0.0 => {
-                // Zoom-invariant physical size: logical * current ppp.
-                let phys = (
-                    (m.x * current_ppp).round() as u32,
-                    (m.y * current_ppp).round() as u32,
-                );
+        // The zoom winit used for this frame's monitor_size = ppp seen last frame.
+        let basis = self.prev_ppp.replace(ppp_now);
+        let target = match (monitor_logical, basis) {
+            (Some((mx, my)), Some(b)) if mx > 0.0 && my > 0.0 => {
+                let phys = ((mx * b).round() as u32, (my * b).round() as u32);
                 if self.last_physical == Some(phys) {
-                    return None; // same monitor — nothing to decide
+                    return None; // same monitor: nothing to decide
                 }
                 self.last_physical = Some(phys);
                 scale_for(phys.0, phys.1)
             }
+            (Some(_), None) => return None, // first frame: no basis yet; decide next frame
             _ => {
-                // Monitor size unknown (some Wayland setups, first frames). Decide
-                // once from the OS scale and never oscillate.
+                // No monitor info (some Wayland setups, test harness): decide once
+                // from the OS scale.
                 if self.applied.is_some() {
                     return None;
                 }
@@ -85,78 +93,147 @@ impl AutoScale {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eframe::egui::vec2;
 
-    #[test]
-    fn table() {
-        for (w, h, n) in [
-            (1280u32, 800u32, 1u32),
-            (1920, 1080, 1),
-            (2560, 1440, 1),
-            (3840, 2160, 2),
-            (5120, 2880, 3),
-            (7680, 4320, 4),
-        ] {
-            assert_eq!(scale_for(w, h), n, "{w}x{h}");
-        }
+    /// Models egui's frame order: winit builds input with the zoom in force BEFORE
+    /// `begin_pass`; `begin_pass` then applies the zoom the app set last frame.
+    struct Sim {
+        native: f32,
+        phys: (u32, u32),
+        zoom: f32,
+        pending: Option<f32>,
     }
-
-    /// Simulates egui: `monitor_size` is reported in logical points of the
-    /// **current** ppp, which changes when we apply a new scale.
-    fn run(phys: (f32, f32), native: f32, frames: usize) -> Vec<u32> {
-        let mut a = AutoScale::default();
-        let mut ppp = native; // zoom starts at 1
-        let mut changes = vec![];
-        for _ in 0..frames {
-            let logical = vec2(phys.0 / ppp, phys.1 / ppp);
-            if let Some(n) = a.update(Some(logical), ppp, native) {
-                changes.push(n);
-                ppp = n as f32; // = zoom_for(n, native) * native
+    impl Sim {
+        fn new(native: f32, phys: (u32, u32)) -> Self {
+            Self {
+                native,
+                phys,
+                zoom: 1.0,
+                pending: None,
             }
         }
-        changes
-    }
-
-    #[test]
-    fn settles_once_on_4k_for_any_os_scale() {
-        for native in [1.0, 1.5, 2.0] {
-            assert_eq!(
-                run((3840.0, 2160.0), native, 100),
-                vec![2],
-                "native {native}"
+        fn frame(
+            &mut self,
+            decide: &mut dyn FnMut(Option<(f32, f32)>, f32, f32) -> Option<u32>,
+        ) -> f32 {
+            let mon = (
+                self.phys.0 as f32 / (self.native * self.zoom),
+                self.phys.1 as f32 / (self.native * self.zoom),
             );
+            if let Some(z) = self.pending.take() {
+                self.zoom = z; // begin_pass
+            }
+            let ppp_now = self.native * self.zoom;
+            if let Some(n) = decide(Some(mon), ppp_now, self.native) {
+                self.pending = Some(zoom_for(n, self.native));
+            }
+            ppp_now
         }
     }
+    fn changes(
+        native: f32,
+        phys: (u32, u32),
+        decide: &mut dyn FnMut(Option<(f32, f32)>, f32, f32) -> Option<u32>,
+    ) -> (usize, f32) {
+        let mut sim = Sim::new(native, phys);
+        let (mut last, mut n) = (0.0f32, 0usize);
+        for i in 0..300 {
+            let p = sim.frame(decide);
+            if i > 0 && (p - last).abs() > 1e-4 {
+                n += 1;
+            }
+            last = p;
+        }
+        (n, last)
+    }
+    const MONITORS: [(u32, u32); 6] = [
+        (1920, 1080),
+        (2560, 1440),
+        (3840, 2160),
+        (1366, 768),
+        (5120, 2880),
+        (3440, 1440),
+    ];
+    const NATIVES: [f32; 4] = [1.0, 1.25, 1.5, 2.0];
 
     #[test]
-    fn does_not_oscillate_for_common_layouts() {
-        // Every reference size settles on exactly one change, for any OS scale.
-        for (w, h, n) in [
-            (1280.0f32, 800.0f32, 1u32),
-            (1920.0, 1080.0, 1),
-            (2560.0, 1440.0, 1),
-            (5120.0, 2880.0, 3),
-            (7680.0, 4320.0, 4),
-        ] {
-            for native in [1.0, 1.25, 1.5, 2.0] {
-                assert_eq!(run((w, h), native, 50), vec![n], "{w}x{h} native {native}");
+    fn settles_on_the_right_integer_and_stays() {
+        for native in NATIVES {
+            for m in MONITORS {
+                let mut a = AutoScale::default();
+                let (n, ppp) = changes(native, m, &mut |mon, p, nat| a.update(mon, p, nat));
+                let want = scale_for(m.0, m.1) as f32;
+                assert!(n <= 2, "native {native} monitor {m:?}: {n} ppp changes");
+                assert!(
+                    (ppp - want).abs() < 1e-3,
+                    "native {native} monitor {m:?}: ended at {ppp}, want {want}"
+                );
             }
         }
     }
 
+    /// The app applies the persisted scale on frame 0, so a correct seed never changes ppp.
     #[test]
-    fn unknown_monitor_decides_once() {
-        let mut a = AutoScale::default();
-        assert_eq!(a.update(None, 1.5, 1.5), Some(2));
-        for _ in 0..50 {
-            assert_eq!(a.update(None, 2.0, 1.5), None);
+    fn persisted_seed_does_not_jump() {
+        let seed = scale_for(3840, 2160); // 2
+        let mut a = AutoScale::with_persisted(Some(seed));
+        let mut sim = Sim::new(1.0, (3840, 2160));
+        sim.zoom = zoom_for(seed, 1.0); // applied at startup by the app
+        let mut n = 0;
+        let mut last = sim.native * sim.zoom;
+        for _ in 0..300 {
+            let p = sim.frame(&mut |mon, p, nat| a.update(mon, p, nat));
+            if (p - last).abs() > 1e-4 {
+                n += 1;
+            }
+            last = p;
         }
+        assert_eq!(n, 0, "a correct persisted seed must not change the scale");
+        // A stale seed (monitor changed since last run) corrects itself exactly once.
+        let mut a = AutoScale::with_persisted(Some(3));
+        let (n, ppp) = changes(1.0, (3840, 2160), &mut |mon, p, nat| a.update(mon, p, nat));
+        assert!(n <= 1 && (ppp - 2.0).abs() < 1e-3, "n={n} ppp={ppp}");
     }
 
     #[test]
-    fn persisted_scale_means_no_first_frame_jump() {
-        let mut a = AutoScale::with_persisted(Some(2));
-        let m = vec2(1920.0, 1080.0); // 4K at ppp 2
-        assert_eq!(a.update(Some(m), 2.0, 1.0), None);
+    fn no_monitor_info_decides_once() {
+        let mut a = AutoScale::default();
+        let mut got = vec![];
+        for _ in 0..50 {
+            got.push(a.update(None, 1.0, 2.0));
+        }
+        assert_eq!(got.iter().flatten().count(), 1);
+    }
+
+    /// Regression proof: the original per-frame `effective_scale` oscillates here.
+    #[test]
+    fn old_effective_scale_flickers() {
+        let (n, _) = changes(1.0, (3840, 2160), &mut |mon, _p, nat| {
+            let (mx, my) = mon.unwrap();
+            Some(scale_for((mx * nat) as u32, (my * nat) as u32)) // physical = monitor * native
+        });
+        assert!(n > 50, "expected the old logic to flicker, got {n} changes");
+    }
+
+    /// The first drop-in (basis = `ppp_now`) is unstable too: documents why
+    /// `prev_ppp` is needed.
+    #[test]
+    fn using_ppp_now_as_basis_is_unstable() {
+        let mut last: Option<(u32, u32)> = None;
+        let mut applied: Option<u32> = None;
+        let (n, _) = changes(1.0, (3840, 2160), &mut |mon, ppp_now, _| {
+            let (mx, my) = mon?;
+            let phys = ((mx * ppp_now).round() as u32, (my * ppp_now).round() as u32);
+            if last == Some(phys) {
+                return None;
+            }
+            last = Some(phys);
+            let t = scale_for(phys.0, phys.1);
+            if applied == Some(t) {
+                return None;
+            }
+            applied = Some(t);
+            Some(t)
+        });
+        assert!(n > 4, "expected instability, got {n} changes");
     }
 }

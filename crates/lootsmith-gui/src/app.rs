@@ -621,6 +621,10 @@ impl LootsmithApp {
 
     /// Select the scale mode (Auto or a fixed integer scale).
     pub fn set_scale_mode(&mut self, mode: ScaleMode) {
+        if mode == ScaleMode::Auto {
+            // Re-decide from scratch after leaving a fixed scale.
+            self.auto = crate::ui::auto_scale::AutoScale::default();
+        }
         self.scale_mode = mode;
         if let ScaleMode::Fixed(n) = mode {
             self.ui_scale = n.clamp(1, 4) as f32;
@@ -629,23 +633,28 @@ impl LootsmithApp {
 
     /// Resolve and apply the UI scale for this frame (spec §2.1 rule 7). `Auto`
     /// latches on the monitor's **physical** size, so it settles once and never
-    /// drives a resize loop. Applied via `set_zoom_factor` (integer `pixels_per_point`
-    /// regardless of the OS scale).
+    /// drives a resize loop. Applied via `set_zoom_factor` (integer
+    /// `pixels_per_point` regardless of the OS scale).
     fn apply_scale(&mut self, ctx: &egui::Context) {
         let native = ctx.native_pixels_per_point().unwrap_or(1.0);
-        let target = match self.scale_mode {
-            ScaleMode::Fixed(n) => n.clamp(1, 4),
+        let wanted: Option<u32> = match self.scale_mode {
+            ScaleMode::Fixed(n) => {
+                let n = n.clamp(1, 4);
+                ((ctx.pixels_per_point() - n as f32).abs() > 1e-3).then_some(n)
+            }
             ScaleMode::Auto => {
-                let monitor = ctx.input(|i| i.viewport().monitor_size);
-                self.auto
-                    .update(monitor, ctx.pixels_per_point(), native)
-                    .or_else(|| self.auto.applied())
-                    .unwrap_or(1)
+                // `update` must be called exactly once per frame.
+                let mon = ctx.input(|i| i.viewport().monitor_size).map(|m| (m.x, m.y));
+                let decision = self.auto.update(mon, ctx.pixels_per_point(), native);
+                if let Some(n) = self.auto.applied() {
+                    self.ui_scale = n as f32;
+                }
+                decision
             }
         };
-        self.ui_scale = target as f32;
-        if (ctx.pixels_per_point() - target as f32).abs() > 0.01 {
-            ctx.set_zoom_factor(crate::ui::auto_scale::zoom_for(target, native));
+        if let Some(n) = wanted {
+            self.ui_scale = n as f32;
+            ctx.set_zoom_factor(crate::ui::auto_scale::zoom_for(n, native));
         }
     }
 
