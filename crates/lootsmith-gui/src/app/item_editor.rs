@@ -70,6 +70,7 @@ impl LootsmithApp {
         &self,
         is_weapon: bool,
         balance: &str,
+        decoded: &items::PackedData,
     ) -> Vec<(&'static str, &'static str)> {
         let all = slots_for(is_weapon);
         let Some(lists) = self.part_lists.as_ref() else {
@@ -78,9 +79,15 @@ impl LootsmithApp {
         let Some(rec) = lists.for_balance(balance) else {
             return all.to_vec();
         };
+        // Union: show a slot if the item **has** that part (it must stay editable)
+        // or the balance offers it as a candidate.
         let has = |slot: &str| -> bool {
             rec.slots.contains_key(slot)
                 || (slot == "type" && rec.slots.contains_key("weapon_type"))
+                || decoded
+                    .part(slot)
+                    .map(|(r, _)| !r.is_none())
+                    .unwrap_or(false)
         };
         let mut out: Vec<(&'static str, &'static str)> = Vec::new();
         for s in ["type", "balance", "manufacturer"] {

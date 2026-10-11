@@ -5,6 +5,7 @@ mod common;
 
 use common::frame::extract;
 use eframe::egui::Vec2;
+use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
 use lootsmith_core::savegame::player_mark_name;
 use lootsmith_core::Container;
@@ -140,7 +141,7 @@ fn inspector_parts_reach_the_last_slot() {
             extract(out).0
         };
         assert!(
-            runs.iter().any(|r| r.text.trim() == "Quick slot"),
+            runs.iter().any(|r| r.text.trim() == "GRADE"),
             "{scale}x: the inspector must render"
         );
     }
@@ -169,12 +170,12 @@ fn workbench_lists_the_last_part_row_at_every_scale() {
     }
 }
 
-/// Gibbed-style part exclusion: the workbench shows only the slots the item's
-/// balance actually uses, with type/balance/manufacturer pinned (so adding items
-/// still works). The fixture pistol balance is `{accessory1, body, material, sight}`
-/// (Selective), so Grip/Barrel/Stock/Elemental/Accessory 2 must NOT appear.
+/// Gibbed-style part exclusion: the workbench shows the item's own parts **plus**
+/// the balance's candidates, with type/balance/manufacturer pinned. The fixture
+/// Dahl pistol carries grip/barrel/material/prefix/title and its balance offers
+/// {accessory1, body, material, sight}, so Stock/Elemental/Accessory 2 must not show.
 #[test]
-fn workbench_shows_only_the_balances_parts() {
+fn workbench_shows_the_items_parts_and_balance_candidates() {
     let save = synthetic("parts");
     let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
     h.state_mut().set_tab(Tab::Backpack);
@@ -190,13 +191,57 @@ fn workbench_shows_only_the_balances_parts() {
         "Balance",
         "Manufacturer",
         "Body",
+        "Grip",
+        "Barrel",
         "Sight",
         "Accessory 1",
         "Material",
+        "Prefix",
+        "Title",
     ] {
         assert!(has(present), "expected {present:?} in the parts grid");
     }
-    for absent in ["Grip", "Barrel", "Stock", "Elemental", "Accessory 2"] {
-        assert!(!has(absent), "{absent:?} must not appear for this balance");
+    for absent in ["Stock", "Elemental", "Accessory 2"] {
+        assert!(!has(absent), "{absent:?} must not appear for this item");
     }
+
+    // The item's own parts win: an elemental part shows even though the balance
+    // omits it.
+    let _ = h.state_mut().set_selected_part(
+        "elemental",
+        "GD_Weap_Pistol.elemental.Pistol_Elemental_Fire",
+    );
+    h.run();
+    let runs = {
+        let out = h.output();
+        extract(out).0
+    };
+    assert!(
+        runs.iter().any(|r| r.text.trim() == "Elemental"),
+        "an existing elemental part must be editable"
+    );
+}
+
+/// The workbench stat blocks are LEVEL / GRADE / SLOT (or STATUS) / MARK, editable,
+/// with no duplicate GAME STAGE / Quick slot row.
+#[test]
+fn workbench_stat_blocks_are_editable_and_deduplicated() {
+    let save = synthetic("stats");
+    let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
+    h.state_mut().set_tab(Tab::Backpack);
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    let runs = {
+        let out = h.output();
+        extract(out).0
+    };
+    let has = |t: &str| runs.iter().any(|r| r.text.trim() == t);
+    for block in ["LEVEL", "GRADE", "SLOT", "MARK"] {
+        assert!(has(block), "stat block {block:?} missing");
+    }
+    assert!(!has("GAME STAGE"), "GAME STAGE duplicates LEVEL");
+    assert!(
+        h.query_all_by_label("Quick slot").count() == 0,
+        "the redundant Quick slot row must be gone"
+    );
 }

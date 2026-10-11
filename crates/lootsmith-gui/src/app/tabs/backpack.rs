@@ -319,38 +319,39 @@ impl LootsmithApp {
                     .layout_job(crate::ui::widgets::job_with_nums(&subtitle, p.dim, 15.0));
                 ui.painter().galley(sr.left_center(), g, p.dim);
                 ui.add_space(10.0);
-                // four stat blocks
+                // four editable stat blocks: LEVEL, GRADE, SLOT / STATUS, MARK
+                let (gstage, mgrade) = match &mut edit.decoded.slot {
+                    lootsmith_core::items::PackedSlot::Weapon(w) => {
+                        (&mut w.game_stage, &mut w.manufacturer_grade_index)
+                    }
+                    lootsmith_core::items::PackedSlot::Item(it) => {
+                        (&mut it.game_stage, &mut it.manufacturer_grade_index)
+                    }
+                };
+                let is_item = edit.container == Container::BackpackItem;
                 let bw = (ui.available_width() - 3.0 * 8.0) / 4.0;
                 let (row, _) = ui.allocate_exact_size(
                     egui::vec2(ui.available_width(), 72.0),
                     egui::Sense::hover(),
                 );
-                let stats: [(&str, String, bool); 4] = [
-                    ("LEVEL", edit.decoded.game_stage().to_string(), true),
-                    ("GAME STAGE", edit.decoded.game_stage().to_string(), true),
-                    (
-                        "GRADE",
-                        match &edit.decoded.slot {
-                            lootsmith_core::items::PackedSlot::Weapon(w) => {
-                                w.manufacturer_grade_index
-                            }
-                            lootsmith_core::items::PackedSlot::Item(it) => {
-                                it.manufacturer_grade_index
-                            }
-                        }
-                        .to_string(),
-                        true,
-                    ),
-                    ("MARK", player_mark_name(edit.mark).to_string(), false),
+                let labels = [
+                    "LEVEL",
+                    "GRADE",
+                    if is_item { "STATUS" } else { "SLOT" },
+                    "MARK",
                 ];
-                for (i, (label, value, numeric)) in stats.iter().enumerate() {
-                    let r = egui::Rect::from_min_size(
-                        row.min + egui::vec2(i as f32 * (bw + 8.0), 0.0),
-                        egui::vec2(bw, row.height()),
-                    );
-                    ui.painter().rect_filled(r, 0.0, p.pan);
+                let cells: Vec<egui::Rect> = (0..4)
+                    .map(|i| {
+                        egui::Rect::from_min_size(
+                            row.min + egui::vec2(i as f32 * (bw + 8.0), 0.0),
+                            egui::vec2(bw, row.height()),
+                        )
+                    })
+                    .collect();
+                for (r, label) in cells.iter().zip(labels) {
+                    ui.painter().rect_filled(*r, 0.0, p.pan);
                     ui.painter().rect_stroke(
-                        r,
+                        *r,
                         0.0,
                         egui::Stroke::new(2.0, p.wdb),
                         egui::StrokeKind::Inside,
@@ -358,89 +359,96 @@ impl LootsmithApp {
                     ui.painter().text(
                         r.left_top() + egui::vec2(10.0, 8.0),
                         egui::Align2::LEFT_TOP,
-                        *label,
+                        label,
                         egui::FontId::proportional(12.0),
                         p.gold,
                     );
-                    let font = if *numeric {
-                        crate::ui::widgets::num_font(20.0)
-                    } else {
-                        egui::FontId::proportional(20.0)
-                    };
-                    ui.painter().text(
-                        r.left_bottom() + egui::vec2(10.0, -8.0),
-                        egui::Align2::LEFT_BOTTOM,
-                        value,
-                        font,
+                }
+                let inner = |r: egui::Rect| {
+                    egui::Rect::from_min_max(
+                        egui::pos2(r.left() + 8.0, r.top() + 24.0),
+                        egui::pos2(r.right() - 8.0, r.bottom() - 6.0),
+                    )
+                };
+                // A VT323 (digit-rule compliant) number cell that is drag-editable.
+                let num_cell = |ui: &mut egui::Ui,
+                                r: egui::Rect,
+                                id: &str,
+                                value: &mut i32,
+                                lo: i32,
+                                hi: i32|
+                 -> bool {
+                    let mut resp = ui.interact(r, ui.id().with(id), egui::Sense::drag());
+                    if resp.dragged() {
+                        let d = resp.drag_delta().x.round() as i32;
+                        if d != 0 {
+                            *value = (*value + d).clamp(lo, hi);
+                            resp.mark_changed();
+                        }
+                    }
+                    let g = ui.painter().layout_job(crate::ui::widgets::job_with_nums(
+                        &value.to_string(),
+                        p.fg,
+                        20.0,
+                    ));
+                    ui.painter().galley(
+                        egui::pos2(r.left(), r.center().y - g.size().y / 2.0),
+                        g,
                         p.fg,
                     );
+                    resp.changed()
+                };
+                if num_cell(ui, inner(cells[0]), "level", gstage, 1, 80) {
+                    edit.dirty = true;
                 }
-                ui.add_space(12.0);
-
-                // per-item fields
-                if edit.container == Container::BackpackItem
-                    || edit.container == Container::BackpackWeapon
-                {
-                    ui.horizontal(|ui| {
-                        if edit.container == Container::BackpackItem {
-                            ui.label("Quantity");
-                            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                ui.add(egui::DragValue::new(&mut edit.quantity)).changed()
-                            }) {
-                                edit.dirty = true;
-                            }
-                            if crate::ui::widgets::checkbox(ui, &mut edit.equipped, "Equipped")
-                                .changed()
-                            {
-                                edit.dirty = true;
-                            }
-                        } else {
-                            ui.label("Quick slot");
-                            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed()
-                            }) {
-                                edit.dirty = true;
-                            }
-                        }
-                        ui.label("Mark");
-                        egui::ComboBox::from_id_salt("mark_edit")
-                            .selected_text(player_mark_name(edit.mark))
-                            .show_ui(ui, |ui| {
-                                for (value, name) in PLAYER_MARKS.iter().enumerate() {
-                                    if ui
-                                        .selectable_label(edit.mark == value as i32, *name)
-                                        .clicked()
-                                    {
-                                        edit.mark = value as i32;
-                                        edit.dirty = true;
-                                    }
-                                }
-                            });
-                    });
-                    ui.add_space(6.0);
-                    let (gstage, mgrade) = match &mut edit.decoded.slot {
-                        lootsmith_core::items::PackedSlot::Weapon(w) => {
-                            (&mut w.game_stage, &mut w.manufacturer_grade_index)
-                        }
-                        lootsmith_core::items::PackedSlot::Item(it) => {
-                            (&mut it.game_stage, &mut it.manufacturer_grade_index)
-                        }
+                if num_cell(ui, inner(cells[1]), "grade", mgrade, 1, 10) {
+                    edit.dirty = true;
+                }
+                if is_item {
+                    // A word, not a number: Equipped / In-Inventory (0 = In-Inventory).
+                    let word = if edit.equipped {
+                        "Equipped"
+                    } else {
+                        "In-Inventory"
                     };
-                    if crate::ui::widgets::number_field(ui, "game_stage", gstage, 90.0).changed() {
+                    if ui
+                        .put(
+                            inner(cells[2]),
+                            egui::Button::new(egui::RichText::new(word).size(17.0)),
+                        )
+                        .clicked()
+                    {
+                        edit.equipped = !edit.equipped;
                         edit.dirty = true;
                     }
-                    if crate::ui::widgets::number_field(ui, "mfr_grade", mgrade, 70.0).changed() {
-                        edit.dirty = true;
-                    }
-                    ui.add_space(6.0);
+                } else if num_cell(ui, inner(cells[2]), "slot", &mut edit.quick_slot, 0, 3) {
+                    edit.dirty = true;
                 }
+                ui.scope_builder(egui::UiBuilder::new().max_rect(inner(cells[3])), |ui| {
+                    egui::ComboBox::from_id_salt("mark_edit")
+                        .selected_text(player_mark_name(edit.mark))
+                        .show_ui(ui, |ui| {
+                            for (value, name) in PLAYER_MARKS.iter().enumerate() {
+                                if ui
+                                    .selectable_label(edit.mark == value as i32, *name)
+                                    .clicked()
+                                {
+                                    edit.mark = value as i32;
+                                    edit.dirty = true;
+                                }
+                            }
+                        });
+                });
+                ui.add_space(12.0);
 
                 theme::section(ui, "Parts");
                 egui::Grid::new("parts_grid")
                     .num_columns(2)
                     .spacing([10.0, 6.0])
                     .show(ui, |ui| {
-                        for (slot, label) in self.slots_for_balance(is_weapon, &balance_name) {
+                        for (slot, label) in
+                            self.slots_for_balance(is_weapon, &balance_name, &edit.decoded)
+                        {
                             crate::ui::widgets::label_nums(ui, label, p.dim, 12.0);
                             let group = items::slot_group(&edit.decoded.slot, slot).unwrap();
                             let current = match edit.decoded.part(slot) {
