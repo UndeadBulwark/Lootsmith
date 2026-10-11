@@ -419,6 +419,8 @@ pub struct LootsmithApp {
     pub action_search: String,
     /// The UI-scale mode (Auto or a fixed integer scale).
     pub scale_mode: ScaleMode,
+    /// Latching auto-scale state (decides once per monitor size).
+    pub(crate) auto: crate::ui::auto_scale::AutoScale,
     /// There are edits in memory that have not been written to disk.
     pub dirty: bool,
     pub status: String,
@@ -517,6 +519,7 @@ impl LootsmithApp {
             show_settings: false,
             action_search: String::new(),
             scale_mode: ScaleMode::Auto,
+            auto: crate::ui::auto_scale::AutoScale::default(),
             dirty: false,
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
@@ -589,13 +592,10 @@ impl LootsmithApp {
     /// blur pixel art, so only whole multiples are offered.
     pub const UI_SCALES: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
 
-    /// The auto UI scale for a monitor's **physical** pixel size (spec §2.1 rule 7):
-    /// `clamp(min(w / 1280, h / 800), 1, 4)`. Physical pixels, so OS scaling never
-    /// doubles up.
+    /// The auto UI scale for a monitor's **physical** pixel size (spec §2.1 rule 7).
+    /// Thin wrapper over [`crate::ui::auto_scale::scale_for`].
     pub fn ui_scale_for(physical_width_px: u32, physical_height_px: u32) -> u32 {
-        (physical_width_px / 1280)
-            .min(physical_height_px / 800)
-            .clamp(1, 4)
+        crate::ui::auto_scale::scale_for(physical_width_px, physical_height_px)
     }
 
     /// Snap an arbitrary scale to the nearest permitted value (ties favour the
@@ -616,47 +616,36 @@ impl LootsmithApp {
     pub fn set_ui_scale(&mut self, scale: f32) {
         let v = Self::clamp_ui_scale(scale).round() as u32;
         self.scale_mode = ScaleMode::Fixed(v.clamp(1, 4));
-        self.ui_scale = self.scale_mode_scale();
+        self.ui_scale = v.clamp(1, 4) as f32;
     }
 
     /// Select the scale mode (Auto or a fixed integer scale).
     pub fn set_scale_mode(&mut self, mode: ScaleMode) {
         self.scale_mode = mode;
-    }
-
-    /// The scale implied by the current [`ScaleMode`], without a context.
-    fn scale_mode_scale(&self) -> f32 {
-        match self.scale_mode {
-            ScaleMode::Fixed(n) => n.clamp(1, 4) as f32,
-            // `Auto` is resolved against the monitor in [`Self::effective_scale`].
-            ScaleMode::Auto => Self::clamp_ui_scale(self.ui_scale),
+        if let ScaleMode::Fixed(n) = mode {
+            self.ui_scale = n.clamp(1, 4) as f32;
         }
     }
 
-    /// The effective integer scale for this frame. `Auto` derives it from the
-    /// monitor's physical size (re-evaluated every frame, so moving the window to
-    /// another monitor or changing the OS scale re-scales).
-    pub fn effective_scale(&self, ctx: &egui::Context) -> f32 {
-        match self.scale_mode {
-            ScaleMode::Fixed(n) => n.clamp(1, 4) as f32,
+    /// Resolve and apply the UI scale for this frame (spec §2.1 rule 7). `Auto`
+    /// latches on the monitor's **physical** size, so it settles once and never
+    /// drives a resize loop. Applied via `set_zoom_factor` (integer `pixels_per_point`
+    /// regardless of the OS scale).
+    fn apply_scale(&mut self, ctx: &egui::Context) {
+        let native = ctx.native_pixels_per_point().unwrap_or(1.0);
+        let target = match self.scale_mode {
+            ScaleMode::Fixed(n) => n.clamp(1, 4),
             ScaleMode::Auto => {
-                let native = ctx.native_pixels_per_point().unwrap_or(1.0);
-                let physical = ctx.input(|i| {
-                    i.viewport()
-                        .monitor_size
-                        .map(|m| (m.x * native, m.y * native))
-                });
-                let (w, h) = physical.unwrap_or_else(|| {
-                    // No monitor info (e.g. the test harness): fall back to the
-                    // window's native logical size (undo our own zoom).
-                    let cur = ctx.pixels_per_point().max(1.0);
-                    let r = ctx.input(|i| i.viewport().inner_rect).unwrap_or(
-                        egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1280.0, 800.0)),
-                    );
-                    (r.width() / cur * native, r.height() / cur * native)
-                });
-                Self::ui_scale_for(w.max(0.0) as u32, h.max(0.0) as u32) as f32
+                let monitor = ctx.input(|i| i.viewport().monitor_size);
+                self.auto
+                    .update(monitor, ctx.pixels_per_point(), native)
+                    .or_else(|| self.auto.applied())
+                    .unwrap_or(1)
             }
+        };
+        self.ui_scale = target as f32;
+        if (ctx.pixels_per_point() - target as f32).abs() > 0.01 {
+            ctx.set_zoom_factor(crate::ui::auto_scale::zoom_for(target, native));
         }
     }
 
@@ -1970,6 +1959,11 @@ impl LootsmithApp {
             "4" => ScaleMode::Fixed(4),
             _ => ScaleMode::Auto,
         };
+        // Seed the latch so frame 0 is already at the persisted scale.
+        self.auto = crate::ui::auto_scale::AutoScale::with_persisted(match self.scale_mode {
+            ScaleMode::Fixed(n) => Some(n),
+            ScaleMode::Auto => None,
+        });
         if !self.dumps.trim().is_empty() {
             self.load_dumps();
         }
@@ -2125,9 +2119,7 @@ impl LootsmithApp {
     pub fn build(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         self.apply_theme(&ctx);
-        let scale = self.effective_scale(&ctx);
-        self.ui_scale = scale;
-        ctx.set_pixels_per_point(scale);
+        self.apply_scale(&ctx);
         let p = theme::active(&ctx);
         self.handle_shortcuts(&ctx);
 
