@@ -168,3 +168,35 @@ fn workbench_lists_the_last_part_row_at_every_scale() {
         );
     }
 }
+
+/// Gibbed-style part exclusion: the workbench shows only the slots the item's
+/// balance actually uses, with type/balance/manufacturer pinned (so adding items
+/// still works). The fixture pistol balance is `{accessory1, body, material, sight}`
+/// (Selective), so Grip/Barrel/Stock/Elemental/Accessory 2 must NOT appear.
+#[test]
+fn workbench_shows_only_the_balances_parts() {
+    let save = synthetic("parts");
+    let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
+    h.state_mut().set_tab(Tab::Backpack);
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    let runs = {
+        let out = h.output();
+        extract(out).0
+    };
+    let has = |t: &str| runs.iter().any(|r| r.text.trim() == t);
+    for present in [
+        "Type",
+        "Balance",
+        "Manufacturer",
+        "Body",
+        "Sight",
+        "Accessory 1",
+        "Material",
+    ] {
+        assert!(has(present), "expected {present:?} in the parts grid");
+    }
+    for absent in ["Grip", "Barrel", "Stock", "Elemental", "Accessory 2"] {
+        assert!(!has(absent), "{absent:?} must not appear for this balance");
+    }
+}

@@ -60,6 +60,55 @@ pub fn slots_for(is_weapon: bool) -> &'static [(&'static str, &'static str)] {
     }
 }
 
+impl LootsmithApp {
+    /// The part slots to show for an item, Gibbed-style: `type`/`balance`/
+    /// `manufacturer` are always pinned (needed to add items), `body` comes first,
+    /// and the remaining slots are only those the item's **balance** actually uses
+    /// (`Weapon/Item Balance Part Lists.json`). Falls back to the full list when the
+    /// balance is unknown (no dumps).
+    pub(crate) fn slots_for_balance(
+        &self,
+        is_weapon: bool,
+        balance: &str,
+    ) -> Vec<(&'static str, &'static str)> {
+        let all = slots_for(is_weapon);
+        let Some(lists) = self.part_lists.as_ref() else {
+            return all.to_vec();
+        };
+        let Some(rec) = lists.for_balance(balance) else {
+            return all.to_vec();
+        };
+        let has = |slot: &str| -> bool {
+            rec.slots.contains_key(slot)
+                || (slot == "type" && rec.slots.contains_key("weapon_type"))
+        };
+        let mut out: Vec<(&'static str, &'static str)> = Vec::new();
+        for s in ["type", "balance", "manufacturer"] {
+            if let Some(pair) = all.iter().find(|(k, _)| *k == s) {
+                out.push(*pair);
+            }
+        }
+        if let Some(pair) = all.iter().find(|(k, _)| *k == "body") {
+            if has("body") {
+                out.push(*pair);
+            }
+        }
+        for (k, label) in all.iter() {
+            if matches!(*k, "type" | "balance" | "manufacturer" | "body") {
+                continue;
+            }
+            if has(k) {
+                out.push((*k, *label));
+            }
+        }
+        if out.len() <= 3 {
+            all.to_vec()
+        } else {
+            out
+        }
+    }
+}
+
 pub(crate) fn resolve_balance(
     manager: &Option<Arc<AssetLibraryManager>>,
     decoded: &items::PackedData,

@@ -440,8 +440,8 @@ impl LootsmithApp {
                     .num_columns(2)
                     .spacing([10.0, 6.0])
                     .show(ui, |ui| {
-                        for (slot, label) in slots_for(is_weapon) {
-                            crate::ui::widgets::label_nums(ui, *label, p.dim, 12.0);
+                        for (slot, label) in self.slots_for_balance(is_weapon, &balance_name) {
+                            crate::ui::widgets::label_nums(ui, label, p.dim, 12.0);
                             let group = items::slot_group(&edit.decoded.slot, slot).unwrap();
                             let current = match edit.decoded.part(slot) {
                                 Some((r, g)) => manager
