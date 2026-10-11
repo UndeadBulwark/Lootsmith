@@ -13,3 +13,6 @@ Cargo.lock.orig
 
 # Snapshot-tool backups
 *.old.png
+
+# Review/design artifacts (mockups, bundles)
+/artifacts/
