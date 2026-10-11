@@ -2168,110 +2168,128 @@ impl LootsmithApp {
         let mut action: Option<Action> = None;
         let ppp = ctx.pixels_per_point();
         let gap = 16.0;
-        let margin = egui::Margin::same(gap as i8);
 
-        // --- Top plank bar (56 px), inset 16 px ---
+        // Spec §2.5: paint `bg` + the dither tile over the WHOLE root so nothing
+        // ever shows the renderer's clear colour (no black bars), at any scale or
+        // while resizing. Bars are then drawn flush on top.
+        {
+            let tex = self.dither_handle(&ctx, p);
+            let screen = ctx.content_rect();
+            let bg = ctx.layer_painter(egui::LayerId::background());
+            bg.rect_filled(screen, 0.0, p.bg);
+            crate::ui::pixel::dither(&bg, screen, &tex);
+        }
+
+        // --- Top plank bar (56 px), flush to the window edges ---
         egui::Panel::top("topbar")
-            .exact_size(56.0 + 2.0 * gap)
-            .frame(egui::Frame::default().inner_margin(margin))
+            .exact_size(56.0)
+            .frame(egui::Frame::default())
             .show(ui, |ui| {
                 let bar = ui.max_rect();
                 self.shell.top = bar;
                 crate::ui::pixel::plank_bar(ui.painter(), bar, ppp, p, true);
-                crate::ui::widgets::wood_style(ui, p);
-                ui.horizontal_centered(|ui| {
-                    let (r, _) =
-                        ui.allocate_exact_size(egui::vec2(150.0, 28.0), egui::Sense::hover());
-                    crate::ui::widgets::ribbon(ui, r, "Lootsmith");
-                    ui.add_space(4.0);
-                    let name = std::path::Path::new(&self.path)
-                        .file_name()
-                        .map(|s| s.to_string_lossy().to_string())
-                        .filter(|s| !s.is_empty())
-                        .unwrap_or_else(|| "no file".to_string());
-                    let (r, _) =
-                        ui.allocate_exact_size(egui::vec2(190.0, 24.0), egui::Sense::hover());
-                    crate::ui::widgets::chip(ui, r, &name, p.fg);
-                    let (r, _) =
-                        ui.allocate_exact_size(egui::vec2(76.0, 24.0), egui::Sense::hover());
-                    crate::ui::widgets::chip(
-                        ui,
-                        r,
-                        if self.dirty { "unsaved" } else { "saved" },
-                        if self.dirty { p.dng } else { p.fg },
-                    );
-                    let (r, _) =
-                        ui.allocate_exact_size(egui::vec2(56.0, 24.0), egui::Sense::hover());
-                    crate::ui::widgets::chip(ui, r, &self.save_platform.id().to_uppercase(), p.fg);
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui
-                            .button("Menu")
-                            .on_hover_text("Files, platform, scale and theme")
+                let row = bar.shrink2(egui::vec2(14.0, 0.0));
+                ui.scope_builder(egui::UiBuilder::new().max_rect(row), |ui| {
+                    crate::ui::widgets::wood_style(ui, p);
+                    ui.horizontal_centered(|ui| {
+                        let (r, _) =
+                            ui.allocate_exact_size(egui::vec2(150.0, 28.0), egui::Sense::hover());
+                        crate::ui::widgets::ribbon(ui, r, "Lootsmith");
+                        ui.add_space(4.0);
+                        let name = std::path::Path::new(&self.path)
+                            .file_name()
+                            .map(|s| s.to_string_lossy().to_string())
+                            .filter(|s| !s.is_empty())
+                            .unwrap_or_else(|| "no file".to_string());
+                        let (r, _) =
+                            ui.allocate_exact_size(egui::vec2(190.0, 24.0), egui::Sense::hover());
+                        crate::ui::widgets::chip(ui, r, &name, p.fg);
+                        let (r, _) =
+                            ui.allocate_exact_size(egui::vec2(76.0, 24.0), egui::Sense::hover());
+                        crate::ui::widgets::chip(
+                            ui,
+                            r,
+                            if self.dirty { "unsaved" } else { "saved" },
+                            if self.dirty { p.dng } else { p.fg },
+                        );
+                        let (r, _) =
+                            ui.allocate_exact_size(egui::vec2(56.0, 24.0), egui::Sense::hover());
+                        crate::ui::widgets::chip(
+                            ui,
+                            r,
+                            &self.save_platform.id().to_uppercase(),
+                            p.fg,
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui
+                                .button("Menu")
+                                .on_hover_text("Files, platform, scale and theme")
+                                .clicked()
+                            {
+                                self.show_settings = true;
+                            }
+                            let (r, _) = ui
+                                .allocate_exact_size(egui::vec2(66.0, 28.0), egui::Sense::click());
+                            if crate::ui::widgets::button(
+                                ui,
+                                r,
+                                "Save",
+                                crate::ui::widgets::ButtonKind::Primary,
+                            )
                             .clicked()
-                        {
-                            self.show_settings = true;
-                        }
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(66.0, 28.0), egui::Sense::click());
-                        if crate::ui::widgets::button(
-                            ui,
-                            r,
-                            "Save",
-                            crate::ui::widgets::ButtonKind::Primary,
-                        )
-                        .clicked()
-                        {
-                            action = Some(Action::Save);
-                        }
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(84.0, 28.0), egui::Sense::click());
-                        if crate::ui::widgets::button(
-                            ui,
-                            r,
-                            "Save As",
-                            crate::ui::widgets::ButtonKind::Normal,
-                        )
-                        .clicked()
-                        {
-                            action = Some(Action::SaveAs);
-                        }
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(70.0, 26.0), egui::Sense::click());
-                        let _ = crate::ui::widgets::button(
-                            ui,
-                            r,
-                            "Redo",
-                            crate::ui::widgets::ButtonKind::Normal,
-                        );
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(70.0, 26.0), egui::Sense::click());
-                        let _ = crate::ui::widgets::button(
-                            ui,
-                            r,
-                            "Undo",
-                            crate::ui::widgets::ButtonKind::Normal,
-                        );
-                        let w = (ui.available_width() - 6.0).max(100.0);
-                        ui.scope(|ui| {
-                            let mut st = (**ui.style()).clone();
-                            st.visuals.override_text_color = Some(p.fg);
-                            st.visuals.weak_text_color = Some(p.fg);
-                            st.visuals.extreme_bg_color = p.pan;
-                            ui.set_style(st);
-                            ui.add_sized(
-                                [w, 24.0],
-                                egui::TextEdit::singleline(&mut self.action_search)
-                                    .hint_text("Ctrl+K  action search"),
+                            {
+                                action = Some(Action::Save);
+                            }
+                            let (r, _) = ui
+                                .allocate_exact_size(egui::vec2(84.0, 28.0), egui::Sense::click());
+                            if crate::ui::widgets::button(
+                                ui,
+                                r,
+                                "Save As",
+                                crate::ui::widgets::ButtonKind::Normal,
+                            )
+                            .clicked()
+                            {
+                                action = Some(Action::SaveAs);
+                            }
+                            let (r, _) = ui
+                                .allocate_exact_size(egui::vec2(70.0, 26.0), egui::Sense::click());
+                            let _ = crate::ui::widgets::button(
+                                ui,
+                                r,
+                                "Redo",
+                                crate::ui::widgets::ButtonKind::Normal,
                             );
+                            let (r, _) = ui
+                                .allocate_exact_size(egui::vec2(70.0, 26.0), egui::Sense::click());
+                            let _ = crate::ui::widgets::button(
+                                ui,
+                                r,
+                                "Undo",
+                                crate::ui::widgets::ButtonKind::Normal,
+                            );
+                            let w = (ui.available_width() - 6.0).max(100.0);
+                            ui.scope(|ui| {
+                                let mut st = (**ui.style()).clone();
+                                st.visuals.override_text_color = Some(p.fg);
+                                st.visuals.weak_text_color = Some(p.fg);
+                                st.visuals.extreme_bg_color = p.pan;
+                                ui.set_style(st);
+                                ui.add_sized(
+                                    [w, 24.0],
+                                    egui::TextEdit::singleline(&mut self.action_search)
+                                        .hint_text("Ctrl+K  action search"),
+                                );
+                            });
                         });
                     });
                 });
             });
 
-        // --- Status plank bar (34 px), inset 16 px ---
+        // --- Status plank bar (34 px), flush to the window edges ---
         egui::Panel::bottom("status")
-            .exact_size(34.0 + 2.0 * gap)
-            .frame(egui::Frame::default().inner_margin(margin))
+            .exact_size(34.0)
+            .frame(egui::Frame::default())
             .show(ui, |ui| {
                 let bar = ui.max_rect();
                 self.shell.status = bar;
@@ -2283,158 +2301,187 @@ impl LootsmithApp {
                     0.0,
                     p.gold,
                 );
-                crate::ui::widgets::wood_style(ui, p);
-                ui.horizontal_centered(|ui| {
-                    status_dot(
-                        ui,
-                        if self.dirty { Glyph::Dot } else { Glyph::Check },
-                        if self.dirty { p.acc } else { p.gold },
-                    );
-                    ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
-                        &self.status,
-                        p.fg,
-                        12.0,
-                    )));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let ok = self.manager.is_some();
-                        let (rect, _) =
-                            ui.allocate_exact_size(egui::vec2(170.0, 22.0), egui::Sense::click());
-                        let hover = if self.dumps.trim().is_empty() {
-                            "No game-data folder — using bundled tables".to_string()
-                        } else {
-                            self.dumps.clone()
-                        };
-                        let response = crate::ui::widgets::status_chip(
+                let row = bar.shrink2(egui::vec2(14.0, 0.0));
+                ui.scope_builder(egui::UiBuilder::new().max_rect(row), |ui| {
+                    crate::ui::widgets::wood_style(ui, p);
+                    ui.horizontal_centered(|ui| {
+                        status_dot(
                             ui,
-                            rect,
-                            if ok {
-                                "Game data ready"
+                            if self.dirty { Glyph::Dot } else { Glyph::Check },
+                            if self.dirty { p.acc } else { p.gold },
+                        );
+                        ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+                            &self.status,
+                            p.fg,
+                            12.0,
+                        )));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let ok = self.manager.is_some();
+                            let (rect, _) = ui
+                                .allocate_exact_size(egui::vec2(170.0, 22.0), egui::Sense::click());
+                            let hover = if self.dumps.trim().is_empty() {
+                                "No game-data folder — using bundled tables".to_string()
                             } else {
-                                "Game data missing"
-                            },
-                            ok,
-                        )
-                        .on_hover_text(hover);
-                        if response.clicked() {
-                            action = Some(Action::PickData);
-                        }
-                        let w = (ui.available_width() * 0.6).max(160.0);
-                        ui.scope(|ui| {
-                            let mut st = (**ui.style()).clone();
-                            st.visuals.override_text_color = Some(p.fg);
-                            st.visuals.weak_text_color = Some(p.fg);
-                            st.visuals.extreme_bg_color = p.pan;
-                            ui.set_style(st);
-                            crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                ui.add_sized(
-                                    [w, 22.0],
-                                    egui::TextEdit::singleline(&mut self.path)
-                                        .hint_text("/path/to/Save0001.sav"),
-                                )
+                                self.dumps.clone()
+                            };
+                            let response = crate::ui::widgets::status_chip(
+                                ui,
+                                rect,
+                                if ok {
+                                    "Game data ready"
+                                } else {
+                                    "Game data missing"
+                                },
+                                ok,
+                            )
+                            .on_hover_text(hover);
+                            if response.clicked() {
+                                action = Some(Action::PickData);
+                            }
+                            let w = (ui.available_width() * 0.6).max(160.0);
+                            ui.scope(|ui| {
+                                let mut st = (**ui.style()).clone();
+                                st.visuals.override_text_color = Some(p.fg);
+                                st.visuals.weak_text_color = Some(p.fg);
+                                st.visuals.extreme_bg_color = p.pan;
+                                ui.set_style(st);
+                                crate::ui::widgets::num_scope(ui, 10.0, |ui| {
+                                    ui.add_sized(
+                                        [w, 22.0],
+                                        egui::TextEdit::singleline(&mut self.path)
+                                            .hint_text("/path/to/Save0001.sav"),
+                                    )
+                                });
                             });
                         });
                     });
                 });
             });
 
-        // --- Sidebar (204 px), inset 16 px left/right ---
+        // --- Sidebar (204 px), inset 16 px; content inset a further 14 px ---
         egui::Panel::left("sidebar")
             .exact_size(204.0 + 2.0 * gap)
             .frame(egui::Frame::default().inner_margin(egui::Margin {
                 left: gap as i8,
                 right: gap as i8,
-                top: 0,
-                bottom: 0,
+                top: gap as i8,
+                bottom: gap as i8,
             }))
             .show(ui, |ui| {
                 let bar = ui.max_rect();
                 self.shell.sidebar = bar;
                 crate::ui::pixel::panel(ui.painter(), bar, ppp, p);
-                ui.set_clip_rect(bar);
-                ui.spacing_mut().item_spacing.y = 0.0;
-                ui.add_space(6.0);
-                ui.label(egui::RichText::new("LOOTSMITH").color(p.gold).size(20.0));
-                ui.add_space(10.0);
-                for (gi, (group, tabs)) in NAV_GROUPS.iter().enumerate() {
-                    if gi > 0 {
-                        let (r, _) = ui.allocate_exact_size(
-                            egui::vec2(ui.available_width(), 10.0),
-                            egui::Sense::hover(),
-                        );
-                        crate::ui::widgets::trail_divider(ui, r.left_center(), r.right_center());
-                    }
-                    // Painted (not a Label) so the group name does not collide
-                    // with a tab of the same name in the accessibility tree.
-                    let (gr, _) = ui.allocate_exact_size(
-                        egui::vec2(ui.available_width(), 16.0),
-                        egui::Sense::hover(),
-                    );
-                    ui.painter().text(
-                        gr.left_center(),
-                        egui::Align2::LEFT_CENTER,
-                        *group,
-                        egui::FontId::proportional(11.0),
-                        p.gold,
-                    );
-                    ui.add_space(2.0);
-                    for tab in tabs.iter() {
-                        let label = self.nav_label(*tab);
-                        let (rect, _) = ui.allocate_exact_size(
-                            egui::vec2(ui.available_width(), 26.0),
-                            egui::Sense::click(),
-                        );
-                        if crate::ui::widgets::nav_row(ui, rect, &label, self.tab == *tab, None)
-                            .clicked()
-                        {
-                            self.tab = *tab;
-                        }
-                    }
-                    if *group == "Account" {
-                        let (rect, _) = ui.allocate_exact_size(
-                            egui::vec2(ui.available_width(), 26.0),
-                            egui::Sense::click(),
-                        );
-                        if crate::ui::widgets::nav_row(ui, rect, "Profile", false, None).clicked() {
-                            action = Some(Action::Profile);
-                        }
-                    }
-                    if *group == "Tools" {
-                        let (rect, _) = ui.allocate_exact_size(
-                            egui::vec2(ui.available_width(), 26.0),
-                            egui::Sense::click(),
-                        );
-                        if crate::ui::widgets::nav_row(ui, rect, "Import", false, None).clicked() {
-                            action = Some(Action::Import);
-                        }
-                    }
-                    ui.add_space(6.0);
-                }
+                let inner = bar.shrink(14.0);
+                ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
+                    ui.set_clip_rect(inner);
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    egui::ScrollArea::vertical()
+                        .id_salt("nav_scroll")
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.add_space(6.0);
+                            ui.label(egui::RichText::new("LOOTSMITH").color(p.gold).size(20.0));
+                            ui.add_space(10.0);
+                            for (gi, (group, tabs)) in NAV_GROUPS.iter().enumerate() {
+                                if gi > 0 {
+                                    let (r, _) = ui.allocate_exact_size(
+                                        egui::vec2(ui.available_width(), 10.0),
+                                        egui::Sense::hover(),
+                                    );
+                                    crate::ui::widgets::trail_divider(
+                                        ui,
+                                        r.left_center(),
+                                        r.right_center(),
+                                    );
+                                }
+                                // Painted (not a Label) so the group name does not collide
+                                // with a tab of the same name in the accessibility tree.
+                                let (gr, _) = ui.allocate_exact_size(
+                                    egui::vec2(ui.available_width(), 16.0),
+                                    egui::Sense::hover(),
+                                );
+                                ui.painter().text(
+                                    gr.left_center(),
+                                    egui::Align2::LEFT_CENTER,
+                                    *group,
+                                    egui::FontId::proportional(11.0),
+                                    p.gold,
+                                );
+                                ui.add_space(2.0);
+                                for tab in tabs.iter() {
+                                    let label = self.nav_label(*tab);
+                                    let (rect, _) = ui.allocate_exact_size(
+                                        egui::vec2(ui.available_width(), 26.0),
+                                        egui::Sense::click(),
+                                    );
+                                    if crate::ui::widgets::nav_row(
+                                        ui,
+                                        rect,
+                                        &label,
+                                        self.tab == *tab,
+                                        None,
+                                    )
+                                    .clicked()
+                                    {
+                                        self.tab = *tab;
+                                    }
+                                }
+                                if *group == "Account" {
+                                    let (rect, _) = ui.allocate_exact_size(
+                                        egui::vec2(ui.available_width(), 26.0),
+                                        egui::Sense::click(),
+                                    );
+                                    if crate::ui::widgets::nav_row(ui, rect, "Profile", false, None)
+                                        .clicked()
+                                    {
+                                        action = Some(Action::Profile);
+                                    }
+                                }
+                                if *group == "Tools" {
+                                    let (rect, _) = ui.allocate_exact_size(
+                                        egui::vec2(ui.available_width(), 26.0),
+                                        egui::Sense::click(),
+                                    );
+                                    if crate::ui::widgets::nav_row(ui, rect, "Import", false, None)
+                                        .clicked()
+                                    {
+                                        action = Some(Action::Import);
+                                    }
+                                }
+                                ui.add_space(6.0);
+                            }
+                        });
+                });
             });
 
-        // --- Body (+ header panel) ---
+        // --- Body (+ header panel), inset 16 px ---
         egui::CentralPanel::default()
             .frame(egui::Frame::default().inner_margin(egui::Margin {
                 left: 0,
                 right: gap as i8,
-                top: 0,
-                bottom: 0,
+                top: gap as i8,
+                bottom: gap as i8,
             }))
             .show(ui, |ui| {
                 let area = ui.max_rect();
                 self.shell.content = area;
-                let tex = self.dither_handle(&ctx, p);
-                crate::ui::pixel::dither(ui.painter(), area, &tex);
+                // Header panel: content inset 20 px.
                 let header_h = 44.0;
                 let header =
                     egui::Rect::from_min_size(area.min, egui::vec2(area.width(), header_h));
                 crate::ui::pixel::panel(ui.painter(), header, ppp, p);
                 let title = self.nav_label(self.tab);
                 let ribbon_w =
-                    (title.chars().count() as f32 * 9.0 + 48.0).min(header.width() - 24.0);
-                let ribbon_rect =
-                    egui::Rect::from_center_size(header.center(), egui::vec2(ribbon_w, 24.0));
+                    (title.chars().count() as f32 * 9.0 + 48.0).min(header.width() - 40.0);
+                let ribbon_rect = egui::Rect::from_min_size(
+                    egui::pos2(header.left() + 20.0, header.center().y - 12.0),
+                    egui::vec2(ribbon_w, 24.0),
+                );
                 crate::ui::widgets::ribbon(ui, ribbon_rect, &title);
-                let body = egui::Rect::from_min_max(header.left_bottom(), area.max);
+                let body = egui::Rect::from_min_max(
+                    header.left_bottom() + egui::vec2(0.0, 10.0),
+                    area.max,
+                );
                 ui.scope_builder(egui::UiBuilder::new().max_rect(body), |ui| {
                     ui.set_clip_rect(body);
                     if self.save_game.is_none() {
@@ -2826,5 +2873,15 @@ impl eframe::App for LootsmithApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.build(ui);
+    }
+
+    /// Clear the window to the theme background so no black ever shows at the
+    /// edges or during a resize.
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        let p = match self.theme {
+            Theme::Dark => crate::theme::DARK,
+            Theme::Light => crate::theme::LIGHT,
+        };
+        egui::Rgba::from(p.bg).to_array()
     }
 }

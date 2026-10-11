@@ -494,7 +494,7 @@ pub fn status_chip(ui: &egui::Ui, rect: Rect, text: &str, ok: bool) -> Response 
         pos2(rect.left() + 24.0, rect.center().y),
         egui::Align2::LEFT_CENTER,
         text,
-        FontId::proportional(14.0),
+        FontId::proportional(12.0),
         p.fg,
     );
     let response = respond(ui, rect, &format!("status-{text}"), Sense::click());
