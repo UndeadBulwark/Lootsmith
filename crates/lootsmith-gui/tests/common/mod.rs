@@ -38,7 +38,18 @@ pub fn synthetic_save_path() -> String {
         std::process::id()
     ));
     fixture::write_synthetic_save(&path).expect("write synthetic save");
+    freeze_mtime(&path);
     path.display().to_string()
+}
+
+/// Freeze a synthetic save's mtime so time-derived UI (the status bar
+/// "saved HH:MM") is deterministic across runs.
+pub fn freeze_mtime(path: &std::path::Path) {
+    use std::time::{Duration, UNIX_EPOCH};
+    let fixed = UNIX_EPOCH + Duration::from_secs(65_000); // 18:03:20 UTC
+    if let Ok(f) = std::fs::File::options().write(true).open(path) {
+        let _ = f.set_times(std::fs::FileTimes::new().set_modified(fixed));
+    }
 }
 
 /// The game-data dumps folder (`LOOTSMITH_ASSET_LIBRARY` or the well-known

@@ -22,6 +22,7 @@ const FAKE_DUMPS: &str = "/home/user/bl2-dumps";
 fn synthetic_at(tag: &str) -> String {
     let path = std::env::temp_dir().join(format!("lootsmith-snapshot-{tag}.sav"));
     lootsmith_core::fixture::write_synthetic_save(&path).expect("write synthetic save");
+    common::freeze_mtime(&path);
     path.display().to_string()
 }
 

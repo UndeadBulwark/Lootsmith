@@ -464,7 +464,11 @@ pub fn nav_row(
         );
     }
     let _ = hovered;
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, active, label));
+    let a11y = match count {
+        Some(n) => format!("{label} ({n})"),
+        None => label.to_string(),
+    };
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, active, a11y.as_str()));
     response
 }
 

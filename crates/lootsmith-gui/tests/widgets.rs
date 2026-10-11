@@ -135,7 +135,7 @@ fn widgets_are_labelled_and_respond() {
         // Accessibility labels.
         for label in [
             "Backpack header",
-            "General",
+            "General (3)",
             "Skills",
             "Save",
             "Remove",

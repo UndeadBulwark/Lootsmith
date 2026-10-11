@@ -254,11 +254,8 @@ impl LootsmithApp {
             let mut sa = egui::ScrollArea::vertical()
                 .id_salt("bench_scroll")
                 .auto_shrink([false, false]);
-            #[cfg(test)]
-            {
-                if let Some(off) = self.inspector_scroll {
-                    sa = sa.vertical_scroll_offset(off);
-                }
+            if let Some(off) = self.inspector_scroll {
+                sa = sa.vertical_scroll_offset(off);
             }
             sa.show(ui, |ui| {
                 let is_weapon = edit.decoded.is_weapon;

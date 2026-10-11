@@ -194,5 +194,22 @@ pub fn elide_middle(s: &str, max_chars: usize) -> String {
 /// underscores turned into spaces.
 pub fn balance_to_name(balance: &str) -> String {
     let last = balance.rsplit('.').next().unwrap_or(balance);
-    last.replace('_', " ")
+    let mut parts: Vec<&str> = last.split('_').collect();
+    // Drop a trailing rarity word so the distinguishing part survives elision.
+    if let Some(t) = parts.last() {
+        if matches!(
+            t.to_ascii_lowercase().as_str(),
+            "common"
+                | "uncommon"
+                | "rare"
+                | "veryrare"
+                | "legendary"
+                | "pearlescent"
+                | "seraph"
+                | "etech"
+        ) {
+            parts.pop();
+        }
+    }
+    parts.join(" ")
 }

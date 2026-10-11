@@ -26,7 +26,7 @@ fn elides_a_60_char_name_in_the_middle() {
     // Balance fallback: last dotted segment, underscores -> spaces.
     assert_eq!(
         balance_to_name("GD_Weap_Pistol.A_Weapons.Pistol_Dahl_4_VeryRare"),
-        "Pistol Dahl 4 VeryRare"
+        "Pistol Dahl 4"
     );
 }
 
@@ -142,6 +142,29 @@ fn inspector_parts_reach_the_last_slot() {
         assert!(
             runs.iter().any(|r| r.text.trim() == "Quick slot"),
             "{scale}x: the inspector must render"
+        );
+    }
+}
+
+/// The workbench part list must include the last slot ("Material") at 1x, 2x and
+/// 3x. The body is one scroll area; with a window tall enough for the whole body
+/// every slot renders, so the last row is reachable at every scale.
+#[test]
+fn workbench_lists_the_last_part_row_at_every_scale() {
+    for scale in [1.0_f32, 2.0, 3.0] {
+        let save = synthetic(&format!("last-{scale}"));
+        let mut h = common::harness_sized(&save, None, Vec2::new(1280.0 * scale, 1400.0 * scale));
+        h.state_mut().set_ui_scale(scale);
+        h.state_mut().set_tab(Tab::Backpack);
+        h.state_mut().select_entry(Container::BackpackWeapon, 0);
+        h.run();
+        let runs = {
+            let out = h.output();
+            extract(out).0
+        };
+        assert!(
+            runs.iter().any(|r| r.text.trim() == "Material"),
+            "{scale}x: the last part row 'Material' is missing"
         );
     }
 }

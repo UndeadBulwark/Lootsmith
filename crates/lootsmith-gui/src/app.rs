@@ -489,6 +489,7 @@ pub struct LootsmithApp {
     pub ui_scale: f32,
     /// Cached background dither texture, keyed by dark/light.
     dither_tex: [Option<egui::TextureHandle>; 2],
+    logo_tex: Option<egui::TextureHandle>,
     /// The shell rects computed by `build` (top bar, sidebar, status bar, content).
     pub shell: ShellRects,
     /// Settings-dialog visibility (top-bar "Menu").
@@ -501,8 +502,8 @@ pub struct LootsmithApp {
     pub palette_sel: usize,
     /// The "Paste BL2(…)" dialog.
     pub show_paste: bool,
-    /// Test-only: force the workbench scroll to the bottom (None = normal).
-    #[cfg(test)]
+    /// Test hook: force the workbench scroll offset (None = normal). Not set in
+    /// normal use; lets a test jump the part list to a specific position.
     pub inspector_scroll: Option<f32>,
     /// The UI-scale mode (Auto or a fixed integer scale).
     pub scale_mode: ScaleMode,
@@ -597,6 +598,7 @@ impl LootsmithApp {
             theme_applied: false,
             ui_scale: 1.0,
             dither_tex: [None, None],
+            logo_tex: None,
             shell: ShellRects {
                 top: egui::Rect::ZERO,
                 sidebar: egui::Rect::ZERO,
@@ -609,7 +611,6 @@ impl LootsmithApp {
             palette_query: String::new(),
             palette_sel: 0,
             show_paste: false,
-            #[cfg(test)]
             inspector_scroll: None,
             scale_mode: ScaleMode::Auto,
             auto: crate::ui::auto_scale::AutoScale::default(),
@@ -827,6 +828,21 @@ impl LootsmithApp {
         }
         let _ = p;
         self.dither_tex[idx].clone().expect("dither texture")
+    }
+
+    /// The cached 96 px logo texture, decoded from the embedded PNG at NEAREST.
+    fn logo(&mut self, ctx: &egui::Context) -> Option<egui::TextureHandle> {
+        if self.logo_tex.is_none() {
+            let ic = eframe::icon_data::from_png_bytes(include_bytes!("../assets/lootsmith.png"))
+                .ok()?;
+            let image = egui::ColorImage::from_rgba_unmultiplied(
+                [ic.width as usize, ic.height as usize],
+                &ic.rgba,
+            );
+            self.logo_tex =
+                Some(ctx.load_texture("lootsmith.logo", image, egui::TextureOptions::NEAREST));
+        }
+        self.logo_tex.clone()
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -2267,6 +2283,21 @@ impl LootsmithApp {
     }
 
     /// Build the full UI. Called by both the native app and the test harness.
+    /// The sidebar base label and count badge for a tab.
+    pub(crate) fn nav_base_count(&self, tab: Tab) -> (&'static str, Option<usize>) {
+        match tab {
+            Tab::Backpack => ("Backpack", Some(self.backpack.len())),
+            Tab::Bank => ("Bank", Some(self.bank.len())),
+            _ => (
+                TABS.iter()
+                    .find(|(t, _)| *t == tab)
+                    .map(|(_, l)| *l)
+                    .unwrap_or("?"),
+                None,
+            ),
+        }
+    }
+
     /// The sidebar label for a tab (Backpack/Bank carry a live count badge).
     fn nav_label(&self, tab: Tab) -> String {
         match tab {
@@ -2466,11 +2497,32 @@ impl LootsmithApp {
                             if self.dirty { Glyph::Dot } else { Glyph::Check },
                             if self.dirty { p.acc } else { p.gold },
                         );
+                        let status_path = crate::ui::item_table::elide_middle(&self.path, 52);
+                        let level = self.form.level;
+                        let saved = std::fs::metadata(&self.path)
+                            .and_then(|m| m.modified())
+                            .ok()
+                            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                            .map(|d| {
+                                let secs = d.as_secs();
+                                format!("saved {:02}:{:02}", (secs / 3600) % 24, (secs / 60) % 60)
+                            })
+                            .unwrap_or_default();
                         ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
-                            &self.status,
+                            &status_path,
                             p.fg,
                             12.0,
                         )));
+                        ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+                            &format!("Level {level}"),
+                            p.fg,
+                            12.0,
+                        )));
+                        if !saved.is_empty() {
+                            ui.add(egui::Label::new(crate::ui::widgets::text_with_nums(
+                                &saved, p.fg, 12.0,
+                            )));
+                        }
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let ok = self.manager.is_some();
                             let (rect, _) = ui
@@ -2494,21 +2546,6 @@ impl LootsmithApp {
                             if response.clicked() {
                                 action = Some(Action::PickData);
                             }
-                            let w = (ui.available_width() * 0.6).max(160.0);
-                            ui.scope(|ui| {
-                                let mut st = (**ui.style()).clone();
-                                st.visuals.override_text_color = Some(p.fg);
-                                st.visuals.weak_text_color = Some(p.fg);
-                                st.visuals.extreme_bg_color = p.pan;
-                                ui.set_style(st);
-                                crate::ui::widgets::num_scope(ui, 10.0, |ui| {
-                                    ui.add_sized(
-                                        [w, 22.0],
-                                        egui::TextEdit::singleline(&mut self.path)
-                                            .hint_text("/path/to/Save0001.sav"),
-                                    )
-                                });
-                            });
                         });
                     });
                 });
@@ -2536,7 +2573,21 @@ impl LootsmithApp {
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
                             ui.add_space(6.0);
-                            ui.label(egui::RichText::new("LOOTSMITH").color(p.gold).size(20.0));
+                            if let Some(tex) = self.logo(ui.ctx()) {
+                                let (lr, _) = ui.allocate_exact_size(
+                                    egui::vec2(96.0, 96.0),
+                                    egui::Sense::hover(),
+                                );
+                                ui.painter().image(
+                                    tex.id(),
+                                    lr,
+                                    egui::Rect::from_min_max(
+                                        egui::pos2(0.0, 0.0),
+                                        egui::pos2(1.0, 1.0),
+                                    ),
+                                    egui::Color32::WHITE,
+                                );
+                            }
                             ui.add_space(10.0);
                             for (gi, (group, tabs)) in NAV_GROUPS.iter().enumerate() {
                                 if gi > 0 {
@@ -2556,16 +2607,25 @@ impl LootsmithApp {
                                     egui::vec2(ui.available_width(), 16.0),
                                     egui::Sense::hover(),
                                 );
+                                let font = egui::FontId::proportional(11.0);
                                 ui.painter().text(
                                     gr.left_center(),
                                     egui::Align2::LEFT_CENTER,
                                     *group,
-                                    egui::FontId::proportional(11.0),
+                                    font.clone(),
+                                    p.gold,
+                                );
+                                // Faux-bold: a second pass half a pixel over.
+                                ui.painter().text(
+                                    gr.left_center() + egui::vec2(0.6, 0.0),
+                                    egui::Align2::LEFT_CENTER,
+                                    *group,
+                                    font,
                                     p.gold,
                                 );
                                 ui.add_space(2.0);
                                 for tab in tabs.iter() {
-                                    let label = self.nav_label(*tab);
+                                    let (base, count) = self.nav_base_count(*tab);
                                     let (rect, _) = ui.allocate_exact_size(
                                         egui::vec2(ui.available_width(), 26.0),
                                         egui::Sense::click(),
@@ -2573,9 +2633,9 @@ impl LootsmithApp {
                                     if crate::ui::widgets::nav_row(
                                         ui,
                                         rect,
-                                        &label,
+                                        base,
                                         self.tab == *tab,
-                                        None,
+                                        count,
                                     )
                                     .clicked()
                                     {
