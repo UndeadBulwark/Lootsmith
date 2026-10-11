@@ -94,11 +94,13 @@ pub fn item_table(
                 );
                 let cy = rect.center().y;
                 let max_name = ((x_type - x_name) / 8.0) as usize;
-                ui.painter().text(
-                    pos2(rect.left() + x_name, cy),
-                    Align2::LEFT_CENTER,
-                    clip(&r.name, max_name),
-                    FontId::proportional(15.0),
+                let name = elide_middle(&r.name, max_name);
+                let galley = ui
+                    .painter()
+                    .layout_job(crate::ui::widgets::job_with_nums(&name, text, 15.0));
+                ui.painter().galley(
+                    pos2(rect.left() + x_name, cy - galley.size().y / 2.0),
+                    galley,
                     text,
                 );
                 ui.painter().text(
@@ -174,15 +176,23 @@ pub fn item_table(
     clicked
 }
 
-fn clip(s: &str, max_chars: usize) -> String {
-    if s.chars().count() <= max_chars {
-        s.to_string()
-    } else {
-        format!(
-            "{}...",
-            s.chars()
-                .take(max_chars.saturating_sub(3))
-                .collect::<String>()
-        )
+/// Middle-elide `s` to at most `max_chars` characters, keeping both ends.
+pub fn elide_middle(s: &str, max_chars: usize) -> String {
+    let n = s.chars().count();
+    if n <= max_chars || max_chars < 5 {
+        return s.to_string();
     }
+    let keep = max_chars - 3; // "..."
+    let left = keep.div_ceil(2);
+    let right = keep - left;
+    let head: String = s.chars().take(left).collect();
+    let tail: String = s.chars().skip(n - right).collect();
+    format!("{head}...{tail}")
+}
+
+/// A readable fallback name from a balance path: the last dotted segment with
+/// underscores turned into spaces.
+pub fn balance_to_name(balance: &str) -> String {
+    let last = balance.rsplit('.').next().unwrap_or(balance);
+    last.replace('_', " ")
 }

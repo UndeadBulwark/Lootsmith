@@ -118,6 +118,24 @@ pub(crate) fn item_name(
     words.join(" ")
 }
 
+/// A short weapon-type name from the weapon's `type` part (`WeaponType_Dahl_Pistol`
+/// -> "Pistol"). `None` when it cannot be resolved.
+fn weapon_type_short(
+    manager: &Option<Arc<AssetLibraryManager>>,
+    decoded: &items::PackedData,
+) -> Option<String> {
+    let manager = manager.as_ref()?;
+    let (r, group) = decoded.part("type")?;
+    let set = decoded.asset_library_set_id;
+    let path = manager
+        .lookup_asset(group, set, r.asset_index, r.sublibrary_index, r.use_set_id)
+        .ok()?;
+    let last = path.rsplit('.').next().unwrap_or(&path);
+    let last = last.strip_prefix("WeaponType_").unwrap_or(last);
+    let short = last.rsplit('_').next().unwrap_or(last);
+    (!short.is_empty()).then(|| short.to_string())
+}
+
 pub(crate) fn row_for(
     entry: &PackedEntry,
     display: usize,
@@ -154,6 +172,11 @@ pub(crate) fn row_for(
             let name = item_name(&decoded, manager, name_parts);
             let rarity = lootsmith_core::RarityRules::embedded().classify(&balance);
             let level = decoded.game_stage();
+            let type_name = if decoded.is_weapon {
+                weapon_type_short(manager, &decoded).unwrap_or_else(|| "Unknown".to_string())
+            } else {
+                "Item".to_string()
+            };
             Row {
                 container: entry.container,
                 occurrence: entry.occurrence,
@@ -172,6 +195,7 @@ pub(crate) fn row_for(
                 is_weapon: decoded.is_weapon,
                 empty: decoded.unique_id == 0,
                 level,
+                type_name,
                 rarity,
             }
         }
@@ -190,6 +214,7 @@ pub(crate) fn row_for(
             is_weapon: matches!(entry.container, Container::BackpackWeapon),
             empty: false,
             level: 0,
+            type_name: "Unknown".to_string(),
             rarity: lootsmith_core::Rarity::Unknown,
         },
     }

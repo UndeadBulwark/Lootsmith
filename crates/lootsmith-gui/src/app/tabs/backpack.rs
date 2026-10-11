@@ -117,96 +117,9 @@ impl LootsmithApp {
                         theme::muted(ui, "Load the game-data folder to edit item parts by name.");
                         return;
                     };
-                    let display = visible
-                        .iter()
-                        .position(|r| {
-                            r.container == edit.container && r.occurrence == edit.occurrence
-                        })
-                        .map(|i| i + 1);
-                    ui.horizontal(|ui| {
-                        let title = match display {
-                            Some(n) => format!("{} #{n}", edit.container.label()),
-                            None => edit.container.label().to_string(),
-                        };
-                        crate::ui::widgets::label_nums(ui, &title, p.fg, 14.0);
-                        ui.label(theme::mono(format!("id={}", edit.decoded.unique_id)));
-                    });
-                    let name = item_name(
-                        &edit.decoded,
-                        &Some(manager.clone()),
-                        self.name_parts.as_deref(),
-                    );
-                    if !name.is_empty() {
-                        ui.label(egui::RichText::new(name).strong().size(15.0).color(p.gold));
-                    }
-                    ui.add_space(6.0);
-
-                    if edit.container == Container::BackpackItem
-                        || edit.container == Container::BackpackWeapon
-                    {
-                        ui.horizontal(|ui| {
-                            if edit.container == Container::BackpackItem {
-                                ui.label("Quantity");
-                                if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                    ui.add(egui::DragValue::new(&mut edit.quantity)).changed()
-                                }) {
-                                    edit.dirty = true;
-                                }
-                                if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
-                                    edit.dirty = true;
-                                }
-                            } else {
-                                ui.label("Quick slot");
-                                if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                    ui.add(egui::DragValue::new(&mut edit.quick_slot)).changed()
-                                }) {
-                                    edit.dirty = true;
-                                }
-                            }
-                            ui.label("Mark");
-                            egui::ComboBox::from_id_salt("mark_edit")
-                                .selected_text(player_mark_name(edit.mark))
-                                .show_ui(ui, |ui| {
-                                    for (value, name) in PLAYER_MARKS.iter().enumerate() {
-                                        if ui
-                                            .selectable_label(edit.mark == value as i32, *name)
-                                            .clicked()
-                                        {
-                                            edit.mark = value as i32;
-                                            edit.dirty = true;
-                                        }
-                                    }
-                                });
-                        });
-                        ui.add_space(6.0);
-                        let (gstage, mgrade) = match &mut edit.decoded.slot {
-                            lootsmith_core::items::PackedSlot::Weapon(weapon) => {
-                                (&mut weapon.game_stage, &mut weapon.manufacturer_grade_index)
-                            }
-                            lootsmith_core::items::PackedSlot::Item(item) => {
-                                (&mut item.game_stage, &mut item.manufacturer_grade_index)
-                            }
-                        };
-                        ui.horizontal(|ui| {
-                            ui.label("Game stage");
-                            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                ui.add(egui::DragValue::new(gstage).range(1..=80)).changed()
-                            }) {
-                                edit.dirty = true;
-                            }
-                            ui.label("Manufacturer grade");
-                            if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                                ui.add(egui::DragValue::new(mgrade).range(1..=10)).changed()
-                            }) {
-                                edit.dirty = true;
-                            }
-                        });
-                        ui.add_space(6.0);
-                    }
-
+                    // Pin the actions, then make the whole inspector body scroll so
+                    // the last part row is reachable at any scale.
                     let is_weapon = edit.decoded.is_weapon;
-                    let set = edit.decoded.asset_library_set_id;
-
                     egui::Panel::bottom("inspector_actions")
                         .frame(
                             egui::Frame::default()
@@ -235,77 +148,180 @@ impl LootsmithApp {
                                 }
                             });
                         });
-
-                    theme::section(
-                        ui,
-                        if is_weapon {
-                            "Weapon parts"
-                        } else {
-                            "Item parts"
-                        },
-                    );
                     egui::ScrollArea::vertical()
-                        .id_salt("inspector_parts")
+                        .id_salt("inspector_all")
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
-                            egui::Grid::new("parts_grid")
-                                .num_columns(2)
-                                .spacing([10.0, 6.0])
-                                .show(ui, |ui| {
-                                    for (slot, label) in slots_for(is_weapon) {
-                                        crate::ui::widgets::label_nums(ui, *label, p.dim, 12.0);
-                                        let group =
-                                            items::slot_group(&edit.decoded.slot, slot).unwrap();
-                                        let current = match edit.decoded.part(slot) {
-                                            Some((r, g)) => manager
-                                                .lookup_asset(
-                                                    g,
-                                                    set,
-                                                    r.asset_index,
-                                                    r.sublibrary_index,
-                                                    r.use_set_id,
-                                                )
-                                                .unwrap_or_else(|_| {
-                                                    format!(
-                                                        "#{}/{}",
-                                                        r.asset_index, r.sublibrary_index
+                            let display = visible
+                                .iter()
+                                .position(|r| {
+                                    r.container == edit.container && r.occurrence == edit.occurrence
+                                })
+                                .map(|i| i + 1);
+                            ui.horizontal(|ui| {
+                                let title = match display {
+                                    Some(n) => format!("{} #{n}", edit.container.label()),
+                                    None => edit.container.label().to_string(),
+                                };
+                                crate::ui::widgets::label_nums(ui, &title, p.fg, 14.0);
+                                ui.label(theme::mono(format!("id={}", edit.decoded.unique_id)));
+                            });
+                            let name = item_name(
+                                &edit.decoded,
+                                &Some(manager.clone()),
+                                self.name_parts.as_deref(),
+                            );
+                            if !name.is_empty() {
+                                ui.label(
+                                    egui::RichText::new(name).strong().size(15.0).color(p.gold),
+                                );
+                            }
+                            ui.add_space(6.0);
+
+                            if edit.container == Container::BackpackItem
+                                || edit.container == Container::BackpackWeapon
+                            {
+                                ui.horizontal(|ui| {
+                                    if edit.container == Container::BackpackItem {
+                                        ui.label("Quantity");
+                                        if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                            ui.add(egui::DragValue::new(&mut edit.quantity))
+                                                .changed()
+                                        }) {
+                                            edit.dirty = true;
+                                        }
+                                        if ui.checkbox(&mut edit.equipped, "Equipped").changed() {
+                                            edit.dirty = true;
+                                        }
+                                    } else {
+                                        ui.label("Quick slot");
+                                        if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                            ui.add(egui::DragValue::new(&mut edit.quick_slot))
+                                                .changed()
+                                        }) {
+                                            edit.dirty = true;
+                                        }
+                                    }
+                                    ui.label("Mark");
+                                    egui::ComboBox::from_id_salt("mark_edit")
+                                        .selected_text(player_mark_name(edit.mark))
+                                        .show_ui(ui, |ui| {
+                                            for (value, name) in PLAYER_MARKS.iter().enumerate() {
+                                                if ui
+                                                    .selectable_label(
+                                                        edit.mark == value as i32,
+                                                        *name,
                                                     )
-                                                }),
-                                            None => "-".to_string(),
-                                        };
-                                        let balance_name =
-                                            resolve_balance(&Some(manager.clone()), &edit.decoded);
-                                        let choices = self.balanced_choices(
-                                            &edit.decoded.asset_library_set_id,
-                                            &balance_name,
-                                            group,
-                                            slot,
-                                        );
-                                        egui::ComboBox::from_id_salt(format!("slot_{slot}"))
-                                            .selected_text(crate::ui::widgets::text_with_nums(
-                                                &current, p.fg, 15.0,
-                                            ))
-                                            .width(270.0)
-                                            .show_ui(ui, |ui| {
-                                                if ui.selectable_label(false, "None").clicked() {
-                                                    let _ = edit
-                                                        .decoded
-                                                        .set_part(manager, slot, "None");
+                                                    .clicked()
+                                                {
+                                                    edit.mark = value as i32;
                                                     edit.dirty = true;
                                                 }
-                                                for choice in &choices {
-                                                    if ui.selectable_label(false, choice).clicked()
+                                            }
+                                        });
+                                });
+                                ui.add_space(6.0);
+                                let (gstage, mgrade) = match &mut edit.decoded.slot {
+                                    lootsmith_core::items::PackedSlot::Weapon(weapon) => (
+                                        &mut weapon.game_stage,
+                                        &mut weapon.manufacturer_grade_index,
+                                    ),
+                                    lootsmith_core::items::PackedSlot::Item(item) => {
+                                        (&mut item.game_stage, &mut item.manufacturer_grade_index)
+                                    }
+                                };
+                                ui.horizontal(|ui| {
+                                    ui.label("Game stage");
+                                    if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                        ui.add(egui::DragValue::new(gstage).range(1..=80)).changed()
+                                    }) {
+                                        edit.dirty = true;
+                                    }
+                                    ui.label("Manufacturer grade");
+                                    if crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                                        ui.add(egui::DragValue::new(mgrade).range(1..=10)).changed()
+                                    }) {
+                                        edit.dirty = true;
+                                    }
+                                });
+                                ui.add_space(6.0);
+                            }
+
+                            let set = edit.decoded.asset_library_set_id;
+
+                            theme::section(
+                                ui,
+                                if is_weapon {
+                                    "Weapon parts"
+                                } else {
+                                    "Item parts"
+                                },
+                            );
+                            ui.scope(|ui| {
+                                egui::Grid::new("parts_grid")
+                                    .num_columns(2)
+                                    .spacing([10.0, 6.0])
+                                    .show(ui, |ui| {
+                                        for (slot, label) in slots_for(is_weapon) {
+                                            crate::ui::widgets::label_nums(ui, *label, p.dim, 12.0);
+                                            let group = items::slot_group(&edit.decoded.slot, slot)
+                                                .unwrap();
+                                            let current = match edit.decoded.part(slot) {
+                                                Some((r, g)) => manager
+                                                    .lookup_asset(
+                                                        g,
+                                                        set,
+                                                        r.asset_index,
+                                                        r.sublibrary_index,
+                                                        r.use_set_id,
+                                                    )
+                                                    .unwrap_or_else(|_| {
+                                                        format!(
+                                                            "#{}/{}",
+                                                            r.asset_index, r.sublibrary_index
+                                                        )
+                                                    }),
+                                                None => "-".to_string(),
+                                            };
+                                            let balance_name = resolve_balance(
+                                                &Some(manager.clone()),
+                                                &edit.decoded,
+                                            );
+                                            let choices = self.balanced_choices(
+                                                &edit.decoded.asset_library_set_id,
+                                                &balance_name,
+                                                group,
+                                                slot,
+                                            );
+                                            egui::ComboBox::from_id_salt(format!("slot_{slot}"))
+                                                .selected_text(crate::ui::widgets::text_with_nums(
+                                                    &current, p.fg, 15.0,
+                                                ))
+                                                .width(270.0)
+                                                .show_ui(ui, |ui| {
+                                                    if ui.selectable_label(false, "None").clicked()
                                                     {
                                                         let _ = edit
                                                             .decoded
-                                                            .set_part(manager, slot, choice);
+                                                            .set_part(manager, slot, "None");
                                                         edit.dirty = true;
                                                     }
-                                                }
-                                            });
-                                        ui.end_row();
-                                    }
-                                });
+                                                    for choice in &choices {
+                                                        if ui
+                                                            .selectable_label(false, choice)
+                                                            .clicked()
+                                                        {
+                                                            let _ = edit
+                                                                .decoded
+                                                                .set_part(manager, slot, choice);
+                                                            edit.dirty = true;
+                                                        }
+                                                    }
+                                                });
+                                            ui.end_row();
+                                        }
+                                    });
+                            });
                         });
                 });
         }
@@ -335,14 +351,14 @@ impl LootsmithApp {
                     .iter()
                     .map(|r| crate::ui::item_table::ItemRow {
                         name: if r.name.is_empty() {
-                            r.balance.clone()
+                            crate::ui::item_table::balance_to_name(&r.balance)
                         } else {
                             r.name.clone()
                         },
-                        kind: r.kind.clone(),
+                        kind: r.type_name.clone(),
                         id: r.id,
                         level: r.level,
-                        marked: r.mark != 0,
+                        marked: player_mark_name(r.mark) == "Favorite",
                         rarity: r.rarity,
                     })
                     .collect();
