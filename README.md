@@ -1,6 +1,21 @@
 # Lootsmith
 
-A cross-platform save editor for Borderlands 2, written in Rust.
+A Linux-native, Rust ([egui](https://github.com/emilk/egui)) save editor for
+**Borderlands 2** — a port/replacement for Gibbed's Borderlands 2 Save Editor.
+
+[![CI](https://github.com/UndeadBulwark/lootsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/UndeadBulwark/lootsmith/actions/workflows/ci.yml)
+[![License: Zlib](https://img.shields.io/badge/license-Zlib-blue.svg)](LICENSE)
+![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)
+
+**Current state:** core + CLI complete and validated against a real PC save; the
+GUI is a full editor with a themed shell. Roadmap to 1.0: [`docs/PLAN_1_0.md`](docs/PLAN_1_0.md).
+
+![Backpack (dark)](docs/screenshots/backpack-dark.png)
+![Backpack (light)](docs/screenshots/backpack-light.png)
+
+<sub>Current dark/light Backpack screens; the design mockups are in
+[`docs/screenshots/mockup-backpack-dark.png`](docs/screenshots/mockup-backpack-dark.png)
+and `mockup-backpack-light.png`.</sub>
 
 > Lootsmith is a Rust port based on Gibbed's Borderlands 2 Save Editor by Rick
 > Gibbed (zlib license).
@@ -8,12 +23,10 @@ A cross-platform save editor for Borderlands 2, written in Rust.
 Lootsmith reads, edits, and writes Borderlands 2 save files: items, weapons,
 currency, skills, and progression. It ships as a library (`lootsmith-core`), a
 CLI (`lootsmith-cli`), and (later) an `egui` desktop app (`lootsmith-gui`),
-with `lootsmith` as a facade crate.
-
-Status: **core + CLI complete and validated against a real PC save; the GUI is a
-full editor (General, Character, Currency, Skills, Fast Travel, Vehicles, Missions,
-Backpack, Bank, Raw) with toolbar, item codes and a themed shell.** See
-`../.opencode/plan/LOOTSMITH_PLAN.md` for the full plan.
+with `lootsmith` as a facade crate. The GUI is a full editor (General, Character,
+Currency, Skills, Fast Travel, Vehicles, Missions, Backpack, Bank, Raw) with a
+toolbar, item codes and a themed shell; see [`docs/PLAN.md`](docs/PLAN.md) and the
+[1.0 roadmap](docs/PLAN_1_0.md).
 
 ## Workspace layout
 
@@ -183,9 +196,8 @@ cargo run -p lootsmith-gui -- --open "/path/to/Save0001.sav" \
 A native window with a toolbar (**Open / Find saves / Save / Save As / Reload /
 New… / Import… / Profile… / platform / Game data**, with `Ctrl+O/S/Shift+S/R`)
 and tabs **General / Character / Currency / Skills / Fast Travel / Vehicles /
-Missions / Backpack (n) / Bank (n) / Raw / About**.
-The
-light/dark theme toggle, and a status bar. Lootsmith **finds your saves
+Missions / Backpack (n) / Bank (n) / Raw / About**, a light/dark theme toggle,
+and a status bar. Lootsmith **finds your saves
 automatically** — native Aspyr, Steam/Proton (appid 49520, all Steam roots incl.
 Flatpak), and generic Wine/Lutris/custom prefixes like a ZLuda prefix under
 `$HOME` — and on first run opens the newest one. **Find saves** lets you pick
