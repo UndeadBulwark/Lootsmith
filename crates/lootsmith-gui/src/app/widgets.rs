@@ -277,16 +277,6 @@ pub(crate) fn currency_name(index: usize) -> String {
     }
 }
 
-/// A vertical rule between toolbar groups.
-pub(crate) fn toolbar_sep(ui: &mut egui::Ui) {
-    let brd = theme::active(ui.ctx()).brd;
-    ui.add_space(4.0);
-    let (rect, _) = ui.allocate_exact_size(egui::vec2(1.0, 18.0), egui::Sense::hover());
-    ui.painter()
-        .vline(rect.center().x, rect.y_range(), egui::Stroke::new(1.0, brd));
-    ui.add_space(4.0);
-}
-
 /// A status glyph (shape carries the meaning too, not just colour).
 pub(crate) fn status_dot(
     ui: &mut egui::Ui,

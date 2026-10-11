@@ -302,13 +302,9 @@ pub fn button(ui: &egui::Ui, rect: Rect, label: &str, kind: ButtonKind) -> Respo
         fill,
         Stroke::new(2.0, border),
     ));
-    ui.painter().text(
-        rect.center(),
-        egui::Align2::CENTER_CENTER,
-        label,
-        FontId::proportional(15.0),
-        text,
-    );
+    let galley = ui.painter().layout_job(job_with_nums(label, text, 15.0));
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, text);
     let response = respond(ui, rect, &format!("button-{label}"), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     response

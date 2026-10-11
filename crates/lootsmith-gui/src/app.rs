@@ -40,6 +40,83 @@ pub enum ScaleMode {
     Fixed(u32),
 }
 
+/// One palette / menu command. The Menu window and the Ctrl+K palette share this
+/// single table (`PALETTE`), so every dropped toolbar action stays reachable.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Cmd {
+    Open,
+    FindSaves,
+    Save,
+    SaveAs,
+    Reload,
+    NewSave,
+    Import,
+    Profile,
+    PickData,
+    ToggleTheme,
+    NewWeapon,
+    NewItem,
+    Duplicate,
+    CopyCode,
+    SyncLevels,
+    SyncEquipped,
+    InsertCodes,
+    Scale(u32),
+}
+
+/// Every command, in palette order.
+pub(crate) const PALETTE: &[Cmd] = &[
+    Cmd::Open,
+    Cmd::FindSaves,
+    Cmd::Save,
+    Cmd::SaveAs,
+    Cmd::Reload,
+    Cmd::NewSave,
+    Cmd::Import,
+    Cmd::Profile,
+    Cmd::PickData,
+    Cmd::ToggleTheme,
+    Cmd::NewWeapon,
+    Cmd::NewItem,
+    Cmd::Duplicate,
+    Cmd::CopyCode,
+    Cmd::SyncLevels,
+    Cmd::SyncEquipped,
+    Cmd::InsertCodes,
+    Cmd::Scale(1),
+    Cmd::Scale(2),
+    Cmd::Scale(3),
+    Cmd::Scale(4),
+];
+
+impl Cmd {
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            Cmd::Open => "Open…",
+            Cmd::FindSaves => "Find saves",
+            Cmd::Save => "Save",
+            Cmd::SaveAs => "Save As…",
+            Cmd::Reload => "Reload",
+            Cmd::NewSave => "New…",
+            Cmd::Import => "Import…",
+            Cmd::Profile => "Profile…",
+            Cmd::PickData => "Game data…",
+            Cmd::ToggleTheme => "Toggle light/dark",
+            Cmd::NewWeapon => "New weapon",
+            Cmd::NewItem => "New item",
+            Cmd::Duplicate => "Duplicate",
+            Cmd::CopyCode => "Copy code",
+            Cmd::SyncLevels => "Sync levels",
+            Cmd::SyncEquipped => "Sync equipped",
+            Cmd::InsertCodes => "Insert code(s)",
+            Cmd::Scale(1) => "Scale 1x",
+            Cmd::Scale(2) => "Scale 2x",
+            Cmd::Scale(3) => "Scale 3x",
+            Cmd::Scale(_) => "Scale 4x",
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum Tab {
     General,
@@ -295,12 +372,8 @@ pub struct ImportSel {
 #[derive(Clone, Copy)]
 enum ItemAction {
     NewWeapon,
-    NewItem,
     Duplicate,
-    CopyCode,
     SyncAll,
-    SyncEquipped,
-    InsertCodes,
 }
 
 /// The tab list, in order.
@@ -422,6 +495,15 @@ pub struct LootsmithApp {
     pub show_settings: bool,
     /// The Ctrl+K action-search text.
     pub action_search: String,
+    /// Ctrl+K command palette visibility and selection.
+    pub show_palette: bool,
+    pub palette_query: String,
+    pub palette_sel: usize,
+    /// The "Paste BL2(…)" dialog.
+    pub show_paste: bool,
+    /// Test-only: force the workbench scroll to the bottom (None = normal).
+    #[cfg(test)]
+    pub inspector_scroll: Option<f32>,
     /// The UI-scale mode (Auto or a fixed integer scale).
     pub scale_mode: ScaleMode,
     /// Latching auto-scale state (decides once per monitor size).
@@ -523,6 +605,12 @@ impl LootsmithApp {
             },
             show_settings: false,
             action_search: String::new(),
+            show_palette: false,
+            palette_query: String::new(),
+            palette_sel: 0,
+            show_paste: false,
+            #[cfg(test)]
+            inspector_scroll: None,
             scale_mode: ScaleMode::Auto,
             auto: crate::ui::auto_scale::AutoScale::default(),
             dirty: false,
@@ -634,6 +722,64 @@ impl LootsmithApp {
         if let ScaleMode::Fixed(n) = mode {
             self.ui_scale = n.clamp(1, 4) as f32;
         }
+    }
+
+    /// Whether the active container tab is the Bank.
+    pub(crate) fn is_bank(&self) -> bool {
+        self.tab == Tab::Bank
+    }
+
+    /// Run a palette / menu command. The Menu window and the Ctrl+K palette share
+    /// this, so every command is reachable from both.
+    pub(crate) fn run_cmd(&mut self, cmd: Cmd, ctx: &egui::Context) {
+        let bank = self.is_bank();
+        match cmd {
+            Cmd::Open => self.dispatch(Action::Open),
+            Cmd::FindSaves => self.dispatch(Action::FindSaves),
+            Cmd::Save => self.dispatch(Action::Save),
+            Cmd::SaveAs => self.dispatch(Action::SaveAs),
+            Cmd::Reload => self.dispatch(Action::Reload),
+            Cmd::NewSave => self.dispatch(Action::New),
+            Cmd::Import => self.dispatch(Action::Import),
+            Cmd::Profile => self.dispatch(Action::Profile),
+            Cmd::PickData => self.dispatch(Action::PickData),
+            Cmd::ToggleTheme => self.dispatch(Action::ToggleTheme),
+            Cmd::NewWeapon => {
+                self.new_item(bank, true);
+            }
+            Cmd::NewItem => {
+                self.new_item(bank, false);
+            }
+            Cmd::Duplicate => {
+                self.duplicate_selected();
+            }
+            Cmd::CopyCode => {
+                self.copy_selected_code(ctx);
+            }
+            Cmd::SyncLevels => {
+                self.sync_levels(false);
+            }
+            Cmd::SyncEquipped => {
+                self.sync_levels(true);
+            }
+            Cmd::InsertCodes => {
+                self.show_paste = true;
+            }
+            Cmd::Scale(n) => {
+                self.set_scale_mode(ScaleMode::Fixed(n.clamp(1, 4)));
+            }
+        }
+        ctx.request_repaint();
+    }
+
+    /// Filtered palette commands for the current query.
+    pub(crate) fn palette_items(&self) -> Vec<Cmd> {
+        let q = self.palette_query.trim().to_lowercase();
+        PALETTE
+            .iter()
+            .copied()
+            .filter(|c| q.is_empty() || c.label().to_lowercase().contains(&q))
+            .collect()
     }
 
     /// Resolve and apply the UI scale for this frame (spec §2.1 rule 7). `Auto`
@@ -1992,7 +2138,7 @@ impl LootsmithApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
-        let (save_as, save, open, reload) = ctx.input_mut(|input| {
+        let (save_as, save, open, reload, palette) = ctx.input_mut(|input| {
             use egui::{Key, KeyboardShortcut, Modifiers};
             (
                 input.consume_shortcut(&KeyboardShortcut::new(
@@ -2002,8 +2148,12 @@ impl LootsmithApp {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::S)),
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::O)),
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::R)),
+                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::K)),
             )
         });
+        if palette {
+            self.show_palette = true;
+        }
         if save_as {
             self.browse_save_as();
         }
@@ -2273,19 +2423,20 @@ impl LootsmithApp {
                                 "Undo",
                                 crate::ui::widgets::ButtonKind::Normal,
                             );
-                            let w = (ui.available_width() - 6.0).max(100.0);
-                            ui.scope(|ui| {
-                                let mut st = (**ui.style()).clone();
-                                st.visuals.override_text_color = Some(p.fg);
-                                st.visuals.weak_text_color = Some(p.fg);
-                                st.visuals.extreme_bg_color = p.pan;
-                                ui.set_style(st);
-                                ui.add_sized(
-                                    [w, 24.0],
-                                    egui::TextEdit::singleline(&mut self.action_search)
-                                        .hint_text("Ctrl+K  action search"),
-                                );
-                            });
+                            let (sr, _) = ui.allocate_exact_size(
+                                egui::vec2((ui.available_width() - 6.0).max(140.0), 24.0),
+                                egui::Sense::hover(),
+                            );
+                            if crate::ui::widgets::button(
+                                ui,
+                                sr,
+                                "Find an action…  Ctrl+K",
+                                crate::ui::widgets::ButtonKind::Normal,
+                            )
+                            .clicked()
+                            {
+                                self.show_palette = true;
+                            }
                         });
                     });
                 });
@@ -2471,22 +2622,24 @@ impl LootsmithApp {
                 let area = ui.max_rect();
                 self.shell.content = area;
                 // Header panel: content inset 20 px.
-                let header_h = 44.0;
-                let header =
-                    egui::Rect::from_min_size(area.min, egui::vec2(area.width(), header_h));
-                crate::ui::pixel::panel(ui.painter(), header, ppp, p);
-                let title = self.nav_label(self.tab);
-                let ribbon_w =
-                    (title.chars().count() as f32 * 9.0 + 48.0).min(header.width() - 40.0);
-                let ribbon_rect = egui::Rect::from_min_size(
-                    egui::pos2(header.left() + 20.0, header.center().y - 12.0),
-                    egui::vec2(ribbon_w, 24.0),
-                );
-                crate::ui::widgets::ribbon(ui, ribbon_rect, &title);
-                let body = egui::Rect::from_min_max(
-                    header.left_bottom() + egui::vec2(0.0, 10.0),
-                    area.max,
-                );
+                // Backpack/Bank draw their own header row inside the screen.
+                let body = if matches!(self.tab, Tab::Backpack | Tab::Bank) {
+                    area
+                } else {
+                    let header_h = 44.0;
+                    let header =
+                        egui::Rect::from_min_size(area.min, egui::vec2(area.width(), header_h));
+                    crate::ui::pixel::panel(ui.painter(), header, ppp, p);
+                    let title = self.nav_label(self.tab);
+                    let ribbon_w =
+                        (title.chars().count() as f32 * 9.0 + 48.0).min(header.width() - 40.0);
+                    let ribbon_rect = egui::Rect::from_min_size(
+                        egui::pos2(header.left() + 20.0, header.center().y - 12.0),
+                        egui::vec2(ribbon_w, 24.0),
+                    );
+                    crate::ui::widgets::ribbon(ui, ribbon_rect, &title);
+                    egui::Rect::from_min_max(header.left_bottom() + egui::vec2(0.0, 10.0), area.max)
+                };
                 ui.scope_builder(egui::UiBuilder::new().max_rect(body), |ui| {
                     ui.set_clip_rect(body);
                     if self.save_game.is_none() {
@@ -2584,6 +2737,98 @@ impl LootsmithApp {
                 });
             if !open {
                 self.show_settings = false;
+            }
+        }
+
+        if self.show_palette {
+            let mut open = true;
+            let mut run: Option<Cmd> = None;
+            egui::Window::new("Action search")
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(false)
+                .default_width(440.0)
+                .show(&ctx, |ui| {
+                    let resp = ui.add(
+                        egui::TextEdit::singleline(&mut self.palette_query)
+                            .hint_text("Type an action…  (Ctrl+K)"),
+                    );
+                    resp.request_focus();
+                    let items = self.palette_items();
+                    if !items.is_empty() {
+                        self.palette_sel = self.palette_sel.min(items.len() - 1);
+                    }
+                    let (up, down, enter, esc) = ui.input(|i| {
+                        (
+                            i.key_pressed(egui::Key::ArrowUp),
+                            i.key_pressed(egui::Key::ArrowDown),
+                            i.key_pressed(egui::Key::Enter),
+                            i.key_pressed(egui::Key::Escape),
+                        )
+                    });
+                    if down && !items.is_empty() {
+                        self.palette_sel = (self.palette_sel + 1) % items.len();
+                    }
+                    if up && !items.is_empty() {
+                        self.palette_sel = self.palette_sel.saturating_sub(1);
+                    }
+                    ui.separator();
+                    egui::ScrollArea::vertical()
+                        .max_height(260.0)
+                        .show(ui, |ui| {
+                            for (i, c) in items.iter().enumerate() {
+                                if ui
+                                    .selectable_label(i == self.palette_sel, c.label())
+                                    .clicked()
+                                {
+                                    run = Some(*c);
+                                }
+                            }
+                        });
+                    if enter {
+                        if let Some(c) = items.get(self.palette_sel) {
+                            run = Some(*c);
+                        }
+                    }
+                    if esc {
+                        self.show_palette = false;
+                    }
+                });
+            if !open {
+                self.show_palette = false;
+            }
+            if let Some(c) = run {
+                self.show_palette = false;
+                self.palette_query.clear();
+                self.palette_sel = 0;
+                self.run_cmd(c, &ctx);
+            }
+        }
+
+        if self.show_paste {
+            let mut open = true;
+            let mut insert = false;
+            egui::Window::new("Paste BL2(…)")
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(false)
+                .show(&ctx, |ui| {
+                    ui.label("Paste one or more BL2(…) codes:");
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.item_code)
+                            .desired_width(420.0)
+                            .desired_rows(4),
+                    );
+                    if ui.button("Insert code(s)").clicked() {
+                        insert = true;
+                    }
+                });
+            if !open {
+                self.show_paste = false;
+            }
+            if insert {
+                self.show_paste = false;
+                self.insert_codes(self.is_bank());
             }
         }
 

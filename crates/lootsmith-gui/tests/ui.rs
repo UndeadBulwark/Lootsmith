@@ -75,7 +75,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
 
-    h.get_by_label("Move to bank").click();
+    h.get_by_label("To bank").click();
     h.run();
     assert_eq!(h.state().backpack.len(), 4);
     assert_eq!(h.state().bank.len(), 2);
@@ -84,7 +84,7 @@ fn moves_a_weapon_to_the_bank_and_back() {
     h.run();
     h.state_mut().select_entry(Container::Bank, 1);
     h.run();
-    h.get_by_label("Move to backpack").click();
+    h.get_by_label("To backpack").click();
     h.run();
     assert_eq!(h.state().backpack.len(), 5);
     assert_eq!(h.state().bank.len(), 1);
@@ -169,7 +169,7 @@ fn creates_a_new_weapon_and_inserts_an_item_code() {
     h.run();
     h.get_by_label("Backpack (5)").click();
     h.run();
-    h.get_by_label("New weapon").click();
+    h.get_by_label("+ Weapon").click();
     h.run();
     assert_eq!(h.state().backpack.len(), 6);
     assert!(h.state().dirty);
@@ -183,6 +183,8 @@ fn creates_a_new_weapon_and_inserts_an_item_code() {
         .unwrap_or_default();
     let _ = code;
     h.state_mut().item_code = "BL2(not-a-real-code)".to_string();
+    h.get_by_label("Paste BL2(…)").click();
+    h.run();
     h.get_by_label("Insert code(s)").click();
     h.run();
     // A malformed code must not add an entry.
