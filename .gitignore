@@ -10,3 +10,6 @@ Cargo.lock.orig
 # kittest snapshot artifacts
 **/tests/snapshots/**/*.new.png
 **/tests/snapshots/**/*.diff.png
+
+# Snapshot-tool backups
+*.old.png
