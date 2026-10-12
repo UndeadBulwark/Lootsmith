@@ -327,6 +327,30 @@ pub fn chip(ui: &egui::Ui, rect: Rect, text: &str, color: Color32) -> Response {
     response
 }
 
+/// Middle-elide `text` until its **real** rendered width fits `max_w`, measured
+/// from the actual font galley — never a px-per-char estimate (the char width
+/// varies with the glyphs and the scale).
+pub fn fit_text(ui: &egui::Ui, text: &str, max_w: f32, size: f32) -> String {
+    let width = |s: &str| {
+        ui.painter()
+            .layout_job(job_with_nums(s, Color32::WHITE, size))
+            .size()
+            .x
+    };
+    if width(text) <= max_w {
+        return text.to_string();
+    }
+    let mut n = text.chars().count();
+    while n > 5 {
+        n -= 1;
+        let cand = crate::ui::item_table::elide_middle(text, n);
+        if width(&cand) <= max_w {
+            return cand;
+        }
+    }
+    crate::ui::item_table::elide_middle(text, 5)
+}
+
 /// A rarity diamond (14 px) with the mandatory outline.
 pub fn gem_rarity(ui: &egui::Ui, center: egui::Pos2, fill: Color32) {
     let p = palette(ui);

@@ -2380,13 +2380,13 @@ impl LootsmithApp {
                         crate::ui::widgets::ribbon(ui, r, "Lootsmith");
                         ui.add_space(4.0);
                         let chip_w = 190.0;
-                        let max_chars = ((chip_w - 12.0) / 7.5) as usize;
                         let name = std::path::Path::new(&self.path)
                             .file_name()
                             .map(|s| s.to_string_lossy().to_string())
                             .filter(|s| !s.is_empty())
                             .unwrap_or_else(|| "no file".to_string());
-                        let name = crate::ui::item_table::elide_middle(&name, max_chars);
+                        // Fit by the real galley width, not a char-count estimate.
+                        let name = crate::ui::widgets::fit_text(ui, &name, chip_w - 16.0, 13.0);
                         let (r, _) =
                             ui.allocate_exact_size(egui::vec2(chip_w, 24.0), egui::Sense::hover());
                         crate::ui::widgets::chip(ui, r, &name, p.fg);

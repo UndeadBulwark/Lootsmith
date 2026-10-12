@@ -143,7 +143,7 @@ impl LootsmithApp {
                     kind: r.type_name.clone(),
                     id: r.id,
                     level: r.level,
-                    marked: player_mark_name(r.mark) == "Favorite",
+                    mark: r.mark,
                     rarity: r.rarity,
                 })
                 .collect();

@@ -43,62 +43,59 @@ fn build(ui: &mut egui::Ui, _: &mut S) {
     theme::apply(ui.ctx(), Theme::Dark);
     let p = *theme::active(ui.ctx());
     ui.painter().rect_filled(ui.max_rect(), 0.0, p.bg);
+    let row = |name: &str, id: i32, mark: i32| ItemRow {
+        name: name.into(),
+        kind: "Pistol".into(),
+        id,
+        level: 10,
+        mark,
+        rarity: lootsmith_core::Rarity::Common,
+    };
+    // PLAYER_MARKS = ["Trash", "Standard", "Favorite"]
     let rows = vec![
-        ItemRow {
-            name: "Standard row".into(),
-            kind: "Pistol".into(),
-            id: 1,
-            level: 10,
-            marked: false,
-            rarity: lootsmith_core::Rarity::Common,
-        },
-        ItemRow {
-            name: "Favorite row".into(),
-            kind: "Pistol".into(),
-            id: 2,
-            level: 10,
-            marked: true,
-            rarity: lootsmith_core::Rarity::Common,
-        },
+        row("Standard row", 1, 1),
+        row("Trash row", 2, 0),
+        row("Favorite row", 3, 2),
     ];
     item_table(ui, &p, &rows, None);
 }
 
+/// The mockup: only a real **Favorite** (mark 2) draws a diamond; **Standard** (1)
+/// and **Trash** (0) draw a small dim dot. (The `bb6c772` render wrongly drew a
+/// diamond on every row.) Shapes are read from the frame: a diamond is a filled
+/// `Shape::Path` (convex polygon), the dot is a filled `Shape::Circle`.
 #[test]
-fn mark_diamond_is_drawn_only_on_the_favourite_row() {
+fn mark_is_a_diamond_only_for_a_favourite() {
     let mut h = Harness::builder()
-        .with_size(Vec2::new(420.0, 160.0))
+        .with_size(Vec2::new(420.0, 220.0))
         .build_ui_state(build, S);
     h.run();
-    let img = h.render().expect("render");
-    let (w, _h) = img.dimensions();
-    let xlo = (w as f32 * 0.80) as u32;
-    let x0 = (w as f32 * 0.86) as u32;
-    let x1 = (w as f32 * 0.94) as u32;
-    // A mark is a compact diamond; the dotted row dividers span the full width,
-    // so ignore any scanline that is mostly bright.
-    let diamond = |y0: u32, y1: u32| {
-        let mut n = 0u32;
-        for y in y0..y1 {
-            let full = (xlo..w).filter(|&x| img.get_pixel(x, y)[0] > 60).count();
-            if full > 25 {
-                continue; // divider line
-            }
-            for x in x0..x1 {
-                if img.get_pixel(x, y)[0] > 60 {
-                    n += 1;
+    let out = h.output();
+    let x_mark = 420.0_f32 * 0.88 + 6.0;
+    let in_mark_col = |x: f32| (x - x_mark).abs() < 20.0;
+    let (mut diamonds, mut dots) = (Vec::new(), Vec::new());
+    for cs in &out.shapes {
+        match &cs.shape {
+            eframe::egui::Shape::Path(p) if p.fill.a() > 0 && !p.points.is_empty() => {
+                let cx = p.points.iter().map(|q| q.x).sum::<f32>() / p.points.len() as f32;
+                let cy = p.points.iter().map(|q| q.y).sum::<f32>() / p.points.len() as f32;
+                if in_mark_col(cx) {
+                    diamonds.push(cy);
                 }
             }
+            eframe::egui::Shape::Circle(c) if c.fill.a() > 0 && in_mark_col(c.center.x) => {
+                dots.push(c.center.y);
+            }
+            _ => {}
         }
-        n
-    };
-    let standard = diamond(30, 68); // row 0 band
-    let favourite = diamond(70, 126); // row 1 band
-    assert_eq!(
-        standard, 0,
-        "Standard row must not draw a mark ({standard} px)"
+    }
+    // Row order top-to-bottom: Standard (dot), Trash (dot), Favorite (diamond).    assert_eq!(diamonds.len(), 1, "exactly one row is a favourite: {diamonds:?}");
+    assert_eq!(dots.len(), 2, "Standard and Trash draw a dot: {dots:?}");
+    let d = diamonds[0];
+    assert!(
+        d > dots[0] && d > dots[1],
+        "the diamond is the last (Favourite) row"
     );
-    assert!(favourite > 0, "Favorite row must draw a mark");
 }
 
 fn synthetic(tag: &str) -> String {

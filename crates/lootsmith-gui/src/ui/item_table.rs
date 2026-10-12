@@ -35,7 +35,8 @@ pub struct ItemRow {
     pub kind: String,
     pub id: i32,
     pub level: i32,
-    pub marked: bool,
+    /// `PLAYER_MARKS` index: 0 = Trash, 1 = Standard, 2 = Favorite.
+    pub mark: i32,
     pub rarity: Rarity,
 }
 
@@ -117,16 +118,21 @@ pub fn item_table(
                     crate::ui::widgets::num_font(15.0),
                     text,
                 );
-                // Mark: a 4-point diamond (no star glyph in Pixelify/VT323).
-                if r.marked {
-                    crate::ui::pixel::diamond(
-                        ui.painter(),
-                        pos2(rect.left() + x_mark + 6.0, cy),
-                        10.0,
-                        text,
-                        ppp,
-                        p,
-                    );
+                // Mark: the mockup shows a diamond for a real favourite and a dim
+                // dot for Standard/Trash (never blank, never a diamond on every row).
+                let mark_c = pos2(rect.left() + x_mark + 6.0, cy);
+                match r.mark {
+                    2 => {
+                        crate::ui::pixel::diamond(ui.painter(), mark_c, 10.0, text, ppp, p);
+                    }
+                    0 | 1 => {
+                        ui.painter().circle_filled(
+                            crate::ui::pixel::snap_pos(mark_c, ppp),
+                            3.0,
+                            p.dim,
+                        );
+                    }
+                    _ => {}
                 }
                 if !sel {
                     crate::ui::pixel::trail_divider(
