@@ -1,17 +1,18 @@
 //! The about tab (moved verbatim from the former single-file app.rs).
 
 use crate::app::*;
-use crate::theme::{self, Tokens};
+use crate::theme;
 use eframe::egui;
 
 pub(crate) fn ui_about(ui: &mut egui::Ui) {
+    let p = *theme::active(ui.ctx());
     ui.add_space(10.0);
     card(ui, 620.0, |ui| {
         theme::section(ui, "About");
         crate::ui::widgets::label_nums(
             ui,
             "Lootsmith — a cross-platform Borderlands 2 save editor",
-            Tokens::ACCENT,
+            p.gold,
             15.0,
         );
         ui.add_space(6.0);

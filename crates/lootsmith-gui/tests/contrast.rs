@@ -23,15 +23,15 @@ const ACCEPTED_FAILURES: [[usize; 2]; SCREENS.len()] = [
     [0, 0],   // Character
     [0, 0],   // Currency
     [0, 0],   // Ammo
-    [0, 2],   // World
-    [25, 29], // Skills
-    [0, 1],   // Travel
-    [1, 1],   // Vehicles
-    [1, 1],   // Missions
+    [0, 0],   // World
+    [25, 29], // Skills (M5 rebuild)
+    [0, 0],   // Travel
+    [0, 0],   // Vehicles
+    [0, 0],   // Missions
     [0, 0],   // Backpack
     [0, 0],   // Bank
     [0, 0],   // Raw
-    [0, 1],   // About
+    [0, 0],   // About
 ];
 
 struct Failure {

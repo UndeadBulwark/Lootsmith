@@ -2,7 +2,7 @@
 //! expansion state, mementos.
 
 use crate::app::*;
-use crate::theme::{self, Tokens};
+use crate::theme;
 use eframe::egui;
 
 impl LootsmithApp {
@@ -45,7 +45,7 @@ impl LootsmithApp {
                     .filter(|d| d.uncovered)
                     .count()
             ),
-            Tokens::TEXT_DIM,
+            p.dim,
             15.0,
         );
         ui.add_space(2.0);
@@ -108,7 +108,7 @@ impl LootsmithApp {
             theme::muted(ui, "(no lockout timers)");
         } else {
             for lockout in &self.world_lockouts {
-                crate::ui::widgets::label_nums(ui, lockout.label(), Tokens::TEXT_DIM, 15.0);
+                crate::ui::widgets::label_nums(ui, lockout.label(), p.dim, 15.0);
             }
         }
 

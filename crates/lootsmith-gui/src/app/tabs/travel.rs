@@ -1,7 +1,7 @@
 //! The travel tab (moved verbatim from the former single-file app.rs).
 
 use crate::app::*;
-use crate::theme::{self, Tokens};
+use crate::theme;
 use eframe::egui;
 
 impl LootsmithApp {
@@ -39,8 +39,9 @@ impl LootsmithApp {
                 }
             }
         }
+        let p = *theme::active(ui.ctx());
         let visited = format!("visited: {} / {}", self.travel.len(), stations.len());
-        crate::ui::widgets::label_nums(ui, &visited, Tokens::TEXT_DIM, 15.0);
+        crate::ui::widgets::label_nums(ui, &visited, p.dim, 15.0);
         ui.add_space(4.0);
 
         // Apply deferred checkbox / group edits after rendering.

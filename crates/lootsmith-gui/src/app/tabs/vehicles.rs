@@ -50,12 +50,18 @@ impl LootsmithApp {
         let dirty = self.vehicles_dirty();
         ui.separator();
         ui.horizontal(|ui| {
-            ui.add_enabled_ui(dirty, |ui| {
-                if ui.button("Apply vehicle changes").clicked() {
+            if dirty {
+                let (r, _) = ui.allocate_exact_size(egui::vec2(170.0, 26.0), egui::Sense::click());
+                if crate::ui::widgets::button(
+                    ui,
+                    r,
+                    "Apply vehicle changes",
+                    crate::ui::widgets::ButtonKind::Primary,
+                )
+                .clicked()
+                {
                     self.apply_vehicles();
                 }
-            });
-            if dirty {
                 ui.label("(unsaved changes)");
             }
         });
