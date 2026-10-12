@@ -2,12 +2,34 @@
 
 A cross-platform Borderlands 2 save editor written in Rust.
 
-**Repo:** `~/Projects/lootsmith` · **HEAD:** `b4f3696` (working tree clean)
-**Updated:** 2026-10-10 · **Reference:** Gibbed's Borderlands 2 Save Editor (C#, zlib)
-· upstream `github.com/gibbed/Gibbed.Borderlands2` · agent brief at repo root: **`AGENTS.md`**
+**Repo:** `~/Projects/lootsmith` · **Reference:** Gibbed's Borderlands 2 Save Editor
+(C#, zlib) · upstream `github.com/gibbed/Gibbed.Borderlands2` · agent brief: `AGENTS.md`.
 
-> Single source of truth after a context compaction. Read §1 (checklist), §2 (the agent brief
-> rules + gap table), §3 (commands) and §4 (facts/gotchas) first.
+> **This file is the single source of truth.** The `~/.opencode/plan/*.md` files are
+> pointers to it — do not keep separate plans. Read §0 (the milestone gate), §1
+> (status), §2 (roadmap), §6 (facts/gotchas) and §7 (commands) first.
+
+---
+
+## 0. How a milestone is done (the gate)
+
+A milestone is **not done** until **all** of these hold:
+
+1. `cargo build --release`; `LOOTSMITH_REQUIRE_FIXTURES=1 cargo test --workspace` —
+   green, **no skips** (a skipped test counts as not done).
+2. `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo fmt --all -- --check` clean.
+3. Its **review bundle exists** — `scripts/review-bundle.sh` →
+   `artifacts/bundles/lootsmith-review-<short-hash>.zip` (§5). The bundle is built from
+   **current** code, never copied.
+4. The report uses the **standard template** and **ends with the line**
+   `Bundle: <full path>`.
+
+Standard report template: what changed · test line (suites / passed / failed / skipped /
+ignored, from a fresh `LOOTSMITH_REQUIRE_FIXTURES=1` run) · clippy + fmt result · the
+contrast ratchet table (per screen, dark/light) · PNGs for every touched screen in
+**dark and light** · known differences from the mockup (numbered) · open issues /
+anything not verified · `Bundle: <path>`.
 
 ---
 
@@ -25,120 +47,154 @@ A cross-platform Borderlands 2 save editor written in Rust.
 - [x] `savejson`: wire-faithful save ↔ JSON (byte-identical round trip; CLI `json`/`unjson`)
 - [x] `profile`: profile.bin — golden keys triplet codec, badass rank/tokens, 14 bonus stats
       (base-32 codec), 1001-byte customization unlock list
-- [x] `partlists`: Balance Part Lists (`<balance>.PartList`, Complete/Selective) → constrained pickers
+- [x] `partlists`: Balance Part Lists → constrained pickers
 - [x] `nameparts`: Weapon/Item Name Parts + Items.json → item display names
+- [x] `rarity`: data-driven classification (`assets/rarity.json`); unmatched = `Unknown`, never guessed
 - [x] `fixture`: `synthetic_save()` so CI runs without a personal save
-- [x] Ammo pools: `ResourceData` (field 11) typed `Resource` + `mutate_resource` (**gap 1**)
-- [x] SDUs: `BLACK_MARKET_KEYS`/`SDU_LEVEL_MAX`, `black_market_upgrades`, `set_sdu` (rewrites
-      `InventorySlotData` = 12+3·lvl and `MaxBankSlots` = 6+2·lvl), `max_all_sdus` (**gap 2**)
+- [x] Ammo pools (field 11), SDUs (36/56/13), challenges (15/38/39/42), world (29/30/43/46)
 
 ### CLI (`lootsmith-cli`, binary `lootsmith`) — done
-- [x] `inspect`, `verify`, `dump`, `items`, `skills`, `travel`, `vehicles`, `missions`, `saves`
-- [x] `ammo`, `sdus`, `new --class NAME`, `json`/`unjson`, `profile`
+- [x] `inspect`, `verify`, `dump`, `items`, `skills`, `travel`, `vehicles`, `missions`,
+      `saves`, `ammo`, `sdus`, `challenges`, `world`, `new --class NAME`, `json`/`unjson`, `profile`
 - [x] `edit`: level/points/currency/golden keys/bank slots · `--item/--part/--set` · `--skill` ·
-      travel · `--steering-mode` · missions · `--ammo/--amount/--sdu` · `--market NAME --sdu-level L` ·
+      travel · `--steering-mode` · missions · `--ammo/--amount/--sdu` · `--market … --sdu-level L` ·
       `--backpack-slots S` / `--bank-size S` / `--max-sdus` · `--out`, `.bak`, re-verify
 
-### GUI (`lootsmith-gui`) — full editor, 12 tabs, split into modules
-- [x] `app/mod.rs` + `app/widgets.rs` + `app/item_editor.rs` + `app/tabs/{general,character,currency,ammo,skills,travel,vehicles,missions,backpack,raw,about}.rs`
-- [x] Toolbar: Open / Find saves / Save / Save As / Reload / New… / Import… / Profile… / platform combo / Game data
-- [x] Tabs: General, Character, Currency, Ammo, Skills, Fast Travel, Vehicles, Missions, Backpack (n), Bank (n), Raw, About
-- [x] Character: class dropdown (DLC flags 44/45) + overpower level + reset; General: Max/OP-max (72/80)
-- [x] Ammo tab: SDU table (9 named upgrades, 0..=9/…), Backpack/Bank slot editors, Max all SDUs; ammo pools
-- [x] Skills: embedded UCP calculator (pyramid layout, colour fill to 26 pts)
-- [x] Fast Travel: DLC-grouped, per-group Check/Uncheck all, star last
-- [x] Backpack/Bank: item display names, balance-constrained pickers, Game Stage + manufacturer grade, codes, sync
-- [x] Raw: search, scalar + int/list element editing
-- [x] New save (clone/blank), section import, profile.bin window; platform Save As
-- [x] `tests/synthetic.rs`; snapshot example falls back to the synthetic save
+### GUI (`lootsmith-gui`) — full editor, themed shell
+- [x] Homestead shell: plank top bar, grouped sidebar (counts, logo), status plank; Auto/1x–4x scale
+- [x] `theme::Palette` + WCAG contrast gate; drawn pixel-art widget set (`ui/pixel.rs`, `ui/widgets.rs`)
+- [x] Tabs: General, Character, Currency, Ammo & SDUs, World, Skills, Fast Travel, Vehicles,
+      Missions, Backpack (n), Bank (n), Raw, About
+- [x] `ui/item_table.rs` list + item workbench (parts union, editable stat blocks)
+- [x] Save discovery, `BL2(…)` item codes, `profile.bin` editing, new/import, platform Save As
+- [x] **M3 complete** — Backpack/Bank match the mockup; side-by-side review sheets done
 
 ### Remaining
-- [ ] Gap 4 World progress (29/30/43/46), Gap 5 DLC state (27), Gap 6 Mementos (32/33)
-- [ ] Gap 7 Bulk ops (complete/reset missions, max everything)
-- [ ] Gap 8 UI prefs/stats (19/15) — low
-- [ ] Gap 9 Game-data onboarding; Gap 10 Packaging; Gap 12 blank-save in-game validation (human)
-- [ ] Re-roll `~/Downloads` archive; verify icon after relaunch (human)
+- [ ] **M4** — every screen except Skills onto Homestead; contrast hard-zero (§3)
+- [ ] **M5** — Skills redesign (drop-in ready; needs the column prerequisite) (§4)
+- [ ] **M6** — consistency lock (enable `lint_tokens`, drive ratchet to 0, byte-exact theme switch)
+- [ ] **M7** — QoL P0 (unsaved-changes guard, rotating backups + restore, confirmation dialogs, undo/redo)
+- [ ] **M8** — release 1.0.0 (version, CHANGELOG/README, AppImage, GitHub Release on tag)
+- [ ] Human: in-game validation (blank save × six classes, platform conversion, profile keys, class change)
 
 ---
 
-## 2. Agent brief (AGENTS.md) — rules + gap table
+## 2. Roadmap
 
-**Per-feature order:** core accessor/mutator → core test → CLI flag → GUI control → GUI test.
-Untouched fields re-serialize byte-identically; never rewrite a message you did not edit;
-game data stays user-supplied. Field layouts come from upstream, never memory:
-`raw.githubusercontent.com/gibbed/Gibbed.Borderlands2/master/projects/Gibbed.Borderlands2.ProtoBufFormats/WillowTwoSave/<Name>.cs`
-or the proto mirror `github.com/Oberacda/Borderlands2SaveEditor/borderlands2/protos/*.proto`.
+| Milestone | Scope | State |
+|---|---|---|
+| M3 | Backpack/Bank match the mockup | ✅ done (baselines provisional) |
+| **M4** | All other screens except Skills → Homestead, contrast 0/0 | not started |
+| **M5** | Skills redesign (rules + board, details/keyboard, respec/build string) | not started (drop-in staged) |
+| **M6** | Consistency lock: enable `tests/lint_tokens.rs`, ratchet → 0, byte-exact theme switch | not started |
+| **M7** | QoL P0 (data safety) | not started |
+| **M8** | Release 1.0.0 + packaging | not started |
 
-Task template:
+Post-1.0 (deferred): DLC state editor (field 27/44/45), mementos (32/33), UI-prefs/stats decode,
+challenges screen.
 
-```
-Task: <one feature from the gap table>
-Read first: AGENTS.md, crates/lootsmith-core/src/savegame.rs, upstream <file>.
-Scope: core + CLI + GUI + tests for this feature only.
-Steps:
-  1. Add typed accessor/mutator in lootsmith-core (field numbers from upstream).
-  2. Add a round-trip test in crates/lootsmith-core/tests/.
-  3. Add CLI flags in lootsmith-cli and list output in `describe`.
-  4. Add a GUI tab or section in its own module, with a kittest UI test.
-Done when: `cargo test --workspace` passes, an edited save re-parses with only the intended
-field changed, and the CLI and GUI both expose the feature.
-Do not: touch unrelated fields, rewrite proto.rs, or change container.rs.
-```
+---
 
-### Gap table (live status)
+## 3. M4 — every screen onto Homestead
 
-| # | Feature | Save field(s) | State |
+**Goal:** bring every screen except Skills onto the Homestead component set and make the contrast
+gate hard-zero per screen. Skills (M5) keeps its old `Tokens::` code, so the `Tokens::` lint stays
+disabled until **M6**. **Dialogs are in scope, after the 13 screens, as separate commits.**
+
+### Definition of done (per screen)
+1. `ACCEPTED_FAILURES[screen] == [0, 0]` in `crates/lootsmith-gui/tests/contrast.rs`.
+2. No `Tokens::`, no `CornerRadius`, no `card(`, no `theme::{section,muted,faint}`, no `ui.heading`,
+   no raw `ui.button`/`ui.small_button`/`ui.checkbox`/`egui::Button`/`egui::Checkbox`/`egui::Frame`,
+   no rounded group boxes.
+3. Panels/headers/buttons/checkboxes come from `ui/widgets.rs` (`egui::Grid`, `ScrollArea`,
+   `DragValue`, `ComboBox`, `TextEdit` remain allowed as layout/input primitives; prefer
+   `ui::widgets::{text_field, search_field, number_field, dropdown}`).
+4. A **per-screen behaviour test**: edit a field through the UI → save → reload → assert the value
+   changed **and nothing else changed** (required in that screen's commit).
+5. **`tests/padding.rs`** passes for the screen (extend it to every migrated tab as each lands;
+   no text within 10 px of a shell panel border).
+6. Snapshot baseline, dark and light, reviewed as PNG.
+
+**Reference pattern:** Backpack/Bank (M3) — `ui/item_table.rs` + `ui/widgets::{panel, ribbon,
+button, stat_block, part_row, dropdown, text_field}`.
+
+### Work order (one commit each; ratchet drops with each)
+- **M4.0 — the 8 contrast runs (isolated first commit):** World 0/2, Travel 0/1, About 0/1
+  (`Tokens::TEXT_DIM`/`ACCENT` on light parchment), Vehicles 1/1 and Missions 1/1 (disabled raw
+  `ui.button`). Then set those 5 `ACCEPTED_FAILURES` rows to `[0,0]`.
+- **M4.1–M4.10 — General, Character, Currency, Ammo, Raw, World, Travel, Vehicles, Missions, About**
+  (World/Travel/Vehicles/Missions fold in their M4.0 fix). Replace `card()`→`panel`,
+  `theme::section`→section label, raw buttons/checkboxes→`ui::widgets::{button,checkbox}`,
+  `TextEdit`→`search_field`, `ComboBox`→`dropdown`, `ui.strong`→column labels,
+  `Tokens::*`→palette (`p.dim`/`p.gold`).
+- **M4.11 — dialogs (separate commits):** Settings, Action search, Paste BL2(…), Saves found,
+  New save, Profile, Import sections → Homestead modal panels.
+- **M4.12 — retire `app/widgets.rs::{card,empty_state,status_dot}` and `theme::{section,muted,faint}`**
+  (move `empty_state` to `ui/widgets.rs`). `theme::Tokens` stays until M6.
+
+### Live contrast ratchet (dark/light failing runs)
+| Screen | Now | Target | Legacy left |
 |---|---|---|---|
-| 1 | Ammo pools | 11 `ResourceData` | ✅ `8be3ca9` |
-| 2 | SDUs | 36/56/13 | ✅ `6a9733c` |
-| 3 | Challenges | 15/38/39/42 | ✅ `b4f3696` (StatsData blob editing, prestige, unlocks) |
-| 4 | World progress | 29/30/43/46 | schema only |
-| 5 | DLC state | 27 (+44/45) | import-only |
-| 6 | Mementos | 32/33 | schema only |
-| 7 | Bulk ops | many | per-DLC travel exists |
-| 8 | UI prefs / stats | 19/15 | raw only — low |
-| 9 | Game-data onboarding | n/a | open |
-| 10 | Packaging | n/a | open (AppImage/Flatpak + CI) |
-| 11 | Fixtures | n/a | ✅ `2c53b1b` |
-| 12 | Blank-save validation | n/a | human step |
-
-### Verified schemas
-- `ResourceData { string Resource=1; string Pool=2; float Amount=3; int32 UpgradeLevel=4 }`
-- `PackedItemData { bytes Serial=1; int32 Quantity=2; bool Equipped=3; int32 Mark=4 }`
-- `PackedWeaponData { bytes Serial=1; QuickWeaponSlot=2; PlayerMark=3; int32 Unknown4=4 }`, `BankSlot { bytes Serial=1 }`
-- `SkillData { string Skill=1; int32 Grade=2; int32 GradePoints=3; int32 EquippedSlotIndex=4 }`
-- `OneOffLevelChallengeData { int32 PackageId=1; int32 ContentId=2; repeated uint32 Completion=3 }` — don't synthesize OP entries
-- DLC class packages: Mechromancer = Tulip 2, Psycho = Lilac 6 (field 45). No colour field in the save top level.
-- SDU order (field 36): rifle, pistol, launcher, shotgun, smg, sniper, grenade, backpack(7), bank(8);
-  backpack = 12+3·lvl, bank = 6+2·lvl (pclifford's savefile.py formulas)
+| General | 0/0 | 0/0 | `card`, `section`, 2× `ui.button` |
+| Character | 0/0 | 0/0 | `card`, `section`, `selectable_label`, `button`, `ComboBox` |
+| Currency | 0/0 | 0/0 | `ui.heading`, `ui.label` |
+| Ammo | 0/0 | 0/0 | `section`×2, `ui.button`, `ui.strong`×6 |
+| Raw | 0/0 | 0/0 | `ui.heading`, `small_button`×2, `ui.strong`×5, `TextEdit`×3 |
+| World | 0/2 | 0/0 | `Tokens::TEXT_DIM`×2, `section`×5, `ui.button`×3, `ui.checkbox`, `muted`×2 |
+| Travel | 0/1 | 0/0 | `Tokens::TEXT_DIM`, `small_button`×2, `ui.button`, `strong`, `muted` |
+| Vehicles | 1/1 | 0/0 | `ui.button`, `selectable_label`×2, `ComboBox`, `strong` |
+| Missions | 1/1 | 0/0 | `ui.button`, `CollapsingHeader`, `section`, `selectable_label`, `strong`×3 |
+| About | 0/1 | 0/0 | `Tokens::ACCENT`, `card`, `section`, `muted`×4, `faint` |
+| Backpack/Bank | 0/0 | 0/0 | — (M3 reference) |
+| Skills | 24/28 | — | **M5** |
 
 ---
 
-## 3. How to build / test / run / automate
+## 4. M5 — Skills redesign
 
-```sh
-cd ~/Projects/lootsmith
-cargo build --release
-cargo clippy --workspace --all-targets -- -D warnings   # must stay clean
-cargo test --workspace                                  # 102 tests
-cargo run -p lootsmith-cli -- ammo|sdus|items|skills|travel|vehicles|missions <save>
-cargo run -p lootsmith-cli -- new/json/unjson/profile/…
-cargo run -p lootsmith-cli -- edit <save> --ammo 5 --amount 999 --sdu 3
-cargo run -p lootsmith-cli -- edit <save> --max-sdus / --backpack-slots 39 / --bank-size 24
-cargo run -p lootsmith-gui                       # window
-cargo run -p lootsmith-gui -- --selftest --open <save>
-cargo test -p lootsmith-gui                      # kittest, by label
-cargo run -p lootsmith-gui --example snapshot -- /tmp/opencode/shots
-```
+Drop-in in `~/Downloads/Skills redesign/` (`skill_rules.rs`, `skill_board.rs`) targets
+`crates/lootsmith-gui/src/skill_rules.rs` and `ui/skill_board.rs`; replace `app/tabs/skills.rs`;
+delete `tree_card`/`skill_tile`/`Tint`… from `app/widgets.rs`.
 
-Paths: fixture `tests/fixtures/pc_Save0001.sav` (gitignored); real save
-`~/bl2-zluda/…/SaveData/76561198098137537/Save0001.sav`; profile
-`~/.local/share/aspyr-media/borderlands 2/willowgame/savedata/76561198098137537/profile.bin`;
-dumps `~/Projects/bl2-rogue/data/gibbed/`; launcher `~/.local/share/applications/lootsmith.desktop`.
+**Prerequisite P0 (before any replacement):** `skills.json` has **no per-skill column data** and the
+count rule (`1→centre, 2→flanks, 3→row`) is wrong for **18 of 108 tiers**. Columns **are** in the
+source page: `bl2skills.com` marks a skill's column with class `push1` (`.skill{width:52px;float:left}`,
+`.tree{width:174px}`, `.push1{margin-left:58px}` → `col_i = i + Σ push_0..i`). Also two **phantom
+skills** named `\1` (icon `class-tree-\i(0)`) are already committed (Salvador Brawn T6, Maya Cataclysm
+T6) — filter them. Tasks: extend `scripts/gen-skill-data.py` to emit `col` + drop placeholders and
+bump `version` to 2; regenerate + diff; make `skill_rules::slots` column-aware with a count fallback
+and tests; show the 18 ASCII tree grids for human comparison.
+
+**Milestones:** M5a rules + board + `tabs/skills.rs` + parity tests (1–5); **M5b** details pane,
+keyboard, shift fill/clear, "ignore budget" switch, zero contrast at 1x/2x/3x — **REVIEW STOP**;
+**M5c** Respec + `LS2:<class>:<digits>` build string + Other-skills panel.
 
 ---
 
-## 4. Key facts & gotchas (hard-won)
+## 5. Review bundle
+
+**Script:** `scripts/review-bundle.sh`. **Output:** `artifacts/bundles/lootsmith-review-<short-hash>.zip`
+(create the dir if missing; `/artifacts/` is gitignored). **Keep the newest 5 bundles.**
+
+**Fail the script if any check fails:** tree clean and README hash == HEAD · no pure-black (0,0,0)
+pixel at screenshot corners/edges · every screenshot newer than the HEAD commit · no
+`tests/snapshots/review` file and no `*.old.png` in the zip · zip **< 5 MB**.
+
+**Contents:**
+1. `README.txt` — HEAD hash + subject, date, milestone just finished; test line; clippy/fmt result;
+   commits since the previous bundle; **files deleted** since the previous bundle; contrast ratchet
+   table; known mockup differences (numbered); open issues.
+2. `screenshots/` — every screen, dark+light, **100% and 200%**, rendered from current code
+   (`<screen>_<theme>_<scale>.png`); Backpack side-by-side with the mockup (mockup | mine 100% |
+   mine 200%), dark+light; a contact sheet per theme; the mockups from `docs/design/`.
+3. `src/` — tracked source only, no assets (exclude `crates/*/assets/skills`, portraits, icons,
+   `data/*.json`, `target/`, `.git`); include `.rs`, `Cargo.*`, docs, `scripts`, `AGENTS.md`, spec
+   files, tests (not snapshot PNGs).
+4. `diff.patch` — `git diff <previous-bundle-hash>..HEAD`, source files only.
+
+---
+
+## 6. Key facts & gotchas (hard-won)
 
 **Two compression layers** — `File = SHA1(20) || u32BE(inner_len) || compress(Inner)`,
 `Inner = u32BE(size) || "WSG" || u32 version=2 || u32 crc32(proto) || i32 proto_size || Huffman(proto)`.
@@ -146,158 +202,58 @@ dumps `~/Projects/bl2-rogue/data/gibbed/`; launcher `~/.local/share/applications
 2. Outer compressed bytes differ (MiniLZO vs lzokay) → gate on the inner buffer.
 3. Item blobs: real-content blobs are byte-identical; blank 40-byte placeholders only semantically stable.
 
-**profile.bin**: SHA1(20) over the rest · u32BE size · LZO1X · entries `[kind][id BE u32][dataType][value][0x00]`
-(1=Int32BE, 4=String, 5=Float, 6=Binary, 8=Int8). Ids 136 rank/138 tokens/143 stats/162 keys/300 unlocks.
-The entry table is the byte gate; the container hash is recomputed on write.
+**profile.bin**: SHA1(20) over the rest · u32BE size · LZO1X · entries
+`[kind][id BE u32][dataType][value][0x00]` (1=Int32BE, 4=String, 5=Float, 6=Binary, 8=Int8).
+Ids 136 rank / 138 tokens / 143 stats / 162 keys / 300 unlocks; the entry table is the byte gate.
 
-**Field 13 `InventorySlotData` is a single required message**; field 38 `ChallengeList` is a
-repeated list (132 entries in the fixture). The field-15 `StatsData` blob holds the challenge
-progress (`u32 4 || u32 size || u16 count` + 12 bytes per entry: `[id:u16][flag][total:i32][flag][prev:i32]`
-little-endian — 387 entries in the fixture). OP entries (40) must not be synthesized without a
-verified ContentId.
+**Field 13 `InventorySlotData`** is a single required message; field 38 `ChallengeList` is repeated
+(132 in the fixture). Field-15 `StatsData` holds challenge progress (`u32 4 || u32 size || u16 count`
++ 12 bytes/entry). OP entries (40) must not be synthesized without a verified ContentId.
 
 **Dumps carry a UTF-8 BOM** — strip `\u{feff}` before serde_json.
 
 **GUI/egui 0.36:** `eframe::App::ui(&mut self, ui, frame)`; `egui::Panel::*` into the root Ui;
-`ComboBox::from_id_salt`; tab modules import `use crate::app::*;` (their `super` is `tabs`);
-tab-bar labels include counts ("Backpack (14)") — kittest queries must match exactly.
+`ComboBox::from_id_salt`; tab modules `use crate::app::*;`. Tab-bar labels include counts —
+kittest queries must match exactly.
 
-**Game data is not bundled** (calculate skill data is the documented exception).
+**Homestead spec rules** (`LOOTSMITH_UI_SPEC.md`): flat only (no shadow/gradient/rounded corners);
+hover/focus change borders only; integer UI scale (Auto / 1x–4x); WCAG ≥ 4.5:1 (non-text 3:1).
 
-**In-game edits the game clamps:** SDU levels feed slot maximums at load (12+3·lvl / 6+2·lvl);
-`apply_form` writes MaxBankSlots from the form — `refresh_sdus` keeps `form.bank_slots` synced.
+**Game data is not bundled** (bundled tables under `crates/lootsmith-core/assets/data/` are the
+documented exception; a picked folder overrides them). Rarity has no dump field — classify from
+`assets/rarity.json`, never guess.
 
----
-
-## 5. Working rules for the next agent
-
-1. Work the gap table, one gap per commit, following the task template.
-2. After each change: tests + clippy + release build + `--selftest` + snapshot.
-3. Commit messages name the gap (`… (AGENTS.md gap N): …`).
-4. Keep README + this plan in sync; mirror to `docs/PLAN.md`.
-5. Anything needing the real game is a human step — say so.
+**In-game edits the game clamps:** SDU levels feed slot maximums at load (backpack = 12+3·lvl,
+bank = 6+2·lvl); `apply_form` writes `MaxBankSlots` from the form; `refresh_sdus` keeps
+`form.bank_slots` synced.
 
 ---
 
-## 6. Phases
+## 7. Build / test / run / automate
 
-| Phase | Scope | State |
-|---|---|---|
-| 0–5 | core + CLI | ✅ |
-| 6 | GUI | ✅ 12 tabs |
-| 7 | AGENTS.md gaps | 1,2,3,4,5,6,7,9,10,11 + split done; 8 = low-left; 12 = human |
+```sh
+cd ~/Projects/lootsmith
+cargo build --release
+cargo clippy --workspace --all-targets -- -D warnings   # must stay clean
+LOOTSMITH_REQUIRE_FIXTURES=1 cargo test --workspace
+cargo run -p lootsmith-cli -- inspect|verify|dump|items|skills|travel|vehicles|missions|ammo|sdus|challenges|world <save>
+cargo run -p lootsmith-cli -- edit <save> --max-sdus / --backpack-slots 39 / --bank-size 24
+cargo run -p lootsmith-gui                       # window
+cargo run -p lootsmith-gui --example snapshot -- /tmp/opencode/shots
+UPDATE_SNAPSHOTS=1 cargo test -p lootsmith-gui --test snapshots   # then OPEN the PNGs
+scripts/review-bundle.sh                         # build the milestone review bundle
+```
 
----
-
-## 7. History (newest first)
-
-`6a9733c` SDUs (gap 2) · `b4f3696` challenges (gap 3) · `0472eaa` fmt · `fcdbbb6` world (gap 4) · `dede710` onboarding (gap 9) · `0c2210d` packaging (gap 10) · `8be3ca9` ammo (gap 1) · `2c53b1b` fixture (gap 11) · `0ad078a` split ·
-`2b4e26e` AGENTS.md · `2192c08` names/class/OP/travel · `83fb0cb` balance pickers ·
-`bd216a8` profile.bin · `53c3ae5` raw lists · `031603f` new/import/JSON/platform ·
-`9f5184a` skill plates · `64af860` 3×6 grid · `d1175a9` calculator composition ·
-`cdd1e64` calculator polish · `e692c58` skill calculator · `b0cd3fe` GUI redesign ·
-`ebcce76` icon · `84a1f2c` discovery · earlier phases (0–6) as in git log.
-
-Archives: `~/Downloads/lootsmith-0.0.1-2192c08.tar.gz` — predates the last 7 commits; re-roll on request.
+Testing reality: the GUI suite runs on the **synthetic** save (`lootsmith_core::fixture`), never a
+personal fixture; dumps-dependent tests fail loudly under `LOOTSMITH_REQUIRE_FIXTURES=1`.
+Snapshot baselines live in `crates/lootsmith-gui/tests/snapshots/`.
 
 ---
 
-## 8. UI overhaul ("Homestead") — spec, workflow, status
+## 8. History (newest first)
 
-The GUI work is now driven by two documents (alongside this plan):
-- `LOOTSMITH_UI_SPEC.md` — the target design (flat pixel-art cabin: plank bars, stitched
-  panels, ribbons, dither; two full palettes; hard rules: no shadow/gradient/rounded corners;
-  hover/focus change borders only; integer scale 100/150/200; WCAG ≥ 4.5:1 test).
-- `LOOTSMITH_UI_WORKFLOW.md` — the testing loop (tests first, `LOOTSMITH_REQUIRE_FIXTURES=1`,
-  snapshot baselines in `tests/snapshots/`, never hide a failure, report template).
-
-### Step 1 (this commit) — done
-- `tests/common/mod.rs`: synthetic-save harness (never a personal fixture), dumps via
-  `LOOTSMITH_ASSET_LIBRARY`, `require_fixtures()` panics under `LOOTSMITH_REQUIRE_FIXTURES=1`.
-- `tests/ui.rs` ported: all GUI tests now run on the synthetic save (24 tests, 0 skipped);
-  the old `tests/synthetic.rs` was folded in and deleted; the fixture's GUID is pinned so
-  synthetic saves are byte-identical between runs.
-- `tests/snapshots.rs` + `tests/snapshots/smoke_backpack.png`: **one smoke snapshot only**
-  (real baselines land after the shell exists, per the approved sequence change).
-- Rarity groundwork: `crates/lootsmith-core/src/rarity.rs` + `assets/rarity.json` (data-driven;
-  rules are path-aware and order-sensitive), `Unknown` is never guessed; report at
-  `~/Downloads/lootsmith-rarity-report.md` (1372 balances: 369 classified, 694 are non-gear
-  mission/pickup defs, 55 uniques await the override list, 245 need review).
-- `AGENTS.md` and this file refreshed to match the code.
-
-### Step order from here
-2. `theme.rs` rewrite (`Palette` + contrast test) · 3. fonts + UI scale · 4. `ui/pixel.rs` ·
-5. `ui/widgets.rs` · 6. shell (plank bar, sidebar, status bar) **then commit the real snapshot
-baselines** · 7. QoL P0 (close guard, undo/redo, rotating backups, confirmations, pre-save diff) ·
-8. item screens (table + workbench + rarity diamonds) · 9. P1→P3.
-
-Skills build string (approved): `LS2:<class>:<t1>.<t2>.<t3>`, one digit per skill in
-`skills.json` order, version prefix + short check suffix; import enforces class match and tier
-gating, warns when over budget, never writes an invalid build. No bl2skills link format.
-
----
-
-## 9. Current state (2026-10-10, HEAD `c1dde46`) — everything below is committed
-
-**Green gate:** `LOOTSMITH_REQUIRE_FIXTURES=1 cargo test --workspace` → 115 passed, 0 failed,
-**1 ignored** (`tests/lint_tokens.rs`, intentionally disabled until the shell migration ends);
-`cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean.
-
-### Done since the last plan revision
-- **Step 1 (workflow)**: `tests/common/mod.rs` — synthetic-save harness, dumps via
-  `LOOTSMITH_ASSET_LIBRARY`, `require_fixtures()` panics under `LOOTSMITH_REQUIRE_FIXTURES=1`;
-  `tests/ui.rs` ported to the synthetic save (no personal fixture needed), `tests/synthetic.rs`
-  folded in; snapshot harness with a smoke shot.
-- **Rarity pipeline (accepted rules)**: `scripts/gen-rarity.py` (Borderlens exact/unique join +
-  reviewed alias file, name-tier patterns for generated gear, no pool data; Legendary is never
-  classified from pools alone). Gates: pinned 6 + cross-check 12 = 100%;
-  pattern-vs-pool 341/345 (name-marked items only, ≥98%); the marker-less pool extension is
-  labelled an inference validated per tier (38 derived, 7 mixed left Unknown, 3 Legendary
-  pool-only left Unknown). Wiki sample logged as **22/25 strict (88%), 25/25 after tier
-  normalization** (wiki "Unique" = our Rare/E-tech). `rarity.json` v2 carries provenance and
-  per-entry origin. Report: `~/Downloads/lootsmith-rarity-report.md`.
-- **Step 2 (palette)**: `theme.rs` — `Palette` (full dark/light token tables), WCAG gate test
-  (text 4.5, non-text 3, diamonds 3) with the full table printed; token fixes: dark `brd`
-  #8C6A40, new `wdb` wood-border token, light `dim` #523D25, light `gold` #5E3E06, six light
-  diamonds darkened; white diamond relies on the 2 px `fg` outline now *specified* in
-  `LOOTSMITH_UI_SPEC.md` §2.3. `apply()` installs the palette (light theme fixed) and disables
-  window/popup shadows.
-- **Data bundling**: 16 tables (2.8 MB) under `crates/lootsmith-core/assets/data/` +
-  `bundled.rs` loaders; a user folder overrides; **no first-run picker**; `PROVENANCE.md`
-  lists every table's source, commit/release, retrieval date and licence status.
-- **Docs**: `AGENTS.md` (rule 4 rewritten, gaps status), `README.md` (fan-project +
-  licensing + bundled-data sections), About-tab lines, spec §2.2 synced to the real tokens.
-
-### Pending (in agreed order)
-1. **Prerequisite**: an `ignore_env` flag + `new_isolated` so the "no folder" tests provably
-   ignore `LOOTSMITH_*` and persisted settings.
-2. **Prerequisite**: `scripts/refresh-data.sh` (pull the 15 dumps from
-   `gibbed/Borderlands2Dumps`, re-serialise, run `gen-rarity.py`).
-3. **Shell a–f, one commit each, PNGs (dark + light) in every report**:
-   a. wire the fetched OFL fonts (`assets/fonts/`) + UI scale 100/150/200
-   b. `ui/pixel.rs` (notched rect, ribbon, plank bar, stitched panel, rivets, trail divider,
-      diamond with outline, dither tile) + geometry/rule tests
-   c. `ui/widgets.rs` components
-   d. plank top bar + sidebar (grouped, counts, logo) + status plank → **commit the real
-      baselines (dark/light × 100/200%) and show the PNGs before (e)**
-   e. Backpack: table + Item workbench + rarity diamonds
-   f. migrate remaining tabs; enable the `Tokens::` lint in the final commit
-4. Then QoL P0 (close guard, undo/redo, rotating backups, confirmations, pre-save diff), P1→P3.
-5. Human steps: in-game validation (blank save, platform conversion, profile keys, class
-   change) and the icon after a menu relaunch.
-
-### Current PNG evidence (all committed)
-- `crates/lootsmith-gui/tests/snapshots/smoke_backpack.png` (dark, synthetic save)
-- `crates/lootsmith-gui/tests/snapshots/smoke_backpack_light.png` (light, synthetic save)
-- `crates/lootsmith-gui/tests/snapshots/smoke_inspector_bundled.png` (bundled tables, no folder)
-- `crates/lootsmith-gui/tests/snapshots/smoke_inspector_real_item_bundled.png` (real pistols:
-  "Smooth Repeater" etc., no folder)
-
-### Harness notes for the next agent
-- The `edit` tool intermittently refuses repo paths ("outside the Plan directory"); if that
-  happens, say so and switch agent/Build mode — do **not** silently rewrite whole files via the
-  shell for the shell work.
-- Keep `cargo fmt` + `clippy -D warnings` green and run the suite with
-  `LOOTSMITH_REQUIRE_FIXTURES=1`; a skipped test counts as not done.
-- Snapshot baselines: regenerate with `UPDATE_SNAPSHOTS=1 cargo test -p lootsmith-gui --test
-  snapshots`, **open the PNGs**, and list every changed baseline with its reason.
+`298bef3` M3: parts union + editable stat blocks · `a9a9948` workbench balance parts · `61262b5` M3(d)
+sidebar/status/elision · `532a29d` M3(c) workbench + Ctrl+K · `1e05d3c` README/CHANGELOG · `60fa1ea`
+1.0 roadmap · `61e869c` list fixes · `bb6c772` black margins + padding · `177016e` mockup item list ·
+`2af08bd` auto UI scale · `3f3da65` Homestead shell · `8f7ba1d` widget set · earlier phases as in
+git log.

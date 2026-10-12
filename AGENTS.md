@@ -9,6 +9,16 @@ Target: feature parity with upstream Gibbed (https://github.com/gibbed/Gibbed.Bo
 
 Upstream is the source of truth for save-format field layouts. Before implementing any feature, read the matching upstream file (`ProtoBufFormats/WillowTwoSave/*.cs`, `SaveEdit/*`) and copy field numbers and types exactly. Do not guess layouts.
 
+### The milestone gate
+
+`docs/PLAN.md` is the single source of truth for the plan (`~/.opencode/plan/*.md` are pointers to it).
+
+A milestone is **not done** until **all** hold: (1) release build + `LOOTSMITH_REQUIRE_FIXTURES=1
+cargo test --workspace` green with no skips; (2) clippy `-D warnings` and `cargo fmt --check` clean;
+(3) its **review bundle exists** — `scripts/review-bundle.sh` →
+`artifacts/bundles/lootsmith-review-<short-hash>.zip` (built from current code, never copied); and
+(4) the report uses the standard template and **ends with the line `Bundle: <full path>`**.
+
 ## 2. Architecture rules
 
 ```
