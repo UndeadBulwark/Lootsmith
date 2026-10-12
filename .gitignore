@@ -14,6 +14,12 @@ Cargo.lock.orig
 # Snapshot-tool backups
 *.old.png
 
+# Stray per-screen review renders (the snapshot tool must not write tracked paths)
+**/tests/snapshots/review/
+
+# Stray backup files
+*.bak
+
 # Review/design artifacts (mockups, bundles)
 /artifacts/
 
