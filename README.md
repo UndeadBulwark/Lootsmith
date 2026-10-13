@@ -11,10 +11,10 @@ A Linux-native, Rust ([egui](https://github.com/emilk/egui)) save editor for
 against real PC saves; the GUI is a full editor with a themed, responsive shell.
 Status and the roadmap to 1.0 live in [`docs/PLAN.md`](docs/PLAN.md).
 
-![Lootsmith (dark)](docs/screenshots/contact-dark.png)
+<img src="docs/screenshots/lootsmith.png" width="180" alt="Lootsmith">
 
-<sub>General · Character · Skills · Backpack workbench (dark). Light theme:
-[`contact-light.png`](docs/screenshots/contact-light.png).</sub>
+<sub>Lootsmith runs in a Light theme (default) and a Dark theme — see the
+[comparison below](#screenshots).</sub>
 
 Lootsmith reads, edits, and writes Borderlands 2 save files: items, weapons,
 currency, skills, and progression. It ships as a library (`lootsmith-core`), a CLI
@@ -42,12 +42,13 @@ a facade crate.
 
 ## Screenshots
 
-| Backpack workbench | Sidebar rail |
-|---|---|
-| ![Backpack (dark)](docs/screenshots/backpack-selected-dark.png) | ![Skills, collapsed rail (dark)](docs/screenshots/sidebar-collapsed-dark.png) |
+Light theme (the default) on top, dark below — the same Backpack workbench:
 
-Light theme: [`skills-light.png`](docs/screenshots/skills-light.png) ·
-[`contact-light.png`](docs/screenshots/contact-light.png).
+[![Light and dark themes](docs/screenshots/theme-compare.png)](docs/screenshots/theme-compare.png)
+
+More (click for full size): [Skills, light](docs/screenshots/skills-light.png) ·
+[Skills, dark](docs/screenshots/skills-dark.png) ·
+[collapsed rail, light](docs/screenshots/sidebar-collapsed-light.png).
 
 ## Install / build
 

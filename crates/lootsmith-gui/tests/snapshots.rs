@@ -31,6 +31,7 @@ fn synthetic_at(tag: &str) -> String {
 fn smoke_backpack() {
     let save = synthetic_at("backpack");
     let mut h = harness_with(&save, Some(FAKE_DUMPS));
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
     h.state_mut()
         .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
@@ -56,6 +57,7 @@ fn smoke_backpack_light() {
 fn smoke_backpack_dark_2x() {
     let save = synthetic_at("backpack-2x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1720.0));
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
     h.state_mut().set_ui_scale(2.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
     h.state_mut()
@@ -85,6 +87,7 @@ fn smoke_backpack_light_2x() {
 fn smoke_inspector_bundled() {
     let save = synthetic_at("inspector-bundled");
     let mut h = harness_isolated(&save);
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
     h.state_mut()
         .select_entry(lootsmith_core::Container::BackpackWeapon, 0);
@@ -97,6 +100,7 @@ fn smoke_inspector_bundled() {
 fn smoke_backpack_dark_3x() {
     let save = synthetic_at("backpack-3x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
     h.state_mut().set_ui_scale(3.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
     h.state_mut()
@@ -124,6 +128,7 @@ fn smoke_backpack_light_3x() {
 fn smoke_general_dark_3x() {
     let save = synthetic_at("general-3x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
     h.state_mut().set_ui_scale(3.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::General);
     h.run();

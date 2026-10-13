@@ -23,6 +23,7 @@ macro_rules! skill_shot {
         fn $name() {
             let save = synthetic_at(stringify!($name));
             let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1180.0));
+            h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
             h.state_mut().read_info.player_class = $class.to_string();
             h.state_mut().set_tab(Tab::Skills);
             h.run();

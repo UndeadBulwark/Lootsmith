@@ -629,7 +629,7 @@ impl LootsmithApp {
             enforce_budget: true,
             skill_build: String::new(),
             respec_armed: false,
-            theme: Theme::Dark,
+            theme: Theme::Light,
             theme_applied: false,
             ui_scale: 1.0,
             dither_tex: [None, None],
