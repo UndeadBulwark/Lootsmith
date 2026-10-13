@@ -11,7 +11,9 @@ A Linux-native, Rust ([egui](https://github.com/emilk/egui)) save editor for
 against real PC saves; the GUI is a full editor with a themed, responsive shell.
 Status and the roadmap to 1.0 live in [`docs/PLAN.md`](docs/PLAN.md).
 
-<img src="docs/screenshots/lootsmith.png" width="180" alt="Lootsmith">
+<p align="center">
+  <img src="docs/screenshots/lootsmith.png" width="320" alt="Lootsmith">
+</p>
 
 <sub>Lootsmith runs in a Light theme (default) and a Dark theme — see the
 [comparison below](#screenshots).</sub>
