@@ -1111,6 +1111,21 @@ impl SaveGame {
         })
     }
 
+    /// Replace the whole `SkillData` list (field 8) with `paths`, all at grade 0
+    /// with no points and slot 0. The game's skill list is class-specific, so a
+    /// class change (or a save whose list doesn't match its class) rebuilds it.
+    pub fn set_skill_list(&mut self, paths: &[String]) {
+        self.message.remove_all(8);
+        for path in paths {
+            let mut sub = Message::default();
+            sub.push(Field::string(1, path));
+            sub.push(Field::varint(2, 0));
+            sub.push(Field::varint(3, 0));
+            sub.push(Field::varint(4, 0));
+            self.message.push(Field::bytes(8, &sub.to_bytes()));
+        }
+    }
+
     // ---- vehicles ----
 
     /// All `ChosenVehicleCustomization` entries (field 57), in order.

@@ -258,9 +258,11 @@ pub fn synthetic_save() -> SaveGame {
         }
     }
 
-    // Three skills, shaped like the real save (`<tree>.<SkillName>` leaves
-    // that the skill calculator matches by normalized leaf name).
+    // The action skill (the action point is always invested in a real save) and
+    // a few tree skills, shaped like the real save (`<tree>.<SkillName>` leaves
+    // that the skill board matches by object path).
     for (skill, grade) in [
+        ("GD_Soldier_Skills.Scorpio.Skill_Scorpio", 1),
         ("GD_Soldier_Skills.Guerrilla.Sentry", 3),
         ("GD_Soldier_Skills.Guerrilla.Ready", 5),
         ("GD_Soldier_Skills.Survival.Willing", 2),
@@ -425,7 +427,7 @@ mod tests {
         assert_eq!(save.num_golden_keys_notified(), Some(3));
         assert_eq!(save.packed_entries().len(), 5);
         assert_eq!(save.bank_entries().len(), 1);
-        assert_eq!(save.skills().len(), 4);
+        assert_eq!(save.skills().len(), 5);
         assert_eq!(save.challenges().len(), 2);
         assert_eq!(
             save.character_name().as_deref(),

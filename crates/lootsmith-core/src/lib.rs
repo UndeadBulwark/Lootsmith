@@ -8,6 +8,7 @@ pub mod bundled;
 pub mod container;
 pub mod crc32;
 pub mod customizations;
+pub mod defs;
 pub mod error;
 pub mod fixture;
 pub mod gameinfo;
@@ -28,6 +29,7 @@ pub mod world;
 
 pub use container::{pack_inner, serialize, unpack, wrap, SaveFile, BLOCK_SIZE};
 pub use customizations::{usage_for_player_class, Customization, Customizations};
+pub use defs::{GameDefs, ItemDef, Mode, PartCollection, WeaponTypeDef};
 pub use error::{Error, Result};
 pub use fixture::{synthetic_save, synthetic_save_bytes, write_synthetic_save};
 pub use gameinfo::{AssetConfig, AssetGroup, AssetLibraryConfigs, AssetLibraryManager};

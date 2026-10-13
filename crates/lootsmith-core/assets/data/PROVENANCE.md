@@ -4,7 +4,7 @@ Every file in this folder is a **data table** (names, ids, part lists, numbers).
 No art, audio or binaries. A folder the user picks in **Game data…** always
 overrides these files.
 
-All 16 Gibbed tables are **verbatim copies** of the upstream files (pretty-printed
+All 17 Gibbed tables are **verbatim copies** of the upstream files (pretty-printed
 UTF-8, with a BOM; the loaders strip `\u{feff}` before parsing). They are *not*
 re-serialised. `rarity.json` is derived and generated.
 
@@ -26,6 +26,7 @@ game-derived data dumps, bundled with attribution as derived data.
 | Bundled file | Upstream file |
 |---|---|
 | `asset-library-manager.json` | `Asset Library Manager.json` |
+| `weapon-types.json` | `Weapon Types.json` |
 | `weapon-balance.json` | `Weapon Balance.json` |
 | `item-balance.json` | `Item Balance.json` |
 | `weapon-parts.json` | `Weapon Parts.json` |
@@ -56,3 +57,25 @@ Only the derived mapping is bundled; provenance (sources, rules and the
 generation date) is recorded inside the file. The same file is copied to
 `assets/data/rarity.json` so the bundled folder is self-contained, and the
 canonical copy at `assets/rarity.json` is what `lootsmith-core` embeds.
+
+## Skill board data — `crates/lootsmith-gui/assets/skills/`
+
+The skill *board* is `skills.json` (version 3), regenerated from
+`skill-source.json` by:
+
+```sh
+scripts/gen-skill-paths.py
+```
+
+`skill-source.json` is a **data table** (object paths, branch/tier/column layout,
+display names, descriptions and max ranks) for the six playable classes. It was
+extracted from the object tables of the installed Borderlands 2 packages
+(`WillowGame/CookedPCConsole/*_Streaming_SF.upk`), cross-checked against the
+community tables in `github.com/FromDarkHell/BL2SkillRandomizer` and
+`github.com/zuhuHix/Bl2_RTSE`; no art, audio or binaries are bundled. It fixes two
+classes of error in the community skill-calculator data the board previously used:
+leet display names that don't match the save's object name (`0ptics` vs
+`Optics`) and skills recorded in the wrong branch (`Resourceful` vs
+`Crisis Management`). The per-skill PNG icons stay in the repo and are re-attached
+to their skill by display name at generation time.
+

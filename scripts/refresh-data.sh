@@ -4,7 +4,7 @@
 # from their upstream sources, and regenerate the derived rarity.json.
 #
 # Sources
-#   * gibbed/Borderlands2Dumps  — the 16 Gibbed dump tables (verbatim copies;
+#   * gibbed/Borderlands2Dumps  — the 17 Gibbed dump tables (verbatim copies;
 #     the dumps are pretty-printed UTF-8 and carry a BOM, which the loaders
 #     strip). Pinned to a commit so the refresh is reproducible.
 #   * thekeogh/borderlens      — curated per-item rarities, via gen-rarity.py.
@@ -12,7 +12,7 @@
 #
 # Usage
 #   scripts/refresh-data.sh                 # tables + rarity
-#   scripts/refresh-data.sh --tables-only   # just the 16 Gibbed tables
+#   scripts/refresh-data.sh --tables-only   # just the 17 Gibbed tables
 #
 # Environment overrides
 #   BORDERLANDS2DUMPS_REPO   default gibbed/Borderlands2Dumps
@@ -42,11 +42,12 @@ done
 
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 1; }
 
-# source (URL-escaped) -> bundled file name, for the 16 Gibbed tables.
+# source (URL-escaped) -> bundled file name, for the 17 Gibbed tables.
 TABLES=(
   "Asset%20Library%20Manager.json|asset-library-manager.json"
   "Item%20Balance.json|item-balance.json"
   "Weapon%20Balance.json|weapon-balance.json"
+  "Weapon%20Types.json|weapon-types.json"
   "Item%20Parts.json|item-parts.json"
   "Weapon%20Parts.json|weapon-parts.json"
   "Item%20Part%20Lists.json|item-part-lists.json"
@@ -66,7 +67,7 @@ mkdir -p "$OUT"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-echo "Fetching 16 tables from $REPO@$REF"
+echo "Fetching 17 tables from $REPO@$REF"
 for entry in "${TABLES[@]}"; do
   src="${entry%%|*}"
   dst="${entry##*|}"

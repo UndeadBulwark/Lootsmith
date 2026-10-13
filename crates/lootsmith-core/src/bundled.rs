@@ -49,3 +49,18 @@ pub fn part_lists() -> Result<crate::partlists::PartLists> {
     lists.add_json_str(bundled_text!("weapon-balance-part-lists.json"))?;
     Ok(lists)
 }
+
+/// The full definitions used by the part pickers (weapon types, item
+/// definitions and their balance chains).
+pub fn defs() -> Result<crate::defs::GameDefs> {
+    crate::defs::GameDefs::from_parts(
+        bundled_text!("weapon-types.json"),
+        bundled_text!("weapon-part-lists.json"),
+        bundled_text!("items.json"),
+        bundled_text!("item-part-lists.json"),
+        Some(bundled_text!("weapon-balance.json")),
+        Some(bundled_text!("weapon-balance-part-lists.json")),
+        Some(bundled_text!("item-balance.json")),
+        Some(bundled_text!("item-balance-part-lists.json")),
+    )
+}

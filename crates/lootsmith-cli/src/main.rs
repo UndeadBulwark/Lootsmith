@@ -2,7 +2,7 @@
 
 use lootsmith_core::{
     container, items, mission_status_name, AssetGroup, AssetLibraryConfigs, AssetLibraryManager,
-    Container, Customizations, Missions, Platform, TravelStations, MISSION_STATUSES,
+    Container, Customizations, GameDefs, Missions, Platform, TravelStations, MISSION_STATUSES,
     VEHICLE_FAMILIES,
 };
 use std::process::ExitCode;
@@ -306,6 +306,27 @@ fn load_name_parts(args: &Args) -> Option<lootsmith_core::NameParts> {
         }
     }
     None
+}
+
+/// The part-picker definitions next to the dumps file, else the bundled tables.
+fn load_defs(dumps: &Option<String>) -> Option<GameDefs> {
+    let dumps = dumps
+        .clone()
+        .or_else(|| std::env::var("LOOTSMITH_ASSET_LIBRARY").ok());
+    if let Some(dumps) = dumps {
+        let path = std::path::PathBuf::from(dumps);
+        let dir = if path.is_dir() {
+            path
+        } else {
+            path.parent().map(<std::path::Path>::to_path_buf)?
+        };
+        if let Ok(defs) = GameDefs::from_dir(&dir) {
+            if !defs.is_empty() {
+                return Some(defs);
+            }
+        }
+    }
+    lootsmith_core::bundled::defs().ok()
 }
 
 fn load_manager(dumps: &Option<String>) -> Option<AssetLibraryManager> {
@@ -1226,6 +1247,27 @@ fn main() -> ExitCode {
                         return ExitCode::FAILURE;
                     }
                 };
+                // Warn (do not block) when the part is not one the item's
+                // balance resolves for the slot.
+                if let Some(defs) = load_defs(&args.dumps) {
+                    let type_path =
+                        lootsmith_core::defs::slot_asset_path(&manager, &decoded, "type");
+                    let balance =
+                        lootsmith_core::defs::slot_asset_path(&manager, &decoded, "balance")
+                            .unwrap_or_default();
+                    if !defs.is_legal_part(
+                        decoded.is_weapon,
+                        type_path.as_deref(),
+                        &balance,
+                        &part,
+                        &name,
+                    ) {
+                        eprintln!(
+                            "warning: {name} is not a listed {part} for this item's balance; \
+                             writing anyway"
+                        );
+                    }
+                }
                 let group = match decoded.set_part(&manager, &part, &name) {
                     Ok(g) => g,
                     Err(e) => {
