@@ -55,7 +55,7 @@ fn smoke_backpack_light() {
 #[test]
 fn smoke_backpack_dark_2x() {
     let save = synthetic_at("backpack-2x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1600.0));
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1720.0));
     h.state_mut().set_ui_scale(2.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
     h.state_mut()
@@ -68,7 +68,7 @@ fn smoke_backpack_dark_2x() {
 #[test]
 fn smoke_backpack_light_2x() {
     let save = synthetic_at("backpack-light-2x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1600.0));
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1720.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
     h.state_mut().set_ui_scale(2.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
@@ -96,7 +96,7 @@ fn smoke_inspector_bundled() {
 #[test]
 fn smoke_backpack_dark_3x() {
     let save = synthetic_at("backpack-3x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2400.0));
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_ui_scale(3.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
     h.state_mut()
@@ -109,7 +109,7 @@ fn smoke_backpack_dark_3x() {
 #[test]
 fn smoke_backpack_light_3x() {
     let save = synthetic_at("backpack-light-3x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2400.0));
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
     h.state_mut().set_ui_scale(3.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::Backpack);
@@ -123,7 +123,7 @@ fn smoke_backpack_light_3x() {
 #[test]
 fn smoke_general_dark_3x() {
     let save = synthetic_at("general-3x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2400.0));
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_ui_scale(3.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::General);
     h.run();
@@ -134,7 +134,7 @@ fn smoke_general_dark_3x() {
 #[test]
 fn smoke_general_light_3x() {
     let save = synthetic_at("general-light-3x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2400.0));
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
     h.state_mut().set_ui_scale(3.0);
     h.state_mut().set_tab(lootsmith_gui::app::Tab::General);

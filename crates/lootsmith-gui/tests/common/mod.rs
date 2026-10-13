@@ -87,7 +87,7 @@ pub fn harness() -> Harness<'static, LootsmithApp> {
 /// A harness over an explicit save (and optional dumps).
 pub fn harness_with(save: &str, dumps: Option<&str>) -> Harness<'static, LootsmithApp> {
     Harness::builder()
-        .with_size(Vec2::new(1280.0, 800.0))
+        .with_size(Vec2::new(1280.0, 860.0))
         .with_max_steps(240)
         .build_ui_state(
             |ui, app: &mut LootsmithApp| app.build(ui),
@@ -118,7 +118,7 @@ pub fn harness_sized(
 /// variable set in the developer's shell cannot change the result.
 pub fn harness_isolated(save: &str) -> Harness<'static, LootsmithApp> {
     Harness::builder()
-        .with_size(Vec2::new(1280.0, 800.0))
+        .with_size(Vec2::new(1280.0, 860.0))
         .with_max_steps(240)
         .build_ui_state(
             |ui, app: &mut LootsmithApp| app.build(ui),

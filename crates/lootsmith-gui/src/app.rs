@@ -879,7 +879,10 @@ impl LootsmithApp {
         self.dither_tex[idx].clone().expect("dither texture")
     }
 
-    /// The cached 96 px logo texture, decoded from the embedded PNG at NEAREST.
+    /// The cached crest texture, decoded from the embedded 256 px PNG. Filtered
+    /// linearly (with mipmaps) because the crest is detailed artwork, not a
+    /// pixel-art widget: nearest-neighbour downscaling made it jagged and its
+    /// banner text unreadable.
     fn logo(&mut self, ctx: &egui::Context) -> Option<egui::TextureHandle> {
         if self.logo_tex.is_none() {
             let ic = eframe::icon_data::from_png_bytes(include_bytes!("../assets/lootsmith.png"))
@@ -888,8 +891,11 @@ impl LootsmithApp {
                 [ic.width as usize, ic.height as usize],
                 &ic.rgba,
             );
-            self.logo_tex =
-                Some(ctx.load_texture("lootsmith.logo", image, egui::TextureOptions::NEAREST));
+            let options = egui::TextureOptions {
+                mipmap_mode: Some(egui::TextureFilter::Linear),
+                ..egui::TextureOptions::LINEAR
+            };
+            self.logo_tex = Some(ctx.load_texture("lootsmith.logo", image, options));
         }
         self.logo_tex.clone()
     }
@@ -2573,10 +2579,6 @@ impl LootsmithApp {
                 ui.scope_builder(egui::UiBuilder::new().max_rect(row), |ui| {
                     crate::ui::widgets::wood_style(ui, p);
                     ui.horizontal_centered(|ui| {
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(150.0, 28.0), egui::Sense::hover());
-                        crate::ui::widgets::ribbon(ui, r, "Lootsmith");
-                        ui.add_space(6.0);
                         if let Some(a) = self.top_menu(ui) {
                             action = Some(a);
                         }
@@ -2765,12 +2767,16 @@ impl LootsmithApp {
                         .id_salt("nav_scroll")
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
-                            ui.add_space(4.0);
+                            ui.add_space(2.0);
                             // The logo IS the collapse toggle.
                             if let Some(tex) = self.logo(ui.ctx()) {
-                                let size = 40.0 + 48.0 * reveal;
+                                // 48 px in the rail, growing to the sidebar's full
+                                // inner width when expanded so the crest and its
+                                // banner text are legible.
+                                let avail = ui.available_width();
+                                let size = 48.0 + (avail - 48.0).max(0.0) * reveal;
                                 let (lr, lresp) = ui.allocate_exact_size(
-                                    egui::vec2(ui.available_width(), 40.0 + 48.0),
+                                    egui::vec2(avail, size),
                                     egui::Sense::click(),
                                 );
                                 let rect = egui::Rect::from_center_size(
@@ -2786,14 +2792,6 @@ impl LootsmithApp {
                                     ),
                                     egui::Color32::WHITE,
                                 );
-                                if lresp.hovered() {
-                                    ui.painter().rect_stroke(
-                                        rect.expand(2.0),
-                                        0.0,
-                                        egui::Stroke::new(2.0, p.gold),
-                                        egui::StrokeKind::Outside,
-                                    );
-                                }
                                 if lresp.clicked() {
                                     self.sidebar_collapsed = !self.sidebar_collapsed;
                                 }
@@ -2810,11 +2808,11 @@ impl LootsmithApp {
                                     "Collapse sidebar"
                                 });
                             }
-                            ui.add_space(8.0);
+                            ui.add_space(2.0 * reveal);
                             for (gi, (group, tabs)) in NAV_GROUPS.iter().enumerate() {
                                 if gi > 0 {
                                     let (r, _) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), 10.0),
+                                        egui::vec2(ui.available_width(), 3.0 + 4.0 * reveal),
                                         egui::Sense::hover(),
                                     );
                                     if reveal > 0.5 {
@@ -2823,12 +2821,21 @@ impl LootsmithApp {
                                             r.left_center(),
                                             r.right_center(),
                                         );
+                                    } else {
+                                        // Collapsed rail: a short centred divider still
+                                        // marks each section boundary.
+                                        let cx = r.center().x;
+                                        crate::ui::widgets::trail_divider(
+                                            ui,
+                                            egui::pos2(cx - 12.0, r.center().y),
+                                            egui::pos2(cx + 12.0, r.center().y),
+                                        );
                                     }
                                 }
                                 // Group label fades out as the rail closes. Painted (not a
                                 // Label) so it does not collide with a tab of the same name.
                                 let (gr, _) = ui.allocate_exact_size(
-                                    egui::vec2(ui.available_width(), 16.0),
+                                    egui::vec2(ui.available_width(), 13.0 * reveal),
                                     egui::Sense::hover(),
                                 );
                                 if reveal > 0.02 {
@@ -2850,11 +2857,11 @@ impl LootsmithApp {
                                         gcol,
                                     );
                                 }
-                                ui.add_space(2.0);
+                                ui.add_space(1.0 * reveal);
                                 for tab in tabs.iter() {
                                     let (base, count) = self.nav_base_count(*tab);
                                     let (rect, _) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), 26.0),
+                                        egui::vec2(ui.available_width(), 24.0),
                                         egui::Sense::click(),
                                     );
                                     if crate::ui::widgets::nav_row(
@@ -2873,7 +2880,7 @@ impl LootsmithApp {
                                 }
                                 if *group == "Account" {
                                     let (rect, _) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), 26.0),
+                                        egui::vec2(ui.available_width(), 24.0),
                                         egui::Sense::click(),
                                     );
                                     if crate::ui::widgets::nav_row(
@@ -2892,7 +2899,7 @@ impl LootsmithApp {
                                 }
                                 if *group == "Tools" {
                                     let (rect, _) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), 26.0),
+                                        egui::vec2(ui.available_width(), 24.0),
                                         egui::Sense::click(),
                                     );
                                     if crate::ui::widgets::nav_row(
@@ -2909,7 +2916,7 @@ impl LootsmithApp {
                                         action = Some(Action::Import);
                                     }
                                 }
-                                ui.add_space(6.0 * reveal);
+                                ui.add_space(2.0 * reveal);
                             }
                         });
                 });
