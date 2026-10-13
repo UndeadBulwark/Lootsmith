@@ -11,9 +11,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      # The GUI tests render through egui_kittest's wgpu backend and need an
-      # adapter; the hosted runner has no GPU, so point wgpu at a software
-      # Vulkan implementation (Lavapipe/llvmpipe).
+      # The hosted runner has no GPU, so the render-dependent GUI tests are
+      # skipped here (they still run on any machine with an adapter).
+      LOOTSMITH_NO_GPU: "1"
       LIBGL_ALWAYS_SOFTWARE: "1"
       VK_DRIVER_FILES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
       VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
