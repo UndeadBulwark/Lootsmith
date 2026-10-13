@@ -13,12 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: System deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libxkbcommon-dev libwayland-dev libx11-dev libxi-dev \
-            libxcursor-dev libxrandr-dev libgl1-mesa-dev libssl-dev
       - name: Build
         run: cargo build --release -p lootsmith-gui -p lootsmith-cli
       - name: Tarball
@@ -26,44 +20,36 @@ jobs:
           VER="${GITHUB_REF_NAME#v}"
           mkdir -p dist
           tar -C target/release -czf "dist/lootsmith-${VER}-linux-x86_64.tar.gz" lootsmith-gui lootsmith
-      - name: AppImage
-        env:
-          APPIMAGE_EXTRACT_AND_RUN: "1"
-        run: |
-          VER="${GITHUB_REF_NAME#v}"
-          wget -q -O linuxdeploy \
-            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          chmod +x linuxdeploy
-          mkdir -p AppDir/usr/bin AppDir/usr/share/applications \
-            AppDir/usr/share/icons/hicolor/256x256/apps
-          cp target/release/lootsmith-gui AppDir/usr/bin/
-          cp packaging/lootsmith.desktop AppDir/usr/share/applications/
-          cp crates/lootsmith-gui/assets/lootsmith.png \
-            AppDir/usr/share/icons/hicolor/256x256/apps/lootsmith.png
-          ./linuxdeploy --appdir AppDir --output appimage
-          mv Lootsmith*.AppImage "dist/lootsmith-${VER}-x86_64.AppImage"
       - uses: actions/upload-artifact@v4
         with:
           name: linux
           path: dist/*
 
-  windows:
-    runs-on: windows-latest
+  flatpak:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: cargo build --release -p lootsmith-gui -p lootsmith-cli
-      - name: Zip
-        shell: pwsh
+      - name: Install flatpak + runtime
         run: |
-          $ver = $env:GITHUB_REF_NAME -replace '^v',''
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive target/release/lootsmith-gui.exe, target/release/lootsmith.exe `
-            "dist/lootsmith-$ver-windows-x86_64.zip"
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder elfutils
+          flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub \
+            org.freedesktop.Platform//24.08 \
+            org.freedesktop.Sdk//24.08 \
+            org.freedesktop.Sdk.Extension.rust-stable//24.08
+      - name: Build bundle
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          flatpak-builder --user --force-clean --repo=repo build-dir \
+            packaging/flatpak/io.github.undeadbulwark.Lootsmith.yml
+          flatpak build-bundle repo "dist/lootsmith-${VER}-x86_64.flatpak" \
+            io.github.undeadbulwark.Lootsmith
       - uses: actions/upload-artifact@v4
         with:
-          name: windows
+          name: flatpak
           path: dist/*
 
   source:
@@ -82,7 +68,7 @@ jobs:
           path: dist/*
 
   release:
-    needs: [linux, windows, source]
+    needs: [linux, flatpak, source]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

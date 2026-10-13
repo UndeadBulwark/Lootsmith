@@ -1,0 +1,30 @@
+app-id: io.github.undeadbulwark.Lootsmith
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: lootsmith-gui
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/lootsmith/cargo
+modules:
+  - name: lootsmith
+    buildsystem: simple
+    build-commands:
+      - cargo build --release -p lootsmith-gui -p lootsmith-cli
+      - install -Dm755 target/release/lootsmith-gui /app/bin/lootsmith-gui
+      - install -Dm755 target/release/lootsmith /app/bin/lootsmith
+      - install -Dm644 packaging/flatpak/io.github.undeadbulwark.Lootsmith.desktop
+        /app/share/applications/io.github.undeadbulwark.Lootsmith.desktop
+      - install -Dm644 crates/lootsmith-gui/assets/lootsmith.png
+        /app/share/icons/hicolor/256x256/apps/io.github.undeadbulwark.Lootsmith.png
+    sources:
+      - type: dir
+        path: ../..

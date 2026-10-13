@@ -54,8 +54,8 @@ More (click for full size): [Skills, light](docs/screenshots/skills-light.png) Â
 
 ## Install / build
 
-Prebuilt artifacts are attached to tagged **releases**: a Linux **AppImage** and
-`.tar.gz`, a Windows `.zip` (experimental), and a source tarball.
+Prebuilt artifacts are attached to tagged **releases**: a Linux **Flatpak bundle**
+(`.flatpak`) and a `.tar.gz`, plus a source tarball.
 
 ```sh
 git clone https://github.com/UndeadBulwark/Lootsmith
@@ -63,8 +63,7 @@ cd lootsmith
 cargo build --release      # binaries in target/release/
 ```
 
-Rust 1.85+ is required. The GUI builds on `eframe`/`wgpu`. Windows is untested â€”
-the build should work, but treat it as experimental.
+Rust 1.85+ is required. The GUI builds on `eframe`/`wgpu`.
 
 ## Run
 
