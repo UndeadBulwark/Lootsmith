@@ -15,7 +15,9 @@ jobs:
       # adapter; the hosted runner has no GPU, so point wgpu at a software
       # Vulkan implementation (Lavapipe/llvmpipe).
       LIBGL_ALWAYS_SOFTWARE: "1"
+      VK_DRIVER_FILES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
       VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+      WGPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -25,7 +27,8 @@ jobs:
       - name: Software Vulkan (for headless GUI tests)
         run: |
           sudo apt-get update
-          sudo apt-get install -y mesa-vulkan-drivers libgl1-mesa-dri
+          sudo apt-get install -y mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri
+          echo "Installed Vulkan ICDs:"; ls /usr/share/vulkan/icd.d/ || true
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy

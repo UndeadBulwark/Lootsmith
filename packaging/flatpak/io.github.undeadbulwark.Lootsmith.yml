@@ -1,9 +1,7 @@
 app-id: io.github.undeadbulwark.Lootsmith
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
 command: lootsmith-gui
 finish-args:
   - --share=ipc
@@ -11,16 +9,21 @@ finish-args:
   - --socket=fallback-x11
   - --device=dri
 build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin
   build-args:
     - --share=network
   env:
     CARGO_HOME: /run/build/lootsmith/cargo
+    RUSTUP_HOME: /run/build/lootsmith/rustup
 modules:
   - name: lootsmith
     buildsystem: simple
     build-commands:
-      - cargo build --release -p lootsmith-gui -p lootsmith-cli
+      # The SDK's bundled Rust is too old for egui 0.36, so fetch current stable.
+      - |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+          | sh -s -- -y --default-toolchain stable --profile minimal
+        . "$CARGO_HOME/env"
+        cargo build --release -p lootsmith-gui -p lootsmith-cli
       - install -Dm755 target/release/lootsmith-gui /app/bin/lootsmith-gui
       - install -Dm755 target/release/lootsmith /app/bin/lootsmith
       - install -Dm644 packaging/flatpak/io.github.undeadbulwark.Lootsmith.desktop

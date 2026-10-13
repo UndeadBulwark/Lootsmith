@@ -36,9 +36,8 @@ jobs:
           flatpak remote-add --if-not-exists --user flathub \
             https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y flathub \
-            org.freedesktop.Platform//24.08 \
-            org.freedesktop.Sdk//24.08 \
-            org.freedesktop.Sdk.Extension.rust-stable//24.08
+            org.freedesktop.Platform//25.08 \
+            org.freedesktop.Sdk//25.08
       - name: Build bundle
         run: |
           VER="${GITHUB_REF_NAME#v}"
