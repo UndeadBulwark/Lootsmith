@@ -646,7 +646,7 @@ fn apply_item_button_appears_only_with_pending_edits() {
     h.state_mut().select_entry(Container::BackpackWeapon, 0);
     h.run();
     assert!(
-        h.query_by_label("Apply item changes").is_none(),
+        h.query_by_label("Apply").is_none(),
         "no pending edits -> no button"
     );
 
@@ -656,14 +656,14 @@ fn apply_item_button_appears_only_with_pending_edits() {
         .set_selected_part("barrel", "GD_Weap_Pistol.Barrel.Pistol_Barrel_Dahl");
     h.run();
     assert!(
-        h.query_by_label("Apply item changes").is_some(),
+        h.query_by_label("Apply").is_some(),
         "pending edit -> button appears"
     );
 
-    h.get_by_label("Apply item changes").click();
+    h.get_by_label("Apply").click();
     h.run();
     assert!(
-        h.query_by_label("Apply item changes").is_none(),
+        h.query_by_label("Apply").is_none(),
         "after apply -> button disappears"
     );
 }

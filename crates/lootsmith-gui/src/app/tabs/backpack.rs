@@ -114,9 +114,8 @@ impl LootsmithApp {
 
         // list: item table + action row
         let list_inner = list.shrink(14.0);
-        // Two rows when there are pending edits: the action buttons, then Apply.
         let edit_dirty = edit_opt.as_ref().map(|e| e.dirty).unwrap_or(false);
-        let actions_h = if edit_dirty { 78.0 } else { 42.0 };
+        let actions_h = 42.0;
         let list_rows = egui::Rect::from_min_max(
             list_inner.min,
             egui::pos2(list_inner.right(), list_inner.bottom() - actions_h),
@@ -221,30 +220,30 @@ impl LootsmithApp {
                 {
                     remove = true;
                 }
-            });
-            if edit_dirty {
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
+                if edit_dirty {
                     let (r5, _) =
-                        ui.allocate_exact_size(egui::vec2(180.0, 26.0), egui::Sense::click());
+                        ui.allocate_exact_size(egui::vec2(84.0, 26.0), egui::Sense::click());
                     if crate::ui::widgets::button(
                         ui,
                         r5,
-                        "Apply item changes",
+                        "Apply",
                         crate::ui::widgets::ButtonKind::Primary,
                     )
                     .clicked()
                     {
                         apply = true;
                     }
-                });
-            }
+                }
+            });
         });
 
         // ---- workbench ----
         let bench_inner = bench.shrink(14.0);
         ui.scope_builder(egui::UiBuilder::new().max_rect(bench_inner), |ui| {
             ui.set_clip_rect(bench_inner);
+            // Bound every dropdown popup (long part lists scroll inside instead of
+            // spilling past the window).
+            ui.spacing_mut().combo_height = 180.0;
             let (Some(manager), Some(edit)) = (manager.as_ref(), edit_opt.as_mut()) else {
                 ui.add_space(8.0);
                 theme::muted(
@@ -346,9 +345,17 @@ impl LootsmithApp {
                     }
                 };
                 let is_item = edit.container == Container::BackpackItem;
-                let bw = (ui.available_width() - 3.0 * 8.0) / 4.0;
+                // Four stat blocks; wrap to 2x2 when the workbench is narrow (high
+                // UI scale) so the cells stay legible instead of being squashed.
+                let cols: usize = if ui.available_width() >= 460.0 { 4 } else { 2 };
+                let rows: usize = 4 / cols;
+                let cell_h = 72.0;
+                let bw = (ui.available_width() - (cols - 1) as f32 * 8.0) / cols as f32;
                 let (row, _) = ui.allocate_exact_size(
-                    egui::vec2(ui.available_width(), 72.0),
+                    egui::vec2(
+                        ui.available_width(),
+                        rows as f32 * cell_h + (rows - 1) as f32 * 8.0,
+                    ),
                     egui::Sense::hover(),
                 );
                 let labels = [
@@ -359,9 +366,11 @@ impl LootsmithApp {
                 ];
                 let cells: Vec<egui::Rect> = (0..4)
                     .map(|i| {
+                        let c = (i % cols) as f32;
+                        let r = (i / cols) as f32;
                         egui::Rect::from_min_size(
-                            row.min + egui::vec2(i as f32 * (bw + 8.0), 0.0),
-                            egui::vec2(bw, row.height()),
+                            row.min + egui::vec2(c * (bw + 8.0), r * (cell_h + 8.0)),
+                            egui::vec2(bw, cell_h),
                         )
                     })
                     .collect();
@@ -464,7 +473,7 @@ impl LootsmithApp {
                 ui.scope_builder(egui::UiBuilder::new().max_rect(inner(cells[3])), |ui| {
                     egui::ComboBox::from_id_salt("mark_edit")
                         .selected_text(player_mark_name(edit.mark))
-                        .height(220.0)
+                        .height(180.0)
                         .show_ui(ui, |ui| {
                             for (value, name) in PLAYER_MARKS.iter().enumerate() {
                                 if ui
@@ -480,6 +489,9 @@ impl LootsmithApp {
                 ui.add_space(12.0);
 
                 theme::section(ui, "Parts");
+                // Dropdowns fill the panel (minus the label column) so they shrink
+                // with the workbench instead of clipping at high UI scale.
+                let dd_w = (ui.available_width() - 150.0).clamp(150.0, 360.0);
                 egui::Grid::new("parts_grid")
                     .num_columns(2)
                     .spacing([10.0, 6.0])
@@ -516,8 +528,8 @@ impl LootsmithApp {
                                     p.fg,
                                     15.0,
                                 ))
-                                .width(270.0)
-                                .height(220.0)
+                                .width(dd_w)
+                                .height(180.0)
                                 .show_ui(ui, |ui| {
                                     if ui.selectable_label(false, "None").clicked() {
                                         let _ = edit.decoded.set_part(manager, slot, "None");
