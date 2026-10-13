@@ -107,3 +107,17 @@ Do not: touch unrelated fields, rewrite proto.rs, or change container.rs.
 2. One 4,287-line `app.rs` exceeds what an agent keeps in context. Split it.
 3. Field layouts exist only in the upstream C# files. Tell the agent to open them; it cannot recall them reliably.
 4. No acceptance criteria. Every task needs the "Done when" line above.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in `UndeadBulwark/lootsmith`, driven by the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles map to `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
