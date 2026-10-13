@@ -6,8 +6,7 @@ mod common;
 use egui_kittest::kittest::Queryable;
 use lootsmith_gui::app::{LootsmithApp, Tab};
 
-const SCREENS: [Tab; 13] = [
-    Tab::General,
+const SCREENS: [Tab; 12] = [
     Tab::Character,
     Tab::Currency,
     Tab::Ammo,
@@ -37,7 +36,6 @@ fn sidebar_label(state: &LootsmithApp, tab: Tab) -> String {
         Tab::Backpack => format!("Backpack ({})", state.backpack.len()),
         Tab::Bank => format!("Bank ({})", state.bank.len()),
         other => [
-            (Tab::General, "General"),
             (Tab::Character, "Character"),
             (Tab::Currency, "Currency"),
             (Tab::Ammo, "Ammo & SDUs"),

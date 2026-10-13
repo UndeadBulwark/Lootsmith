@@ -206,6 +206,35 @@ impl LootsmithApp {
                     crate::ui::widgets::label_nums(ui, &self.read_info.last_saved, p.fg, 15.0);
                     ui.end_row();
                 });
+            // Merged in from the former "General" page.
+            theme::section(ui, "Progress");
+            egui::Grid::new("character_progress")
+                .num_columns(2)
+                .spacing([16.0, 6.0])
+                .show(ui, |ui| {
+                    ui.label("Playthroughs");
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.playthroughs))
+                    })
+                    .changed();
+                    ui.end_row();
+                    ui.label("Total play time (s)");
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.total_play_time))
+                    })
+                    .changed();
+                    ui.end_row();
+                    ui.label("Badass mode");
+                    changed |=
+                        crate::ui::widgets::checkbox(ui, &mut self.form.badass, "").changed();
+                    ui.end_row();
+                    ui.label("Bank slots");
+                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
+                        ui.add(egui::DragValue::new(&mut self.form.bank_slots))
+                    })
+                    .changed();
+                    ui.end_row();
+                });
         });
         if changed {
             self.dirty = true;

@@ -33,8 +33,8 @@ fn loads_the_synthetic_save_and_switches_tabs() {
     assert_eq!(state.bank.len(), 1);
 
     for (label, tab) in [
-        ("Character", Tab::Character),
         ("Currency", Tab::Currency),
+        ("Character", Tab::Character),
         ("Ammo & SDUs", Tab::Ammo),
         ("World", Tab::World),
         ("Skills", Tab::Skills),
@@ -45,7 +45,6 @@ fn loads_the_synthetic_save_and_switches_tabs() {
         ("Bank (1)", Tab::Bank),
         ("Raw", Tab::Raw),
         ("About", Tab::About),
-        ("General", Tab::General),
     ] {
         h.get_by_label(label).click();
         h.run();

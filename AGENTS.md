@@ -46,7 +46,7 @@ lootsmith-gui    egui front end over core. No format logic here.
 
 Implemented: container read/write (LZO/zlib, SHA1, CRC32, Huffman), all 58 top-level field specs,
 CLI (`inspect verify dump items skills travel vehicles missions saves new json unjson profile ammo sdus
-challenges world edit`), GUI tabs (General, Character, Currency, **Ammo**, **World**, Skills, Fast Travel,
+challenges world edit`), GUI tabs (Character, Currency, **Ammo**, **World**, Skills, Fast Travel,
 Vehicles, Missions, Backpack, Bank, Raw, About), item part editing with balance-constrained pickers,
 item display names, `BL2(...)` item codes, profile.bin editing, new-save creation (clone + experimental
 blank), section import, platform conversion, save auto-discovery (native, Steam/Proton, Wine), game-data

@@ -146,8 +146,7 @@ pub fn render_tab_at(
 }
 
 /// Every tab, in the order the shell will show them.
-pub const SCREENS: [Tab; 13] = [
-    Tab::General,
+pub const SCREENS: [Tab; 12] = [
     Tab::Character,
     Tab::Currency,
     Tab::Ammo,

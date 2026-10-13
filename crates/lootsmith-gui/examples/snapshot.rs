@@ -62,8 +62,7 @@ fn main() {
         harness
     };
 
-    let shots: [Shot; 12] = [
-        ("general", Tab::General, None),
+    let shots: [Shot; 11] = [
         ("character", Tab::Character, None),
         ("currency", Tab::Currency, None),
         ("ammo", Tab::Ammo, None),

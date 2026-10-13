@@ -5,7 +5,6 @@ pub mod ammo;
 pub mod backpack;
 pub mod character;
 pub mod currency;
-pub mod general;
 pub mod missions;
 pub mod raw;
 pub mod skills;

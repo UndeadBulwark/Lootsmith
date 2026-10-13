@@ -150,35 +150,3 @@ fn smoke_backpack_light_3x() {
     h.run();
     h.snapshot("smoke_backpack_light_3x");
 }
-
-/// The General screen at 300% scale (dark).
-#[test]
-fn smoke_general_dark_3x() {
-    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
-        eprintln!("skipped: no GPU adapter in this environment");
-        return;
-    }
-    let save = synthetic_at("general-3x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
-    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
-    h.state_mut().set_ui_scale(3.0);
-    h.state_mut().set_tab(lootsmith_gui::app::Tab::General);
-    h.run();
-    h.snapshot("smoke_general_dark_3x");
-}
-
-/// The General screen at 300% scale (light).
-#[test]
-fn smoke_general_light_3x() {
-    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
-        eprintln!("skipped: no GPU adapter in this environment");
-        return;
-    }
-    let save = synthetic_at("general-light-3x");
-    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
-    h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
-    h.state_mut().set_ui_scale(3.0);
-    h.state_mut().set_tab(lootsmith_gui::app::Tab::General);
-    h.run();
-    h.snapshot("smoke_general_light_3x");
-}

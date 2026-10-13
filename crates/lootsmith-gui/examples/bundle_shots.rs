@@ -10,8 +10,7 @@ use lootsmith_gui::app::{LootsmithApp, Tab};
 use lootsmith_gui::theme::{self, Theme};
 use lootsmith_gui::ui::item_table::{item_table, ItemRow};
 
-const SCREENS: [Tab; 13] = [
-    Tab::General,
+const SCREENS: [Tab; 12] = [
     Tab::Character,
     Tab::Currency,
     Tab::Ammo,

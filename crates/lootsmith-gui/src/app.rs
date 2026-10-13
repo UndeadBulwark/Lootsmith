@@ -119,7 +119,6 @@ impl Cmd {
 
 #[derive(Clone, PartialEq, Eq, Copy, Debug)]
 pub enum Tab {
-    General,
     Character,
     Currency,
     Ammo,
@@ -283,7 +282,6 @@ impl RawField {
 
 fn tab_key(tab: Tab) -> &'static str {
     match tab {
-        Tab::General => "general",
         Tab::Character => "character",
         Tab::Currency => "currency",
         Tab::Ammo => "ammo",
@@ -301,7 +299,6 @@ fn tab_key(tab: Tab) -> &'static str {
 
 fn tab_from_key(key: &str) -> Option<Tab> {
     match key {
-        "general" => Some(Tab::General),
         "character" => Some(Tab::Character),
         "currency" => Some(Tab::Currency),
         "ammo" => Some(Tab::Ammo),
@@ -375,8 +372,7 @@ enum ItemAction {
 }
 
 /// The tab list, in order.
-const TABS: [(Tab, &str); 13] = [
-    (Tab::General, "General"),
+const TABS: [(Tab, &str); 12] = [
     (Tab::Character, "Character"),
     (Tab::Currency, "Currency"),
     (Tab::Ammo, "Ammo & SDUs"),
@@ -393,10 +389,7 @@ const TABS: [(Tab, &str); 13] = [
 
 /// Sidebar groups: label -> tabs (spec §2.2 grouped sidebar).
 const NAV_GROUPS: [(&str, &[Tab]); 5] = [
-    (
-        "Character",
-        &[Tab::General, Tab::Character, Tab::Skills, Tab::Currency],
-    ),
+    ("Character", &[Tab::Character, Tab::Skills, Tab::Currency]),
     ("Inventory", &[Tab::Backpack, Tab::Bank, Tab::Ammo]),
     ("Progress", &[Tab::Missions, Tab::Travel, Tab::World]),
     ("Account", &[Tab::Vehicles]),
@@ -407,7 +400,6 @@ const NAV_GROUPS: [(&str, &[Tab]); 5] = [
 fn nav_icon_for(tab: Tab) -> crate::ui::pixel::NavIcon {
     use crate::ui::pixel::NavIcon as I;
     match tab {
-        Tab::General => I::Cog,
         Tab::Character => I::Person,
         Tab::Skills => I::Star,
         Tab::Currency => I::Coin,
@@ -670,7 +662,7 @@ impl LootsmithApp {
             profile_form: ProfileForm::default(),
             loaded_once: false,
             ignore_env: false,
-            tab: Tab::General,
+            tab: Tab::Character,
             selected: None,
             item_edit: None,
             choices: HashMap::new(),
@@ -1921,7 +1913,7 @@ impl LootsmithApp {
         self.accept_save(save, note);
         self.dirty = true;
         self.modal = Modal::None;
-        self.tab = Tab::General;
+        self.tab = Tab::Character;
     }
 
     /// Start an experimental from-scratch save (spec-driven blank). Only the
@@ -1938,7 +1930,7 @@ impl LootsmithApp {
         self.accept_save(save, note);
         self.dirty = true;
         self.modal = Modal::None;
-        self.tab = Tab::General;
+        self.tab = Tab::Character;
     }
 
     pub(crate) fn new_class_choice(&self) -> &'static str {
@@ -2959,7 +2951,6 @@ impl LootsmithApp {
                         return;
                     }
                     match self.tab {
-                        Tab::General => self.ui_general(ui),
                         Tab::Character => self.ui_character(ui),
                         Tab::Currency => self.ui_currency(ui),
                         Tab::Ammo => self.ui_ammo(ui),

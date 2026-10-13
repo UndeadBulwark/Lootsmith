@@ -63,7 +63,7 @@ anything not verified · `Bundle: <path>`.
 ### GUI (`lootsmith-gui`) — full editor, themed shell
 - [x] Homestead shell: plank top bar, grouped sidebar (counts, logo), status plank; Auto/1x–4x scale
 - [x] `theme::Palette` + WCAG contrast gate; drawn pixel-art widget set (`ui/pixel.rs`, `ui/widgets.rs`)
-- [x] Tabs: General, Character, Currency, Ammo & SDUs, World, Skills, Fast Travel, Vehicles,
+- [x] Tabs: Character, Currency, Ammo & SDUs, World, Skills, Fast Travel, Vehicles,
       Missions, Backpack (n), Bank (n), Raw, About
 - [x] `ui/item_table.rs` list + item workbench (parts union, editable stat blocks)
 - [x] Save discovery, `BL2(…)` item codes, `profile.bin` editing, new/import, platform Save As
@@ -148,7 +148,7 @@ button, stat_block, part_row, dropdown, text_field}`.
 - **M4.0 — the 8 contrast runs (isolated first commit):** World 0/2, Travel 0/1, About 0/1
   (`Tokens::TEXT_DIM`/`ACCENT` on light parchment), Vehicles 1/1 and Missions 1/1 (disabled raw
   `ui.button`). Then set those 5 `ACCEPTED_FAILURES` rows to `[0,0]`.
-- **M4.1–M4.10 — General, Character, Currency, Ammo, Raw, World, Travel, Vehicles, Missions, About**
+- **M4.1–M4.10 — Character, Currency, Ammo, Raw, World, Travel, Vehicles, Missions, About**
   (World/Travel/Vehicles/Missions fold in their M4.0 fix). Replace `card()`→`panel`,
   `theme::section`→section label, raw buttons/checkboxes→`ui::widgets::{button,checkbox}`,
   `TextEdit`→`search_field`, `ComboBox`→`dropdown`, `ui.strong`→column labels,

@@ -34,7 +34,7 @@ a facade crate.
   names, rarity, and `BL2(…)` item codes.
 - **Skills:** every vault hunter's tree matches the in-game layout, with the real
   per-skill columns, the action-skill banner, and tier gating.
-- **Everything else:** General, Character, Currency, Ammo & SDUs, World, Fast
+- **Everything else:** Character, Currency, Ammo & SDUs, World, Fast
   Travel, Vehicles, Missions, Backpack, Bank, Raw, About, plus `profile.bin`
   (golden keys, badass rank/tokens, bonuses).
 - **Save discovery:** native, Steam/Proton, and Wine prefixes.

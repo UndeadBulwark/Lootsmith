@@ -19,7 +19,6 @@ use lootsmith_gui::theme::{contrast, Theme};
 /// Backpack, Bank, Character and Currency are fully migrated, so they are hard
 /// zero. Step (f) must drive the rest to zero.
 const ACCEPTED_FAILURES: [[usize; 2]; SCREENS.len()] = [
-    [0, 0],   // General
     [0, 0],   // Character
     [0, 0],   // Currency
     [0, 0],   // Ammo
