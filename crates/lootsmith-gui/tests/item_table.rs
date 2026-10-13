@@ -15,6 +15,10 @@ use lootsmith_gui::ui::item_table::{balance_to_name, elide_middle, item_table, I
 
 #[test]
 fn elides_a_60_char_name_in_the_middle() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let name = "GD_Weapon_Manufacturer_Something_A_Really_Long_Balance_Name_Xyz";
     assert!(name.chars().count() >= 60, "{}", name.chars().count());
     let e = elide_middle(name, 24);
@@ -33,6 +37,10 @@ fn elides_a_60_char_name_in_the_middle() {
 
 #[test]
 fn favourite_mark_is_only_the_favourite_value() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     assert_eq!(player_mark_name(2), "Favorite");
     assert_ne!(player_mark_name(0), "Favorite"); // Trash
     assert_ne!(player_mark_name(1), "Favorite"); // Standard
@@ -66,6 +74,10 @@ fn build(ui: &mut egui::Ui, _: &mut S) {
 /// `Shape::Path` (convex polygon), the dot is a filled `Shape::Circle`.
 #[test]
 fn mark_is_a_diamond_only_for_a_favourite() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = Harness::builder()
         .with_size(Vec2::new(420.0, 220.0))
         .build_ui_state(build, S);
@@ -109,6 +121,10 @@ fn synthetic(tag: &str) -> String {
 /// at 1x/2x/3x the inspector must still render its first part rows.
 #[test]
 fn inspector_parts_reach_the_last_slot() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     // Tall viewport: nothing is culled, so every part row must be present.
     let save = synthetic("material");
     let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 2000.0));
@@ -149,6 +165,10 @@ fn inspector_parts_reach_the_last_slot() {
 /// every slot renders, so the last row is reachable at every scale.
 #[test]
 fn workbench_lists_the_last_part_row_at_every_scale() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     for scale in [1.0_f32, 2.0, 3.0] {
         let save = synthetic(&format!("last-{scale}"));
         let mut h = common::harness_sized(&save, None, Vec2::new(1280.0 * scale, 1400.0 * scale));
@@ -172,6 +192,10 @@ fn workbench_lists_the_last_part_row_at_every_scale() {
 /// — those simply offer only "None" (`BaseWeaponView.xaml`).
 #[test]
 fn workbench_shows_every_weapon_part_slot() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic("parts");
     let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
     h.state_mut().set_tab(Tab::Backpack);
@@ -237,6 +261,10 @@ fn workbench_shows_every_weapon_part_slot() {
 /// with no duplicate GAME STAGE / Quick slot row.
 #[test]
 fn workbench_stat_blocks_are_editable_and_deduplicated() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic("stats");
     let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
     h.state_mut().set_tab(Tab::Backpack);
@@ -261,6 +289,10 @@ fn workbench_stat_blocks_are_editable_and_deduplicated() {
 /// the status bar but still written, and a legal part is accepted.
 #[test]
 fn illegal_parts_are_warned_but_still_written() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic("legality");
     let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
     h.state_mut().set_tab(Tab::Backpack);

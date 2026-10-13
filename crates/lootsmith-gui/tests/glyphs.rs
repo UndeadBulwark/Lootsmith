@@ -38,6 +38,10 @@ fn hash_glyph(glyph: Glyph) -> u64 {
 
 #[test]
 fn each_status_glyph_is_distinct() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut seen: std::collections::HashMap<u64, Glyph> = std::collections::HashMap::new();
     for glyph in [Glyph::Check, Glyph::Cross, Glyph::Dot, Glyph::Ring] {
         let hash = hash_glyph(glyph);

@@ -133,6 +133,10 @@ fn harness(theme: Theme) -> Harness<'static, G> {
 
 #[test]
 fn widgets_are_labelled_and_respond() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     for theme in [Theme::Dark, Theme::Light] {
         let mut h = harness(theme);
         h.run();

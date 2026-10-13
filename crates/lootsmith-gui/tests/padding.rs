@@ -29,6 +29,10 @@ fn synthetic(tag: &str) -> String {
 
 #[test]
 fn text_is_padded_inside_each_shell_panel() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut bad: Vec<String> = Vec::new();
     for tab in MIGRATED {
         for theme in [Theme::Dark, Theme::Light] {

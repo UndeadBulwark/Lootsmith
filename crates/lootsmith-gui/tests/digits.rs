@@ -18,6 +18,10 @@ fn violations(sections: &[Section]) -> Vec<String> {
 
 #[test]
 fn digits_never_use_the_label_font() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut bad: Vec<String> = Vec::new();
     for theme in [Theme::Dark, Theme::Light] {
         for tab in SCREENS {

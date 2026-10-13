@@ -8,6 +8,10 @@ use lootsmith_gui::theme::Theme;
 
 #[test]
 fn no_gradients_or_odd_borders_on_any_screen() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut bad = Vec::new();
     for tab in SCREENS {
         for theme in [Theme::Dark, Theme::Light] {

@@ -34,6 +34,10 @@ fn build(ui: &mut Ui, s: &mut S) {
 
 #[test]
 fn filename_chip_never_overflows_and_keeps_contrast() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     assert!(LONG.chars().count() >= 60, "the test name must be long");
     for theme in [Theme::Dark, Theme::Light] {
         let pal = if theme == Theme::Dark {

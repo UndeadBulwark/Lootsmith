@@ -8,6 +8,10 @@ use lootsmith_gui::theme::Theme;
 
 #[test]
 fn gallery_dark_1x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = gallery::harness(Theme::Dark, 1.0, Vec2::new(760.0, 700.0));
     h.run();
     h.snapshot("gallery_dark_1x");
@@ -15,6 +19,10 @@ fn gallery_dark_1x() {
 
 #[test]
 fn gallery_light_1x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = gallery::harness(Theme::Light, 1.0, Vec2::new(760.0, 700.0));
     h.run();
     h.snapshot("gallery_light_1x");
@@ -22,6 +30,10 @@ fn gallery_light_1x() {
 
 #[test]
 fn gallery_dark_2x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = gallery::harness(Theme::Dark, 2.0, Vec2::new(1520.0, 1400.0));
     h.run();
     h.snapshot("gallery_dark_2x");
@@ -29,6 +41,10 @@ fn gallery_dark_2x() {
 
 #[test]
 fn gallery_light_2x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = gallery::harness(Theme::Light, 2.0, Vec2::new(1520.0, 1400.0));
     h.run();
     h.snapshot("gallery_light_2x");
@@ -38,6 +54,10 @@ fn gallery_light_2x() {
 /// the swatch magnifies it 2x (16 px cells) so it is visible in review.
 #[test]
 fn dither_swatch_contains_both_tile_colors_in_a_checker() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     use lootsmith_gui::theme::Palette;
     for theme in [Theme::Dark, Theme::Light] {
         let p = Palette::for_theme(theme);

@@ -18,6 +18,10 @@ fn open_palette() -> egui_kittest::Harness<'static, LootsmithApp> {
 
 #[test]
 fn palette_lists_every_toolbar_action() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let h = open_palette();
     for label in [
         "Open…",
@@ -51,6 +55,10 @@ fn palette_lists_every_toolbar_action() {
 
 #[test]
 fn palette_dispatches_a_command() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = open_palette();
     // Filter so the entry is at the top of the list (clickable without scrolling).
     h.state_mut().palette_query = "Scale 2x".into();
@@ -63,6 +71,10 @@ fn palette_dispatches_a_command() {
 
 #[test]
 fn palette_filters_and_esc_closes() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = open_palette();
     // Type a query -> only matching entries remain.
     h.state_mut().palette_query = "scale".into();

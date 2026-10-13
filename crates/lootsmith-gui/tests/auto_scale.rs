@@ -14,6 +14,10 @@ fn synthetic(tag: &str) -> String {
 
 #[test]
 fn auto_scale_settles_on_4k_and_does_not_keep_resizing() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic("4k");
     // A 4K monitor at 2× means a 2560×1600 pt logical window; give the harness that
     // physical size so the fit does not cap the scale.

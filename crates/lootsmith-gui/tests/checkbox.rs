@@ -37,6 +37,10 @@ fn hash(theme: Theme, checked: bool) -> u64 {
 #[test]
 fn checked_and_unchecked_differ_in_both_themes() {
     if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
         eprintln!("checkbox: skipped (no GPU adapter in this environment)");
         return;
     }

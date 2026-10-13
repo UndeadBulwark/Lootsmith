@@ -62,6 +62,10 @@ fn approx(a: f32, b: f32) -> bool {
 
 #[test]
 fn shell_rects_match_the_spec_sizes_at_1x_and_2x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     for scale in [1.0_f32, 2.0] {
         // A fixed scale of 2× needs twice the physical window so the logical
         // layout stays 1280 pt wide (and the sidebar stays expanded).
@@ -122,6 +126,10 @@ fn shell_rects_match_the_spec_sizes_at_1x_and_2x() {
 
 #[test]
 fn sidebar_exposes_every_screen_with_count_badges() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = common::harness_isolated(&save_path());
     h.run();
     assert!(
@@ -142,6 +150,10 @@ fn sidebar_exposes_every_screen_with_count_badges() {
 
 #[test]
 fn every_screen_renders_inside_the_shell() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = common::harness_isolated(&save_path());
     h.run();
     for tab in SCREENS {
@@ -162,6 +174,10 @@ fn every_screen_renders_inside_the_shell() {
 
 #[test]
 fn sidebar_collapses_to_a_narrow_rail() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = common::harness_isolated(&save_path());
     h.run();
     assert!(
@@ -187,6 +203,10 @@ fn sidebar_collapses_to_a_narrow_rail() {
 /// The logo itself is the collapse toggle (no tiny chevron).
 #[test]
 fn the_logo_toggles_the_sidebar() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = common::harness_isolated(&save_path());
     h.run();
     assert!(!h.state().sidebar_collapsed, "expanded by default");

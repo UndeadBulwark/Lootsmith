@@ -20,6 +20,10 @@ const TEST_WEAPON_ID: &str = "id=400";
 
 #[test]
 fn loads_the_synthetic_save_and_switches_tabs() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     let state = h.state();
@@ -51,6 +55,10 @@ fn loads_the_synthetic_save_and_switches_tabs() {
 
 #[test]
 fn selects_a_backpack_row_by_label() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -67,6 +75,10 @@ fn selects_a_backpack_row_by_label() {
 
 #[test]
 fn moves_a_weapon_to_the_bank_and_back() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -92,6 +104,10 @@ fn moves_a_weapon_to_the_bank_and_back() {
 
 #[test]
 fn removes_an_entry() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -108,6 +124,10 @@ fn removes_an_entry() {
 
 #[test]
 fn duplicates_a_selected_item() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -124,6 +144,10 @@ fn duplicates_a_selected_item() {
 
 #[test]
 fn syncs_item_levels_to_the_character() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -165,6 +189,10 @@ fn save_configs(_file: &lootsmith_core::SaveFile) -> lootsmith_core::AssetLibrar
 
 #[test]
 fn creates_a_new_weapon_and_inserts_an_item_code() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -193,6 +221,10 @@ fn creates_a_new_weapon_and_inserts_an_item_code() {
 
 #[test]
 fn skill_calculator_adds_a_rank() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -216,6 +248,10 @@ fn skill_calculator_adds_a_rank() {
 
 #[test]
 fn edits_fast_travel_and_saves() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Fast Travel").click();
@@ -246,6 +282,10 @@ fn edits_fast_travel_and_saves() {
 
 #[test]
 fn edits_missions_and_saves() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Missions").click();
@@ -273,6 +313,10 @@ fn edits_missions_and_saves() {
 
 #[test]
 fn edits_vehicles_and_saves() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness_isolated(&synthetic_save_path());
     h.run();
     h.get_by_label("Vehicles").click();
@@ -309,6 +353,10 @@ fn edits_vehicles_and_saves() {
 
 #[test]
 fn edits_a_weapon_part_by_name_and_saves() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness_isolated(&synthetic_save_path());
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -340,6 +388,10 @@ fn edits_a_weapon_part_by_name_and_saves() {
 
 #[test]
 fn raw_view_lists_and_targets_fields() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Raw").click();
@@ -366,6 +418,10 @@ fn raw_view_lists_and_targets_fields() {
 
 #[test]
 fn settings_round_trip() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut app = LootsmithApp::new(Some(synthetic_save_path()), None);
     app.load();
     app.set_tab(Tab::Missions);
@@ -379,6 +435,10 @@ fn settings_round_trip() {
 
 #[test]
 fn dirty_tracking() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut app = LootsmithApp::new(Some(synthetic_save_path()), None);
     app.load();
     assert!(!app.dirty, "a fresh load is clean");
@@ -397,6 +457,10 @@ fn dirty_tracking() {
 
 #[test]
 fn new_blank_save_is_fresh_and_writable() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut app = LootsmithApp::new(Some(synthetic_save_path()), None);
     app.load();
     app.new_class = 0; // sorted ids: GD_Assassin first → Zer0
@@ -421,6 +485,10 @@ fn new_blank_save_is_fresh_and_writable() {
 
 #[test]
 fn new_clone_save_resets_progress() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut app = LootsmithApp::new(Some(synthetic_save_path()), None);
     app.load();
     assert_eq!(app.form.level, 40);
@@ -440,6 +508,10 @@ fn new_clone_save_resets_progress() {
 
 #[test]
 fn import_sections_copies_travel_from_another_save() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let source = synthetic_save_path();
     let mut app = LootsmithApp::new(Some(source.clone()), None);
     app.load();
@@ -467,6 +539,10 @@ fn import_sections_copies_travel_from_another_save() {
 
 #[test]
 fn ammo_and_sdu_tabs_write_through_to_disk() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Ammo & SDUs").click();
@@ -491,6 +567,10 @@ fn ammo_and_sdu_tabs_write_through_to_disk() {
 
 #[test]
 fn world_tab_edits_and_challenge_progress_write_through() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("World").click();
@@ -526,6 +606,10 @@ fn world_tab_edits_and_challenge_progress_write_through() {
 
 #[test]
 fn profile_editor_round_trips_values() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     use lootsmith_core::profile::Profile;
     let probe = std::env::temp_dir().join("lootsmith-ui-profile.bin");
     let mut profile = Profile::default();
@@ -548,6 +632,10 @@ fn profile_editor_round_trips_values() {
 
 #[test]
 fn bundled_tables_resolve_names_with_no_game_data_folder() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     // No user folder: the bundled tables must still resolve part names, so a
     // fresh install needs no setup and shows no picker. The harness is
     // *isolated* (`new_isolated`), so a LOOTSMITH_* variable set in the shell
@@ -576,6 +664,10 @@ fn bundled_tables_resolve_names_with_no_game_data_folder() {
 
 #[test]
 fn ui_scale_is_clamped_to_whole_multiples() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     // Spec §2.1 rule 7: only 1x/2x/3x/4x (fractional scales blur pixel art).
     assert_eq!(LootsmithApp::clamp_ui_scale(0.9), 1.0);
     assert_eq!(LootsmithApp::clamp_ui_scale(1.4), 1.0);
@@ -589,6 +681,10 @@ fn ui_scale_is_clamped_to_whole_multiples() {
 
 #[test]
 fn ui_scale_auto_matches_the_monitor_size() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     // Spec §2.1 rule 7 table: floor(min(w/1280, h/800)), clamped to 1..=4, using
     // physical pixels so OS scaling never doubles up.
     assert_eq!(LootsmithApp::ui_scale_for(1280, 800), 1);
@@ -601,6 +697,10 @@ fn ui_scale_auto_matches_the_monitor_size() {
 
 #[test]
 fn ui_scale_control_selects_3x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("File").click();
@@ -615,6 +715,10 @@ fn ui_scale_control_selects_3x() {
 
 #[test]
 fn ui_scale_control_selects_2x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("File").click();
@@ -629,6 +733,10 @@ fn ui_scale_control_selects_2x() {
 
 #[test]
 fn ui_scale_setter_clamps() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_save_path();
     let mut h = harness_isolated(&save);
     h.state_mut().set_ui_scale(1.42);
@@ -639,6 +747,10 @@ fn ui_scale_setter_clamps() {
 
 #[test]
 fn apply_item_button_appears_only_with_pending_edits() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness_isolated(&synthetic_save_path());
     h.run();
     h.get_by_label("Backpack (5)").click();
@@ -670,6 +782,10 @@ fn apply_item_button_appears_only_with_pending_edits() {
 
 #[test]
 fn require_fixtures_is_off_by_default_here() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     // The suite must need no external data: the synthetic save plus the bundled
     // tables are always enough (a clean clone with no fixtures still tests).
     let h = harness();

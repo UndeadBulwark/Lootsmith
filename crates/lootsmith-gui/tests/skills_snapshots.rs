@@ -21,6 +21,10 @@ macro_rules! skill_shot {
     ($name:ident, $class:literal) => {
         #[test]
         fn $name() {
+            if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+                eprintln!("skipped: no GPU adapter in this environment");
+                return;
+            }
             let save = synthetic_at(stringify!($name));
             let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1180.0));
             h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);

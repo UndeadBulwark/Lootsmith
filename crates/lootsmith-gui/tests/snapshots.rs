@@ -29,6 +29,10 @@ fn synthetic_at(tag: &str) -> String {
 /// A 1280x800 render of the Backpack screen on the synthetic save (100%, dark).
 #[test]
 fn smoke_backpack() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("backpack");
     let mut h = harness_with(&save, Some(FAKE_DUMPS));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
@@ -42,6 +46,10 @@ fn smoke_backpack() {
 /// The same screen in the light palette (100%).
 #[test]
 fn smoke_backpack_light() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("backpack-light");
     let mut h = harness_with(&save, Some(FAKE_DUMPS));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
@@ -55,6 +63,10 @@ fn smoke_backpack_light() {
 /// The Backpack screen at 200% scale (dark), to check the pixel grid.
 #[test]
 fn smoke_backpack_dark_2x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("backpack-2x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1720.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
@@ -69,6 +81,10 @@ fn smoke_backpack_dark_2x() {
 /// The Backpack screen at 200% scale (light).
 #[test]
 fn smoke_backpack_light_2x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("backpack-light-2x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(2560.0, 1720.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
@@ -85,6 +101,10 @@ fn smoke_backpack_light_2x() {
 /// `LOOTSMITH_*` variable set in the shell can change it.
 #[test]
 fn smoke_inspector_bundled() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("inspector-bundled");
     let mut h = harness_isolated(&save);
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
@@ -98,6 +118,10 @@ fn smoke_inspector_bundled() {
 /// The Backpack screen at 300% scale (dark) — the pixel grid must hold at 3x.
 #[test]
 fn smoke_backpack_dark_3x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("backpack-3x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
@@ -112,6 +136,10 @@ fn smoke_backpack_dark_3x() {
 /// The Backpack screen at 300% scale (light).
 #[test]
 fn smoke_backpack_light_3x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("backpack-light-3x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);
@@ -126,6 +154,10 @@ fn smoke_backpack_light_3x() {
 /// The General screen at 300% scale (dark).
 #[test]
 fn smoke_general_dark_3x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("general-3x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
@@ -138,6 +170,10 @@ fn smoke_general_dark_3x() {
 /// The General screen at 300% scale (light).
 #[test]
 fn smoke_general_light_3x() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = synthetic_at("general-light-3x");
     let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(3840.0, 2580.0));
     h.state_mut().set_theme(lootsmith_gui::app::Theme::Light);

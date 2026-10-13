@@ -26,6 +26,10 @@ fn action_index(h: &egui_kittest::Harness<'_, lootsmith_gui::app::LootsmithApp>)
 /// Left-click adds, right-click removes, and the grade survives a save/reload.
 #[test]
 fn adds_and_removes_a_rank_and_writes_it() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -61,6 +65,10 @@ fn adds_and_removes_a_rank_and_writes_it() {
 /// With no points available, an add is blocked (nothing changes).
 #[test]
 fn add_is_blocked_without_points() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -83,6 +91,10 @@ fn add_is_blocked_without_points() {
 /// blocked.
 #[test]
 fn removal_that_would_lock_a_higher_tier_is_blocked() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -118,6 +130,10 @@ fn removal_that_would_lock_a_higher_tier_is_blocked() {
 /// The wide action-skill banner toggles the save's action skill (0 -> 1).
 #[test]
 fn action_skill_banner_toggles() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -141,6 +157,10 @@ fn action_skill_banner_toggles() {
 /// The action skill gates tier 1: with none set, a tree point is refused.
 #[test]
 fn tier_one_needs_the_action_skill() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -164,6 +184,10 @@ fn tier_one_needs_the_action_skill() {
 /// Clearing the action point is refused while tier 1 still holds ranks.
 #[test]
 fn clearing_the_action_point_is_blocked_while_tier_one_has_ranks() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -213,6 +237,10 @@ fn clearing_the_action_point_is_blocked_while_tier_one_has_ranks() {
 /// every point back.
 #[test]
 fn pasted_build_applies_and_respec_refunds() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.get_by_label("Skills").click();
@@ -255,6 +283,10 @@ fn pasted_build_applies_and_respec_refunds() {
 /// only the action skill was, because the save still held the old class's list).
 #[test]
 fn changed_class_tree_is_editable() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     h.state_mut()
@@ -292,6 +324,10 @@ fn changed_class_tree_is_editable() {
 /// build) is repaired when the Skills screen opens.
 #[test]
 fn a_mismatched_skill_list_is_rebuilt_on_open() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     // The class says Siren, but the skill list is still Axton's.
@@ -322,6 +358,10 @@ fn a_mismatched_skill_list_is_rebuilt_on_open() {
 /// the board is consistent for the new hero.
 #[test]
 fn changing_class_refunds_skill_points() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut h = harness();
     h.run();
     let before: i32 = h.state().skills.iter().map(|s| s.grade.max(0)).sum();

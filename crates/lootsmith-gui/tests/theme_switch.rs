@@ -53,6 +53,10 @@ fn diff(a: &RgbaImage, b: &RgbaImage) -> usize {
 
 #[test]
 fn theme_and_scale_switches_match_fresh_renders() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let save = fixed_save();
     let cases = [
         (

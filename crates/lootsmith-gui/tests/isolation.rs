@@ -19,6 +19,10 @@ use std::path::PathBuf;
 
 #[test]
 fn isolated_app_ignores_env_and_uses_bundled_tables() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     // A *real* game-data folder in a temp dir. If an env variable to it were
     // honoured, the app would load from disk (`dumps_bundled == false`).
     let core_data = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../lootsmith-core/assets/data");

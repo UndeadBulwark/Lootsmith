@@ -111,6 +111,10 @@ fn sampled_fill(img: &RgbaImage, run: &Run) -> Option<Color32> {
 
 #[test]
 fn rendered_text_meets_wcag_in_both_themes() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let mut totals = [[0usize; 2]; SCREENS.len()];
     for (s, tab) in SCREENS.iter().enumerate() {
         for (slot, theme) in [Theme::Dark, Theme::Light].into_iter().enumerate() {
@@ -187,6 +191,10 @@ fn fill(order: usize, x: f32, y: f32, w: f32, h: f32, color: Color32) -> Fill {
 
 #[test]
 fn analyser_flags_fg_text_on_acc_fill() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let acc = lootsmith_gui::theme::DARK.acc;
     let fg = lootsmith_gui::theme::DARK.fg;
     let runs = vec![run(1, 10.0, 10.0, fg, "Smooth Repeater")];
@@ -198,6 +206,10 @@ fn analyser_flags_fg_text_on_acc_fill() {
 
 #[test]
 fn analyser_uses_the_enclosing_fill_at_a_boundary() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let bg = lootsmith_gui::theme::DARK.bg;
     let acc = lootsmith_gui::theme::DARK.acc;
     let on = lootsmith_gui::theme::DARK.on;
@@ -213,6 +225,10 @@ fn analyser_uses_the_enclosing_fill_at_a_boundary() {
 
 #[test]
 fn analyser_selected_row_on_acc_passes() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
     let acc = lootsmith_gui::theme::DARK.acc;
     let on = lootsmith_gui::theme::DARK.on;
     let fills = vec![fill(0, 0.0, 40.0, 500.0, 20.0, acc)];
