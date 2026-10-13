@@ -114,7 +114,9 @@ impl LootsmithApp {
 
         // list: item table + action row
         let list_inner = list.shrink(14.0);
-        let actions_h = 42.0;
+        // Two rows when there are pending edits: the action buttons, then Apply.
+        let edit_dirty = edit_opt.as_ref().map(|e| e.dirty).unwrap_or(false);
+        let actions_h = if edit_dirty { 78.0 } else { 42.0 };
         let list_rows = egui::Rect::from_min_max(
             list_inner.min,
             egui::pos2(list_inner.right(), list_inner.bottom() - actions_h),
@@ -164,6 +166,7 @@ impl LootsmithApp {
             list_inner.max,
         );
         ui.scope_builder(egui::UiBuilder::new().max_rect(actions), |ui| {
+            ui.set_clip_rect(list_inner);
             ui.horizontal(|ui| {
                 let has = selected.is_some();
                 let (r1, _) = ui.allocate_exact_size(egui::vec2(96.0, 26.0), egui::Sense::click());
@@ -218,9 +221,12 @@ impl LootsmithApp {
                 {
                     remove = true;
                 }
-                if edit_opt.as_ref().map(|e| e.dirty).unwrap_or(false) {
+            });
+            if edit_dirty {
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
                     let (r5, _) =
-                        ui.allocate_exact_size(egui::vec2(150.0, 26.0), egui::Sense::click());
+                        ui.allocate_exact_size(egui::vec2(180.0, 26.0), egui::Sense::click());
                     if crate::ui::widgets::button(
                         ui,
                         r5,
@@ -231,8 +237,8 @@ impl LootsmithApp {
                     {
                         apply = true;
                     }
-                }
-            });
+                });
+            }
         });
 
         // ---- workbench ----
@@ -381,7 +387,9 @@ impl LootsmithApp {
                         egui::pos2(r.right() - 8.0, r.bottom() - 6.0),
                     )
                 };
-                // A VT323 (digit-rule compliant) number cell that is drag-editable.
+                // A VT323 (digit-rule compliant) number cell: drag to scrub, or
+                // click to open a type-able DragValue (kept out of the default
+                // frame so it never disturbs the workbench layout/tests).
                 let num_cell = |ui: &mut egui::Ui,
                                 r: egui::Rect,
                                 id: &str,
@@ -389,25 +397,43 @@ impl LootsmithApp {
                                 lo: i32,
                                 hi: i32|
                  -> bool {
-                    let mut resp = ui.interact(r, ui.id().with(id), egui::Sense::drag());
-                    if resp.dragged() {
-                        let d = resp.drag_delta().x.round() as i32;
-                        if d != 0 {
-                            *value = (*value + d).clamp(lo, hi);
-                            resp.mark_changed();
+                    let cell_id = ui.id().with(id);
+                    let editing: bool = ui.memory(|m| m.data.get_temp(cell_id).unwrap_or(false));
+                    let mut changed = false;
+                    if editing {
+                        let resp = crate::ui::widgets::num_scope(ui, 20.0, |ui| {
+                            ui.put(r, egui::DragValue::new(value).range(lo..=hi).speed(0.5))
+                        });
+                        if resp.changed() {
+                            changed = true;
+                        }
+                        if resp.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                            ui.memory_mut(|m| m.data.insert_temp(cell_id, false));
+                        }
+                    } else {
+                        let g = ui.painter().layout_job(crate::ui::widgets::job_with_nums(
+                            &value.to_string(),
+                            p.fg,
+                            20.0,
+                        ));
+                        ui.painter().galley(
+                            egui::pos2(r.left(), r.center().y - g.size().y / 2.0),
+                            g,
+                            p.fg,
+                        );
+                        let resp = ui.interact(r, cell_id, egui::Sense::click_and_drag());
+                        if resp.dragged() {
+                            let d = resp.drag_delta().x.round() as i32;
+                            if d != 0 {
+                                *value = (*value + d).clamp(lo, hi);
+                                changed = true;
+                            }
+                        }
+                        if resp.clicked() {
+                            ui.memory_mut(|m| m.data.insert_temp(cell_id, true));
                         }
                     }
-                    let g = ui.painter().layout_job(crate::ui::widgets::job_with_nums(
-                        &value.to_string(),
-                        p.fg,
-                        20.0,
-                    ));
-                    ui.painter().galley(
-                        egui::pos2(r.left(), r.center().y - g.size().y / 2.0),
-                        g,
-                        p.fg,
-                    );
-                    resp.changed()
+                    changed
                 };
                 if num_cell(ui, inner(cells[0]), "level", gstage, 1, 80) {
                     edit.dirty = true;
@@ -438,6 +464,7 @@ impl LootsmithApp {
                 ui.scope_builder(egui::UiBuilder::new().max_rect(inner(cells[3])), |ui| {
                     egui::ComboBox::from_id_salt("mark_edit")
                         .selected_text(player_mark_name(edit.mark))
+                        .height(220.0)
                         .show_ui(ui, |ui| {
                             for (value, name) in PLAYER_MARKS.iter().enumerate() {
                                 if ui
@@ -490,6 +517,7 @@ impl LootsmithApp {
                                     15.0,
                                 ))
                                 .width(270.0)
+                                .height(220.0)
                                 .show_ui(ui, |ui| {
                                     if ui.selectable_label(false, "None").clicked() {
                                         let _ = edit.decoded.set_part(manager, slot, "None");

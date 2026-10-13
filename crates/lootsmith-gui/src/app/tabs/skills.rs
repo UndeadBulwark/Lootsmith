@@ -208,36 +208,39 @@ impl LootsmithApp {
         }
 
         let mut focus: Option<(usize, usize, usize)> = None;
-        // Reserve the banner band above the trees; the banner is painted once the
-        // row has landed so it can be centred over the panels.
-        let (band, _) = ui.allocate_exact_size(
-            egui::vec2(ui.available_width(), BANNER_H + 16.0),
-            egui::Sense::hover(),
-        );
         let body = ui.available_rect_before_wrap();
         let native_row = views.len() as f32 * board::panel_w(1.0)
             + views.len().saturating_sub(1) as f32 * board::GAP;
-        // Show the details pane when the row plus it fit at native size; otherwise
-        // shrink the tiles so all three trees still fit without a horizontal scroll.
+        let tiers = views.first().map_or(6, |v| v.model.tiers.len());
+        let native_h = board::panel_h(tiers, 1.0);
+        // Show the details pane when the row plus it fit at native size.
         let details_w = 300.0;
         let show_details = body.width() >= native_row + details_w + 32.0;
-        let avail = if show_details {
+        let avail_w = if show_details {
             body.width() - details_w - 16.0
         } else {
             body.width()
         };
-        let k = (avail / native_row).clamp(MIN_TILE_SCALE, 1.0);
+        // Fit the tiles to BOTH axes so every tier is visible with no vertical
+        // scroll, and keep the action-skill banner inside the same fitted region so
+        // it scales/moves with the trees instead of clipping on its own.
+        let avail_h = (body.height() - BANNER_H - 16.0).max(60.0);
+        let k = (avail_w / native_row)
+            .min(avail_h / native_h)
+            .clamp(MIN_TILE_SCALE, 1.0);
         let row_w = k * native_row;
-        let trees_max = if show_details {
-            egui::Rect::from_min_max(
-                body.min,
-                egui::pos2(body.right() - details_w - 16.0, body.bottom()),
-            )
-        } else {
-            body
-        };
+        let trees_max = egui::Rect::from_min_max(
+            egui::pos2(body.left(), body.top() + BANNER_H + 16.0),
+            egui::pos2(
+                if show_details {
+                    body.right() - details_w - 16.0
+                } else {
+                    body.right()
+                },
+                body.bottom(),
+            ),
+        );
         let mut panels_left = trees_max.left();
-        ui.add_space(6.0);
         ui.scope_builder(egui::UiBuilder::new().max_rect(trees_max), |ui| {
             ui.set_clip_rect(trees_max);
             // Vertical + horizontal scroll, so the three fixed-width panels never
@@ -327,7 +330,7 @@ impl LootsmithApp {
         let models: Vec<Tree> = views.iter().map(|v| v.model.clone()).collect();
         let clear_ok = crate::skill_rules::action_clear_ok(&models);
         let brect = egui::Rect::from_center_size(
-            egui::pos2(panels_left + row_w / 2.0, band.center().y),
+            egui::pos2(panels_left + row_w / 2.0, body.top() + BANNER_H / 2.0 + 8.0),
             egui::vec2(BANNER_W, BANNER_H),
         );
         if let Some(a) = board::action_banner(
