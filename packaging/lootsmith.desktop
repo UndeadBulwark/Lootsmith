@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Lootsmith
+Comment=Borderlands 2 save editor
+Exec=lootsmith-gui
+Icon=lootsmith
+Categories=Game;Utility;
+Terminal=false
