@@ -8,7 +8,8 @@ A Linux-native, Rust ([egui](https://github.com/emilk/egui)) save editor for
 ![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)
 
 **Current state:** core + CLI complete and validated against a real PC save; the
-GUI is a full editor with a themed shell. Roadmap to 1.0: [`docs/PLAN_1_0.md`](docs/PLAN_1_0.md).
+GUI is a full editor with a themed shell. Status and the roadmap to 1.0:
+[`docs/PLAN.md`](docs/PLAN.md).
 
 ![Backpack (dark)](docs/screenshots/backpack-dark.png)
 ![Backpack (light)](docs/screenshots/backpack-light.png)
@@ -25,8 +26,8 @@ currency, skills, and progression. It ships as a library (`lootsmith-core`), a
 CLI (`lootsmith-cli`), and (later) an `egui` desktop app (`lootsmith-gui`),
 with `lootsmith` as a facade crate. The GUI is a full editor (General, Character,
 Currency, Skills, Fast Travel, Vehicles, Missions, Backpack, Bank, Raw) with a
-toolbar, item codes and a themed shell; see [`docs/PLAN.md`](docs/PLAN.md) and the
-[1.0 roadmap](docs/PLAN_1_0.md).
+toolbar, item codes and a themed shell; see
+[`docs/PLAN.md`](docs/PLAN.md) (status + the 1.0 roadmap).
 
 ## Workspace layout
 

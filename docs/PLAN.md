@@ -69,9 +69,22 @@ anything not verified · `Bundle: <path>`.
 - [x] Save discovery, `BL2(…)` item codes, `profile.bin` editing, new/import, platform Save As
 - [x] **M3 complete** — Backpack/Bank match the mockup; side-by-side review sheets done
 
+### GUI — current work (uncommitted, builds clean)
+- [x] **Skills redesign (M5)** — bundled game-derived tables (per-node `id`, action-skill
+      ids, icons; `skill-source.json` + `scripts/gen-skill-paths.py`), pure board rules,
+      action-skill banner, tier-1 gate, blocked action-point clearing; class change
+      refunds points and rebuilds the save's `SkillData` (`SaveGame::set_skill_list`);
+      auto-repair on opening Skills; collapsible sidebar rail.
+- [x] Menu bar (File / Edit / View / Tools / Help); top bar slimmed (platform chip,
+      saved/unsaved chip, Undo/Redo, Save As, wide search box removed — dirty dot on the
+      filename, Ctrl+K search icon kept).
+- [x] Responsive shell: zoom-to-fit, auto-collapse rail when narrow, skill tiles shrink
+      to fit.
+- [ ] Verification: `--no-fail-fast` triage, snapshot regen, and the full milestone gate.
+
 ### Remaining
-- [ ] **M4** — every screen except Skills onto Homestead; contrast hard-zero (§3)
-- [ ] **M5** — Skills redesign (drop-in ready; needs the column prerequisite) (§4)
+- [ ] **M4** — every screen except Skills onto Homestead; contrast hard-zero (§3) — in progress
+- [ ] **M5** — Skills redesign (rules + board landed; review stop + M5b/c verification pending) (§4)
 - [ ] **M6** — consistency lock (enable `lint_tokens`, drive ratchet to 0, byte-exact theme switch)
 - [ ] **M7** — QoL P0 (unsaved-changes guard, rotating backups + restore, confirmation dialogs, undo/redo)
 - [ ] **M8** — release 1.0.0 (version, CHANGELOG/README, AppImage, GitHub Release on tag)
@@ -84,11 +97,24 @@ anything not verified · `Bundle: <path>`.
 | Milestone | Scope | State |
 |---|---|---|
 | M3 | Backpack/Bank match the mockup | ✅ done (baselines provisional) |
-| **M4** | All other screens except Skills → Homestead, contrast 0/0 | not started |
-| **M5** | Skills redesign (rules + board, details/keyboard, respec/build string) | not started (drop-in staged) |
+| **M4** | All other screens except Skills → Homestead, contrast 0/0 | in progress (ratchet not re-verified) |
+| **M5** | Skills redesign (rules + board, details/keyboard, respec/build string) | implemented (a/b/c); review stop + verification pending |
 | **M6** | Consistency lock: enable `tests/lint_tokens.rs`, ratchet → 0, byte-exact theme switch | not started |
 | **M7** | QoL P0 (data safety) | not started |
 | **M8** | Release 1.0.0 + packaging | not started |
+
+### Current pass — finish checklist
+1. `cargo test -p lootsmith-gui --no-fail-fast` → triage (cargo stops at the first failing
+   test binary without the flag).
+2. Regenerate snapshots (the top bar changed): `UPDATE_SNAPSHOTS=1 cargo test -p lootsmith-gui
+   --test snapshots` and the skills snapshot suite, then **open the PNGs**.
+3. Milestone gate: `cargo build --release`; `LOOTSMITH_REQUIRE_FIXTURES=1 cargo test --workspace`;
+   `cargo clippy --workspace --all-targets -- -D warnings`; `cargo fmt --all -- --check`.
+4. Commit the working tree, split as: (a) skills data + core, (b) skills UI, (c) item editor,
+   (d) shell/menu/responsive + zoom, (e) snapshots. Version bumped to **0.4.0**.
+
+Known flake: the `palette` tests share one temp save (`lootsmith-palette.sav`) and can fail
+under parallel load; they pass 3/3 in isolation.
 
 Post-1.0 (deferred): DLC state editor (field 27/44/45), mementos (32/33), UI-prefs/stats decode,
 challenges screen.
@@ -156,14 +182,10 @@ Drop-in in `~/Downloads/Skills redesign/` (`skill_rules.rs`, `skill_board.rs`) t
 `crates/lootsmith-gui/src/skill_rules.rs` and `ui/skill_board.rs`; replace `app/tabs/skills.rs`;
 delete `tree_card`/`skill_tile`/`Tint`… from `app/widgets.rs`.
 
-**Prerequisite P0 (before any replacement):** `skills.json` has **no per-skill column data** and the
-count rule (`1→centre, 2→flanks, 3→row`) is wrong for **18 of 108 tiers**. Columns **are** in the
-source page: `bl2skills.com` marks a skill's column with class `push1` (`.skill{width:52px;float:left}`,
-`.tree{width:174px}`, `.push1{margin-left:58px}` → `col_i = i + Σ push_0..i`). Also two **phantom
-skills** named `\1` (icon `class-tree-\i(0)`) are already committed (Salvador Brawn T6, Maya Cataclysm
-T6) — filter them. Tasks: extend `scripts/gen-skill-data.py` to emit `col` + drop placeholders and
-bump `version` to 2; regenerate + diff; make `skill_rules::slots` column-aware with a count fallback
-and tests; show the 18 ASCII tree grids for human comparison.
+**Prerequisite P0 — done.** `skills.json` is regenerated to **v3** with per-node `id` and
+`action_skill.id` (columns bundled from the source page via `scripts/gen-skill-paths.py` +
+`skill-source.json`), and the two phantom `\1` skills are filtered. `skill_rules::slots` is
+column-aware. Provenance is recorded in `crates/lootsmith-core/assets/data/PROVENANCE.md`.
 
 **Milestones:** M5a rules + board + `tabs/skills.rs` + parity tests (1–5); **M5b** details pane,
 keyboard, shift fill/clear, "ignore budget" switch, zero contrast at 1x/2x/3x — **REVIEW STOP**;
@@ -226,6 +248,14 @@ documented exception; a picked folder overrides them). Rarity has no dump field 
 **In-game edits the game clamps:** SDU levels feed slot maximums at load (backpack = 12+3·lvl,
 bank = 6+2·lvl); `apply_form` writes `MaxBankSlots` from the form; `refresh_sdus` keeps
 `form.bank_slots` synced.
+
+**Zoom-to-fit** derives the physical window as `content_rect × pixels_per_point`, which is
+invariant only when the host derives the logical size from the physical one (winit does, and the
+screenshot harness models it). Never treat the logical width as physical.
+
+**Menu bar** uses `Ui::menu_button`, not `MenuBar::ui` (the latter claims the full row width and
+would push the file chip off-row). Keep menu labels digit-free (the digit gate): use size words
+(`Small`/`Normal`/`Large`/`Huge`), not `1x…4x`.
 
 ---
 
