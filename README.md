@@ -114,4 +114,13 @@ gate and current roadmap.
 
 - Original tool: Gibbed's Borderlands 2 Save Editor by Rick Gibbed.
 - Lootsmith is licensed under the [Zlib licence](LICENSE).
-- Parts of the codebase were developed with AI assistance.
+
+## AI disclaimer
+
+Lootsmith was developed with substantial help from **AI coding agents**. Most of
+the code was AI-generated and then reviewed against upstream Gibbed sources and
+the test gate (`LOOTSMITH_REQUIRE_FIXTURES=1 cargo test --workspace`).
+
+It is provided **as-is, without warranty** of any kind. Despite the tests, AI-written
+code can be wrong; save-format edits are easy to get subtly wrong. **Back up your
+saves and verify changes in-game before relying on them.** Use at your own risk.
