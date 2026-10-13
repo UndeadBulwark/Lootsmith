@@ -48,11 +48,16 @@ fn main() {
     });
     std::fs::create_dir_all(&out_dir).expect("create out dir");
 
+    let theme = match args.get(5).map(|s| s.as_str()) {
+        Some("light") => lootsmith_gui::theme::Theme::Light,
+        _ => lootsmith_gui::theme::Theme::Dark,
+    };
     let app = |save: &str, dumps: &Option<String>| {
         let mut harness = Harness::builder().with_size(size).build_ui_state(
             |ui, app: &mut LootsmithApp| app.build(ui),
             LootsmithApp::new(Some(save.to_string()), dumps.clone()),
         );
+        harness.state_mut().set_theme(theme);
         harness.run();
         harness
     };
