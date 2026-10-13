@@ -15,7 +15,9 @@ fn synthetic(tag: &str) -> String {
 #[test]
 fn auto_scale_settles_on_4k_and_does_not_keep_resizing() {
     let save = synthetic("4k");
-    let mut h = common::harness_isolated(&save);
+    // A 4K monitor at 2× means a 2560×1600 pt logical window; give the harness that
+    // physical size so the fit does not cap the scale.
+    let mut h = common::harness_sized(&save, None, egui::vec2(2560.0, 1600.0));
     h.state_mut().set_scale_mode(ScaleMode::Auto);
     h.run();
 

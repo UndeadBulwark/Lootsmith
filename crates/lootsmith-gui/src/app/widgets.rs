@@ -1,8 +1,7 @@
-//! Shared widget helpers and the skill calculator tiles (moved verbatim
-//! from the former single-file `app.rs`).
+//! Shared widget helpers (moved verbatim from the former single-file `app.rs`).
 
 use super::*;
-use crate::theme::{self, Tokens};
+use crate::theme;
 use eframe::egui;
 
 pub(crate) fn customization_combo(
@@ -34,247 +33,28 @@ pub(crate) fn customization_combo(
         });
 }
 
-/// Blend `accent` into `base` by `t` (0..1).
-pub(crate) fn tint(base: egui::Color32, accent: egui::Color32, t: f32) -> egui::Color32 {
-    let mix = |a: u8, b: u8| (a as f32 * (1.0 - t) + b as f32 * t).round() as u8;
-    egui::Color32::from_rgb(
-        mix(base.r(), accent.r()),
-        mix(base.g(), accent.g()),
-        mix(base.b(), accent.b()),
-    )
-}
-
-/// One tree plate: a 3-slot-per-row tier pyramid, uniformly tinted with the
-/// tree colour like the community calculator. A tier's single skill centres,
-/// a pair spreads to the outer columns, three fill the row — no empty boxes.
-pub(crate) fn tree_card(
-    ui: &mut egui::Ui,
-    tree: &crate::skills::SkillTree,
-    grades: &[i32],
-    grade_of: &impl Fn(&str) -> Option<usize>,
-    textures: &std::collections::HashMap<String, Option<egui::TextureHandle>>,
-    edit: &mut Option<(usize, i32)>,
-) {
-    const TILE: f32 = 62.0;
-    const GAP: f32 = 6.0;
-    const COLS: usize = 3;
-
-    let accent = crate::skills::tree_accent(&tree.color);
-    let tree_total: i32 = tree
-        .tiers
-        .iter()
-        .flat_map(|t| &t.skills)
-        .filter_map(|n| grade_of(&n.skill))
-        .map(|i| grades[i].max(0))
-        .sum();
-    let grid_w = COLS as f32 * TILE + (COLS as f32 - 1.0) * GAP;
-
-    egui::Frame::default()
-        .fill(tint(Tokens::SURFACE, accent, 0.26))
-        .stroke(egui::Stroke::new(1.0, Tokens::BORDER))
-        .corner_radius(egui::CornerRadius::same(8))
-        .inner_margin(egui::Margin::same(10))
-        .show(ui, |ui| {
-            ui.vertical(|ui| {
-                ui.set_width(grid_w);
-                ui.spacing_mut().item_spacing = egui::vec2(GAP, GAP);
-
-                for tier in &tree.tiers {
-                    let unlocked = crate::skills::tier_unlocked(tree_total, tier.level);
-                    let slots: [Option<&crate::skills::SkillNode>; COLS] =
-                        match tier.skills.as_slice() {
-                            [only] => [None, Some(only), None],
-                            [a, b] => [Some(a), None, Some(b)],
-                            [a, b, c, ..] => [Some(a), Some(b), Some(c)],
-                            _ => [None, None, None],
-                        };
-                    ui.horizontal(|ui| {
-                        for slot in slots {
-                            match slot {
-                                Some(node) => {
-                                    let idx = grade_of(&node.skill);
-                                    let grade = idx.map(|i| grades[i]).unwrap_or(0);
-                                    let max = node.max.max(1);
-                                    let tex = textures.get(&node.icon).cloned().flatten();
-                                    let response = skill_tile(
-                                        ui,
-                                        &TileState {
-                                            node,
-                                            texture: tex.as_ref(),
-                                            grade,
-                                            max,
-                                            unlocked,
-                                            accent,
-                                            size: TILE,
-                                        },
-                                    );
-                                    if unlocked {
-                                        if let Some(i) = idx {
-                                            if response.clicked() && grade < max {
-                                                *edit = Some((i, grade + 1));
-                                            } else if response.secondary_clicked() && grade > 0 {
-                                                *edit = Some((i, grade - 1));
-                                            }
-                                        }
-                                    }
-                                }
-                                // Invisible spacer so the pyramid stays centred.
-                                None => {
-                                    ui.allocate_exact_size(
-                                        egui::vec2(TILE, TILE),
-                                        egui::Sense::hover(),
-                                    );
-                                }
-                            }
-                        }
-                    });
-                }
-
-                ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new(tree.name.to_uppercase())
-                            .strong()
-                            .size(13.0)
-                            .color(accent),
-                    );
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        crate::ui::widgets::label_num(ui, tree_total.to_string(), accent, 13.0);
-                    });
-                });
-            });
-        });
-}
-
-/// One skill tile: icon-centred with a metal frame and a rank badge, matching the
-/// community calculator. Partial/full/locked/hover states are all visualised.
-pub(crate) struct TileState<'a> {
-    node: &'a crate::skills::SkillNode,
-    texture: Option<&'a egui::TextureHandle>,
-    grade: i32,
-    max: i32,
-    unlocked: bool,
-    accent: egui::Color32,
-    size: f32,
-}
-
-pub(crate) fn skill_tile(ui: &mut egui::Ui, t: &TileState) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(t.size, t.size), egui::Sense::click());
-    let hovered = response.hovered();
-    let painter = ui.painter_at(rect);
-    let full = t.max > 1 && t.grade >= t.max;
-    let unlocked = t.unlocked;
-    let accent = t.accent;
-
-    // Soft glow when maxed.
-    if full && unlocked {
-        painter.rect_filled(
-            rect.expand(2.0),
-            egui::CornerRadius::same(10),
-            accent.gamma_multiply(0.30),
-        );
-    }
-    // Metal edge + inner plate (brightens on hover).
-    painter.rect_filled(rect, egui::CornerRadius::same(8), Tokens::BG);
-    let plate = if !unlocked {
-        Tokens::BG
-    } else if hovered {
-        tint(Tokens::SURFACE, accent, 0.06)
-    } else {
-        Tokens::SURFACE_ALT
-    };
-    painter.rect_filled(rect.shrink(2.0), egui::CornerRadius::same(7), plate);
-
-    // Border: accent when invested, dim when locked.
-    let (width, color) = if !unlocked {
-        (1.0, Tokens::SURFACE_ALT)
-    } else if t.grade > 0 {
-        (2.0, accent)
-    } else {
-        (1.0, Tokens::BORDER)
-    };
-    painter.rect_stroke(
-        rect.shrink(width / 2.0),
-        egui::CornerRadius::same(8),
-        egui::Stroke::new(width, color),
-        egui::StrokeKind::Inside,
-    );
-
-    // Icon.
-    if let Some(texture) = t.texture {
-        let icon = egui::Rect::from_center_size(
-            rect.center() - egui::vec2(0.0, 3.0),
-            egui::vec2(t.size - 18.0, t.size - 18.0),
-        );
-        let icon_tint = if unlocked {
-            egui::Color32::WHITE
-        } else {
-            egui::Color32::from_gray(88)
-        };
-        painter.image(
-            texture.id(),
-            icon,
-            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-            icon_tint,
-        );
-    }
-    // Locked marker.
-    if !unlocked {
-        painter.circle_filled(
-            rect.left_top() + egui::vec2(10.0, 10.0),
-            3.0,
-            Tokens::TEXT_FAINT,
-        );
-    }
-
-    // Rank badge, bottom-right.
-    let badge_color = if !unlocked {
-        Tokens::TEXT_FAINT
-    } else if full {
-        accent
-    } else {
-        Tokens::TEXT
-    };
-    let galley = painter.layout_job(crate::ui::widgets::job_with_nums(
-        &format!("{}/{}", t.grade, t.max),
-        badge_color,
-        11.5,
-    ));
-    let pad = egui::vec2(4.0, 2.0);
-    let badge_size = galley.size() + pad * 2.0;
-    let badge = egui::Rect::from_min_size(
-        egui::pos2(
-            rect.right() - badge_size.x - 3.0,
-            rect.bottom() - badge_size.y - 3.0,
-        ),
-        badge_size,
-    );
-    painter.rect_filled(
-        badge,
-        egui::CornerRadius::same(3),
-        egui::Color32::from_black_alpha(210),
-    );
-    painter.galley(badge.min + pad, galley, badge_color);
-
-    response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Button, unlocked, &t.node.skill)
-    });
-    if t.node.desc.is_empty() {
-        response
-    } else {
-        response.on_hover_text(&t.node.desc)
-    }
-}
-
-/// Display label for a currency slot.
+/// Display label for a currency slot. The array order is Gibbed's
+/// `CurrencyOnHandViewModel`: `[Credits, Eridium, SeraphCrystals, ReservedA,
+/// TorgueTokens, ReservedC…J]` — Torgue tokens are **index 4**, not 3.
 pub(crate) fn currency_name(index: usize) -> String {
     match index {
         0 => "Money".to_string(),
         1 => "Eridium".to_string(),
         2 => "Seraph crystals".to_string(),
-        3 => "Torgue tokens".to_string(),
-        n => format!("Slot {n}"),
+        3 => "Reserved A".to_string(),
+        4 => "Torgue tokens".to_string(),
+        n => {
+            let letter = (b'C' + (n as u8).saturating_sub(5)) as char;
+            format!("Reserved {letter}")
+        }
     }
+}
+
+/// Whether a currency slot holds a real currency (money/eridium/seraph/torgue)
+/// rather than a reserved placeholder. Reserved slots are hidden unless the
+/// user asks to see them.
+pub(crate) fn currency_slot_is_known(index: usize) -> bool {
+    matches!(index, 0 | 1 | 2 | 4)
 }
 
 /// A status glyph (shape carries the meaning too, not just colour).
@@ -329,4 +109,30 @@ pub(crate) fn empty_state(ui: &mut egui::Ui) {
             "so item parts, missions and travel stations resolve to names.",
         );
     });
+}
+
+#[cfg(test)]
+mod currency_tests {
+    use super::{currency_name, currency_slot_is_known};
+
+    #[test]
+    fn currency_indices_match_gibbed() {
+        // Gibbed `CurrencyOnHandViewModel`: Torgue tokens are index 4; index 3
+        // is a reserved slot.
+        assert_eq!(currency_name(0), "Money");
+        assert_eq!(currency_name(1), "Eridium");
+        assert_eq!(currency_name(2), "Seraph crystals");
+        assert_eq!(currency_name(3), "Reserved A");
+        assert_eq!(currency_name(4), "Torgue tokens");
+        assert_eq!(currency_name(5), "Reserved C");
+        assert_eq!(currency_name(12), "Reserved J");
+    }
+
+    #[test]
+    fn only_real_currencies_are_known() {
+        assert!(currency_slot_is_known(0));
+        assert!(currency_slot_is_known(4), "Torgue tokens must stay visible");
+        assert!(!currency_slot_is_known(3));
+        assert!(!currency_slot_is_known(5));
+    }
 }

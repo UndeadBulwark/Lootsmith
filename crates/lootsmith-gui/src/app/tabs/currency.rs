@@ -20,7 +20,8 @@ impl LootsmithApp {
         ui.add_space(2.0);
         crate::ui::widgets::label_nums(
             ui,
-            "Index 0 is money. Other slots are eridium, seraph crystals, Torgue tokens, ...",
+            "Money · Eridium · Seraph crystals · Torgue tokens (slot 4). \
+             Slot 3 and 5+ are unused.",
             p.fg,
             15.0,
         );
@@ -35,14 +36,10 @@ impl LootsmithApp {
                     .spacing([16.0, 6.0])
                     .show(ui, |ui| {
                         for (i, value) in self.form.currency.iter_mut().enumerate() {
-                            if i >= 4 && !self.currency_show_unused {
+                            if !currency_slot_is_known(i) && !self.currency_show_unused {
                                 continue;
                             }
-                            ui.label(if i >= 4 {
-                                "Reserved / unused".to_string()
-                            } else {
-                                currency_name(i)
-                            });
+                            ui.label(currency_name(i));
                             changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
                                 crate::ui::widgets::num_scope(ui, 15.0, |ui| {
                                     ui.add(egui::DragValue::new(value))

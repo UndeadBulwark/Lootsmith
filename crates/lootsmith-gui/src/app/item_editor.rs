@@ -61,58 +61,12 @@ pub fn slots_for(is_weapon: bool) -> &'static [(&'static str, &'static str)] {
 }
 
 impl LootsmithApp {
-    /// The part slots to show for an item, Gibbed-style: `type`/`balance`/
-    /// `manufacturer` are always pinned (needed to add items), `body` comes first,
-    /// and the remaining slots are only those the item's **balance** actually uses
-    /// (`Weapon/Item Balance Part Lists.json`). Falls back to the full list when the
-    /// balance is unknown (no dumps).
-    pub(crate) fn slots_for_balance(
-        &self,
-        is_weapon: bool,
-        balance: &str,
-        decoded: &items::PackedData,
-    ) -> Vec<(&'static str, &'static str)> {
-        let all = slots_for(is_weapon);
-        let Some(lists) = self.part_lists.as_ref() else {
-            return all.to_vec();
-        };
-        let Some(rec) = lists.for_balance(balance) else {
-            return all.to_vec();
-        };
-        // Union: show a slot if the item **has** that part (it must stay editable)
-        // or the balance offers it as a candidate.
-        let has = |slot: &str| -> bool {
-            rec.slots.contains_key(slot)
-                || (slot == "type" && rec.slots.contains_key("weapon_type"))
-                || decoded
-                    .part(slot)
-                    .map(|(r, _)| !r.is_none())
-                    .unwrap_or(false)
-        };
-        let mut out: Vec<(&'static str, &'static str)> = Vec::new();
-        for s in ["type", "balance", "manufacturer"] {
-            if let Some(pair) = all.iter().find(|(k, _)| *k == s) {
-                out.push(*pair);
-            }
-        }
-        if let Some(pair) = all.iter().find(|(k, _)| *k == "body") {
-            if has("body") {
-                out.push(*pair);
-            }
-        }
-        for (k, label) in all.iter() {
-            if matches!(*k, "type" | "balance" | "manufacturer" | "body") {
-                continue;
-            }
-            if has(k) {
-                out.push((*k, *label));
-            }
-        }
-        if out.len() <= 3 {
-            all.to_vec()
-        } else {
-            out
-        }
+    /// The part slots shown for an item. Gibbed always shows every slot
+    /// (`BaseWeaponView.xaml` / `BaseItemView.xaml`); a slot the balance does
+    /// not cover still appears, offering only "None". The choices per slot come
+    /// from [`LootsmithApp::slot_choices`].
+    pub(crate) fn part_slots(&self, is_weapon: bool) -> Vec<(&'static str, &'static str)> {
+        slots_for(is_weapon).to_vec()
     }
 }
 
@@ -171,6 +125,26 @@ pub(crate) fn item_name(
             words.push(word);
         }
     }
+    if words.is_empty() {
+        // No prefix/title words: for a non-weapon, Gibbed falls back to the
+        // item definition's name from `Items.json` (`BaseItemViewModel`).
+        if let Some((reference, group)) = decoded.part("type") {
+            if reference != items::PackedAssetReference::NONE {
+                if let Ok(asset) = manager.lookup_asset(
+                    group,
+                    set,
+                    reference.asset_index,
+                    reference.sublibrary_index,
+                    reference.use_set_id,
+                ) {
+                    if let Some(name) = name_parts.type_name(&asset) {
+                        return name.to_string();
+                    }
+                }
+            }
+        }
+        return String::new();
+    }
     words.join(" ")
 }
 
@@ -190,6 +164,35 @@ fn weapon_type_short(
     let last = last.strip_prefix("WeaponType_").unwrap_or(last);
     let short = last.rsplit('_').next().unwrap_or(last);
     (!short.is_empty()).then(|| short.to_string())
+}
+
+/// A human label for a part asset: the name-parts word for `prefix`/`title`
+/// (and the flavour name for an item `type`), otherwise the asset's last dotted
+/// segment. Keeps the pickers readable without inventing names for parts the
+/// dumps do not name.
+pub(crate) fn part_label(
+    name_parts: Option<&NameParts>,
+    group: AssetGroup,
+    slot: &str,
+    asset: &str,
+) -> String {
+    if asset == "None" || asset.is_empty() {
+        return asset.to_string();
+    }
+    match slot {
+        "prefix" | "title" => {
+            if let Some(word) = name_parts.and_then(|np| np.part_name(asset)) {
+                return word.to_string();
+            }
+        }
+        "type" | "item" if group == AssetGroup::ItemTypes => {
+            if let Some(name) = name_parts.and_then(|np| np.type_name(asset)) {
+                return name.to_string();
+            }
+        }
+        _ => {}
+    }
+    asset.rsplit('.').next().unwrap_or(asset).to_string()
 }
 
 pub(crate) fn row_for(
@@ -345,9 +348,33 @@ impl LootsmithApp {
     }
 
     /// Set a named slot on the currently selected item (programmatic editing).
+    /// Legality is warn-only: an out-of-balance part is flagged in the status
+    /// bar but still written.
     pub fn set_selected_part(&mut self, slot: &str, name: &str) -> Result<(), String> {
         let Some(manager) = self.manager.clone() else {
             return Err("no asset library loaded".into());
+        };
+        let warning = {
+            let Some(edit) = self.item_edit.as_ref() else {
+                return Err("no item selected".into());
+            };
+            match self.defs.as_ref() {
+                Some(defs) => {
+                    let type_path =
+                        lootsmith_core::defs::slot_asset_path(&manager, &edit.decoded, "type");
+                    let balance =
+                        lootsmith_core::defs::slot_asset_path(&manager, &edit.decoded, "balance")
+                            .unwrap_or_default();
+                    !defs.is_legal_part(
+                        edit.decoded.is_weapon,
+                        type_path.as_deref(),
+                        &balance,
+                        slot,
+                        name,
+                    )
+                }
+                None => false,
+            }
         };
         let Some(edit) = self.item_edit.as_mut() else {
             return Err("no item selected".into());
@@ -356,6 +383,9 @@ impl LootsmithApp {
             .set_part(&manager, slot, name)
             .map_err(|e| e.to_string())?;
         edit.dirty = true;
+        if warning {
+            self.status = format!("warning: {name} may not be legal for this {slot}");
+        }
         Ok(())
     }
 
@@ -676,5 +706,64 @@ impl LootsmithApp {
     /// Whether the item inspector has a decoded item to show (tests).
     pub fn selected_item_editor_is_ready(&self) -> bool {
         self.item_edit.is_some()
+    }
+}
+
+#[cfg(test)]
+mod part_label_tests {
+    use super::part_label;
+    use crate::app::AssetGroup;
+    use lootsmith_core::NameParts;
+
+    #[test]
+    fn known_names_are_used_and_paths_fall_back_to_the_last_segment() {
+        let parts = NameParts::from_json_str(
+            r#"{"GD_Weap_Shared_Names.Name.Prefix_Dahl.Prefix_Grip_Dahl": {"name": "Hard"},
+                "GD_Ammodrops.Pickups.AmmoDrop": {"name": "Combat Rifle Ammo", "type": "UsableItem"}}"#,
+        )
+        .expect("parse name parts");
+        // prefix/title -> name-parts word
+        assert_eq!(
+            part_label(
+                Some(&parts),
+                AssetGroup::WeaponParts,
+                "prefix",
+                "GD_Weap_Shared_Names.Name.Prefix_Dahl.Prefix_Grip_Dahl"
+            ),
+            "Hard"
+        );
+        // item type -> Items.json flavour name
+        assert_eq!(
+            part_label(
+                Some(&parts),
+                AssetGroup::ItemTypes,
+                "type",
+                "GD_Ammodrops.Pickups.AmmoDrop"
+            ),
+            "Combat Rifle Ammo"
+        );
+        // an unnamed part -> last dotted segment, never the whole path
+        assert_eq!(
+            part_label(
+                Some(&parts),
+                AssetGroup::WeaponParts,
+                "grip",
+                "GD_Weap_Pistol.Grip.Pistol_Grip_Dahl"
+            ),
+            "Pistol_Grip_Dahl"
+        );
+        assert_eq!(
+            part_label(
+                None,
+                AssetGroup::WeaponParts,
+                "body",
+                "GD_Weap_Pistol.Body.Body_X"
+            ),
+            "Body_X"
+        );
+        assert_eq!(
+            part_label(Some(&parts), AssetGroup::WeaponParts, "stock", "None"),
+            "None"
+        );
     }
 }

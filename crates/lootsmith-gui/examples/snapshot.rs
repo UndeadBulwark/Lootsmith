@@ -16,6 +16,12 @@ fn main() {
         .get(1)
         .cloned()
         .unwrap_or_else(|| "/tmp/opencode/shots".to_string());
+    // Optional 4th arg `WxH` (e.g. 1900x1010), default 1280x880.
+    let size = args
+        .get(4)
+        .and_then(|s| s.split_once(['x', 'X']))
+        .and_then(|(w, h)| Some(Vec2::new(w.parse().ok()?, h.parse().ok()?)))
+        .unwrap_or(Vec2::new(1280.0, 880.0));
     let save = args.get(2).cloned().unwrap_or_else(|| {
         let personal = format!(
             "{}/../../tests/fixtures/pc_Save0001.sav",
@@ -43,12 +49,10 @@ fn main() {
     std::fs::create_dir_all(&out_dir).expect("create out dir");
 
     let app = |save: &str, dumps: &Option<String>| {
-        let mut harness = Harness::builder()
-            .with_size(Vec2::new(1280.0, 880.0))
-            .build_ui_state(
-                |ui, app: &mut LootsmithApp| app.build(ui),
-                LootsmithApp::new(Some(save.to_string()), dumps.clone()),
-            );
+        let mut harness = Harness::builder().with_size(size).build_ui_state(
+            |ui, app: &mut LootsmithApp| app.build(ui),
+            LootsmithApp::new(Some(save.to_string()), dumps.clone()),
+        );
         harness.run();
         harness
     };
@@ -98,6 +102,13 @@ fn main() {
     harness.state_mut().show_saves = true;
     harness.run();
     render(&mut harness, &out_dir, "find-saves");
+
+    // The collapsed sidebar rail (per-tab icons + centred toggle).
+    let mut harness = app(&save, &dumps);
+    harness.state_mut().set_sidebar_collapsed(true);
+    harness.state_mut().set_tab(Tab::Skills);
+    harness.run();
+    render(&mut harness, &out_dir, "sidebar-collapsed");
 }
 
 fn render(harness: &mut Harness<'_, LootsmithApp>, out_dir: &str, name: &str) {

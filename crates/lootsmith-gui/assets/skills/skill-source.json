@@ -1,0 +1,2046 @@
+{
+ "classes": {
+  "GD_Assassin.Character.CharClass_Assassin": {
+   "action": "GD_Assassin_Skills.ActionSkill.Skill_Deception",
+   "branches": [
+    {
+     "name": "SNIPING",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Assassin_Skills.Sniping.HeadShot",
+        null,
+        "GD_Assassin_Skills.Sniping.Optics"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Assassin_Skills.Sniping.Killer",
+        null,
+        "GD_Assassin_Skills.Sniping.Precision"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Assassin_Skills.Sniping.OneShotOneKill",
+        "GD_Assassin_Skills.Sniping.Bore",
+        "GD_Assassin_Skills.Sniping.Velocity"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Sniping.KillConfirmed",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Sniping.AtOneWithTheGun",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Sniping.CriticalAscention",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "CUNNING",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Assassin_Skills.Cunning.FastHands",
+        null,
+        "GD_Assassin_Skills.Cunning.CounterStrike"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Assassin_Skills.Cunning.Fearless",
+        null,
+        "GD_Assassin_Skills.Cunning.Ambush"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Assassin_Skills.Cunning.RisingShot",
+        "GD_Assassin_Skills.Cunning.DeathMark",
+        "GD_Assassin_Skills.Cunning.Unforseen"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Cunning.Innervate",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Cunning.TwoFang",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Cunning.DeathBlossom",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "BLOODSHED",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Assassin_Skills.Bloodshed.KillingBlow",
+        null,
+        "GD_Assassin_Skills.Bloodshed.IronHand"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Assassin_Skills.Bloodshed.Grim",
+        null,
+        "GD_Assassin_Skills.Bloodshed.BeLikeWater"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Assassin_Skills.Bloodshed.Followthrough",
+        "GD_Assassin_Skills.Bloodshed.Execute",
+        "GD_Assassin_Skills.Bloodshed.Backstab"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Bloodshed.Resurgence",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Bloodshed.LikeTheWind",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Assassin_Skills.Bloodshed.ManyMustFall",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    }
+   ],
+   "class": "assassin",
+   "skills": {
+    "GD_Assassin_Skills.ActionSkill.Skill_Deception": {
+     "description": "Action Skill. Press [ActionSkill key] to create a holographic decoy and vanish for a few seconds. The longer you are invisible the more Damage your next attack deals, but ending invisibility sooner causes your next Deception Cooldown to refresh faster.",
+     "max": 1,
+     "name": "Decepti0n"
+    },
+    "GD_Assassin_Skills.Bloodshed.Backstab": {
+     "description": "Your Melee Attacks deal Bonus Melee Damage when hitting an enemy in the back.",
+     "max": 5,
+     "name": "Backstab"
+    },
+    "GD_Assassin_Skills.Bloodshed.BeLikeWater": {
+     "description": "Shooting an enemy improves the Melee Damage of your next Melee Attack. Melee Attacks improve the Shooting Damage of your next shot.",
+     "max": 5,
+     "name": "Be Like Water"
+    },
+    "GD_Assassin_Skills.Bloodshed.Execute": {
+     "description": "Melee Override Skill. While Deception is active and a target is under your crosshairs, press [Melee key] to dash forward a short distance and perform a Special Melee Attack, dealing massive damage.",
+     "max": 1,
+     "name": "Execute"
+    },
+    "GD_Assassin_Skills.Bloodshed.Followthrough": {
+     "description": "Kill Skill. Killing an enemy increases your Movement Speed, Melee Damage, and Gun Damage for a few seconds.",
+     "max": 5,
+     "name": "F0ll0wthr0ugh"
+    },
+    "GD_Assassin_Skills.Bloodshed.Grim": {
+     "description": "Kill Skill. Killing an enemy causes your Shields to quickly regenerate and increases your Action Skill Cooldown Rate for a few seconds.",
+     "max": 5,
+     "name": "Grim"
+    },
+    "GD_Assassin_Skills.Bloodshed.IronHand": {
+     "description": "Increases your Melee Damage and your Maximum Health.",
+     "max": 5,
+     "name": "Ir0n Hand"
+    },
+    "GD_Assassin_Skills.Bloodshed.KillingBlow": {
+     "description": "Massively increases Melee Damage against enemies with low health.",
+     "max": 5,
+     "name": "Killing Bl0w"
+    },
+    "GD_Assassin_Skills.Bloodshed.LikeTheWind": {
+     "description": "While moving you gain increased Melee Damage and Gun Damage.",
+     "max": 5,
+     "name": "Like the Wind"
+    },
+    "GD_Assassin_Skills.Bloodshed.ManyMustFall": {
+     "description": "Killing an enemy with a Melee Attack while Deception is active causes you to deploy another holographic decoy, re-stealth, and add time to Deception's duration. This can be done multiple times in succession.",
+     "max": 1,
+     "name": "Many Must Fall"
+    },
+    "GD_Assassin_Skills.Bloodshed.Resurgence": {
+     "description": "Killing an enemy with a Melee Attack restores Health. The lower your health, the more health you receive.",
+     "max": 5,
+     "name": "Resurgence"
+    },
+    "GD_Assassin_Skills.Cunning.Ambush": {
+     "description": "Increases Damage when attacking from behind or when attacking an enemy who is targeting someone other than you.",
+     "max": 5,
+     "name": "Ambush"
+    },
+    "GD_Assassin_Skills.Cunning.CounterStrike": {
+     "description": "After getting hit, your next Melee Attack has a chance to deal massive Melee Damage.",
+     "max": 5,
+     "name": "C0unter Strike"
+    },
+    "GD_Assassin_Skills.Cunning.DeathBlossom": {
+     "description": "Action Skill Augment. Press [ActionSkill key] while Deception is active to throw a handful of kunai. Each kunai will explode with a random elemental type. Kunai do not benefit from the Deception damage bonuses, but throwing kunai does not end Deception and can apply Death Mark.",
+     "max": 1,
+     "name": "Death Bl0ss0m"
+    },
+    "GD_Assassin_Skills.Cunning.DeathMark": {
+     "description": "Dealing Melee Damage marks the target for a short duration. Marked targets take additional Damage from all sources. Also, it's not an easy thing to live with.",
+     "max": 1,
+     "name": "Death Mark"
+    },
+    "GD_Assassin_Skills.Cunning.FastHands": {
+     "description": "Increases your Reload Speed and Weapon Swap Speed.",
+     "max": 5,
+     "name": "Fast Hands"
+    },
+    "GD_Assassin_Skills.Cunning.Fearless": {
+     "description": "While your Shield is depleted you gain increased Gun Damage and Fire Rate.",
+     "max": 5,
+     "name": "Fearless"
+    },
+    "GD_Assassin_Skills.Cunning.Innervate": {
+     "description": "While Deception is active you gain increased Gun Damage, Health Regeneration, and Movement Speed.",
+     "max": 5,
+     "name": "Innervate"
+    },
+    "GD_Assassin_Skills.Cunning.RisingShot": {
+     "description": "Each successful Ranged or Melee Attack gives you a Damage bonus for a short time. This bonus can stack up to 5 times. Faster weapons can gain stacks more quickly, but slower weapons retain stacks for a longer period of time.",
+     "max": 5,
+     "name": "Rising Sh0t"
+    },
+    "GD_Assassin_Skills.Cunning.TwoFang": {
+     "description": "Every time you fire a gun you have a chance to fire twice.",
+     "max": 5,
+     "name": "Tw0 Fang"
+    },
+    "GD_Assassin_Skills.Cunning.Unforseen": {
+     "description": "Your holographic decoy explodes when you become visible again, causing Shock Damage to nearby enemies.",
+     "max": 5,
+     "name": "Unf0reseen"
+    },
+    "GD_Assassin_Skills.Sniping.AtOneWithTheGun": {
+     "description": "Greatly improves your Accuracy with Sniper Rifles when shooting from the hip. Also increases your Reload Speed and Magazine Size with Sniper Rifles.",
+     "max": 5,
+     "name": "At 0ne with the Gun"
+    },
+    "GD_Assassin_Skills.Sniping.Bore": {
+     "description": "Your shots pierce through enemies. If your shot hits an enemy after piercing an enemy, it causes massive Bonus Damage. B0re does not work with rockets and some special projectiles. Also, while Deception is active, your visor will highlight enemy crit locations.",
+     "max": 1,
+     "name": "B0re"
+    },
+    "GD_Assassin_Skills.Sniping.CriticalAscention": {
+     "description": "Scoring a Critical Hit with a Sniper Rifle increases your Damage and Critical Hit Damage with Sniper Rifles. This effect can stack up to 999 times. Stacks slowly decay if you haven't scored a critical hit in awhile.",
+     "max": 1,
+     "name": "Critical Ascensi0n"
+    },
+    "GD_Assassin_Skills.Sniping.HeadShot": {
+     "description": "Increases Critical Hit Damage.",
+     "max": 5,
+     "name": "Headsh0t"
+    },
+    "GD_Assassin_Skills.Sniping.KillConfirmed": {
+     "description": "Aiming Down the Sights with your gun grants you a bonus to Critical Hit Damage. The longer you aim down the sights, the greater the bonus.",
+     "max": 5,
+     "name": "Kill C0nfirmed"
+    },
+    "GD_Assassin_Skills.Sniping.Killer": {
+     "description": "Kill Skill. Killing an enemy gives you bonus Critical Hit Damage and Reload Speed for a few seconds.",
+     "max": 5,
+     "name": "Killer"
+    },
+    "GD_Assassin_Skills.Sniping.OneShotOneKill": {
+     "description": "The first shot fired from a fully loaded magazine causes Bonus Damage.",
+     "max": 5,
+     "name": "0ne Sh0t 0ne Kill"
+    },
+    "GD_Assassin_Skills.Sniping.Optics": {
+     "description": "Increases your Zoom with all gun types. Also, your Aim is not disrupted as much when taking damage.",
+     "max": 5,
+     "name": "0ptics"
+    },
+    "GD_Assassin_Skills.Sniping.Precision": {
+     "description": "Improves your Accuracy with all gun types.",
+     "max": 5,
+     "name": "Precisi0n"
+    },
+    "GD_Assassin_Skills.Sniping.Velocity": {
+     "description": "Increases Bullet Speed, Damage, and Critical Hit Damage with all guns.",
+     "max": 5,
+     "name": "Vel0city"
+    }
+   }
+  },
+  "GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass": {
+   "action": "GD_Lilac_SkillsBase.ActionSkill.Skill_Psycho",
+   "branches": [
+    {
+     "name": "BLOODLUST",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Lilac_Skills_Bloodlust.Skills.BloodfilledGuns",
+        null,
+        "GD_Lilac_Skills_Bloodlust.Skills.BloodyTwitch"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Bloodlust.Skills.TasteOfBlood",
+        "GD_Lilac_Skills_Bloodlust.Skills.BloodyRevival",
+        "GD_Lilac_Skills_Bloodlust.Skills.BloodOverdrive"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Bloodlust.Skills.BloodBath",
+        "GD_Lilac_Skills_Bloodlust.Skills.BuzzAxeBombadier",
+        "GD_Lilac_Skills_Bloodlust.Skills.FuelTheBlood"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Bloodlust.Skills.BloodTrance",
+        null,
+        "GD_Lilac_Skills_Bloodlust.Skills.BoilingBlood"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Bloodlust.Skills.NervousBlood",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Bloodlust.Skills.Bloodsplosion",
+        null
+       ],
+       "hidden": [
+        "GD_Lilac_Skills_Bloodlust.Skills._Bloodlust"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "MANIA",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Lilac_Skills_Mania.Skills.EmptyRage",
+        "GD_Lilac_Skills_Mania.Skills.PullThePin",
+        "GD_Lilac_Skills_Mania.Skills.FeedTheMeat"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Mania.Skills.EmbraceThePain",
+        null,
+        "GD_Lilac_Skills_Mania.Skills.FuelTheRampage"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Mania.Skills.ThrillOfTheKill",
+        "GD_Lilac_Skills_Mania.Skills.LightTheFuse",
+        "GD_Lilac_Skills_Mania.Skills.StripTheFlesh"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Mania.Skills.RedeemTheSoul",
+        "GD_Lilac_Skills_Mania.Skills.SaltTheWound",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Mania.Skills.SilenceTheVoices",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Mania.Skills.ReleaseTheBeast",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "HELLBORN",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Lilac_Skills_Hellborn.Skills.BurnBabyBurn",
+        null,
+        "GD_Lilac_Skills_Hellborn.Skills.FuelTheFire"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Hellborn.Skills.NumbedNerves",
+        null,
+        "GD_Lilac_Skills_Hellborn.Skills.PainIsPower"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Lilac_Skills_Hellborn.Skills.ElementalElation",
+        "GD_Lilac_Skills_Hellborn.Skills.DelusionalDamage",
+        "GD_Lilac_Skills_Hellborn.Skills.FireFiend"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Hellborn.Skills.FlameFlare",
+        "GD_Lilac_Skills_Hellborn.Skills.HellfireHalitosis"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Hellborn.Skills.ElementalEmpathy",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Lilac_Skills_Hellborn.Skills.RavingRetribution",
+        null
+       ],
+       "hidden": [
+        "GD_Lilac_Skills_Hellborn.Skills.FireStatusDetector",
+        "GD_Lilac_Skills_Hellborn.Skills.AppliedStatusEffectListener"
+       ]
+      }
+     ]
+    }
+   ],
+   "class": "psycho",
+   "skills": {
+    "GD_Lilac_SkillsBase.ActionSkill.Skill_Psycho": {
+     "description": "Action Skill. Press [ActionSkill key] to start your Buzz Axe Rampage. During Buzz Axe Rampage your Melee Damage and Movement Speed is increased.<br><br>Killing an enemy instantly refills your Health. <br><br>Taking damage accelerates Cooldown Recharge.<br><br>Attack: [Fire key].<br>Throw axe: Hold [aim key], then [Fire key]",
+     "max": 1,
+     "name": "Buzz Axe Rampage"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BloodBath": {
+     "description": "Kill Skill. Killing an enemy with a grenade or explosion increases Weapon Damage for each stack of Bloodlust. An enemy killed this way has a greater chance to drop grenade ammo.",
+     "max": 5,
+     "name": "Blood Bath"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BloodOverdrive": {
+     "description": "Kill Skill. Killing an enemy with a bullet increases your Melee Damage and reduces Grenade Fuse Time for each stack of Bloodlust.",
+     "max": 5,
+     "name": "Blood Overdrive"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BloodTrance": {
+     "description": "Duration of Buzz Axe Rampage is increased for each stack of Bloodlust at the time of activation.",
+     "max": 5,
+     "name": "Blood Trance"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BloodfilledGuns": {
+     "description": "Magazine Size of all weapons increased for each stack of Bloodlust.<br><br><font color=\"#70FFFF\">Dealing damage to an enemy adds a stack of Bloodlust. Stacks decay after a few seconds if you haven't dealt damage.</font>",
+     "max": 5,
+     "name": "Blood-filled Guns"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.Bloodsplosion": {
+     "description": "Killing an enemy causes them to explode with an Elemental Nova matching the element of the damage that killed it <font color=\"#AAAAAA\">(Non-elemental damage will cause an explosive nova)</font>. Nova damage increased for each stack of Bloodlust.<br><br>Any Overkill Damage is also added to damage caused by an Elemental Nova.",
+     "max": 1,
+     "name": "Bloodsplosion"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BloodyRevival": {
+     "description": "Assault Rifle Damage during Fight For Your Life increased for each stack of Bloodlust.",
+     "max": 5,
+     "name": "Bloody Revival"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BloodyTwitch": {
+     "description": "Kill Skill. Killing an enemy increases your Weapon Swap Speed for each stack of Bloodlust. <br><br><font color=\"#70FFFF\">Dealing damage to an enemy adds a stack of Bloodlust. Stacks decay after a few seconds if you haven't dealt damage.</font>",
+     "max": 5,
+     "name": "Blood Twitch"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BoilingBlood": {
+     "description": "Increases the time before Bloodlust stacks start to decay.",
+     "max": 5,
+     "name": "Boiling Blood"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.BuzzAxeBombadier": {
+     "description": "When thrown, your buzz axe now has Dynamite attached to it which explodes on impact.",
+     "max": 1,
+     "name": "Buzz Axe Bombardier"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.FuelTheBlood": {
+     "description": "Kill Skill. Killing an enemy with melee increases Grenade Damage for each stack of Bloodlust and adds bonus stacks to Bloodlust.",
+     "max": 5,
+     "name": "Fuel the Blood"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.NervousBlood": {
+     "description": "Kill Skill. Killing an enemy increases your Reload Speed for each stack of Bloodlust.",
+     "max": 5,
+     "name": "Nervous Blood"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills.TasteOfBlood": {
+     "description": "During Buzz Axe Rampage, all damage you suffer is reduced. Damage reduction is increased for each stack of Bloodlust.<br><br>Killing an enemy during Buzz Axe Rampage adds extra stacks of Bloodlust.",
+     "max": 5,
+     "name": "Taste of Blood"
+    },
+    "GD_Lilac_Skills_Bloodlust.Skills._Bloodlust": {
+     "description": "Dealing damage to an enemy adds a stack of Bloodlust. Stacks decay after a few seconds if you haven't dealt damage.",
+     "max": 1,
+     "name": "Bloodlust"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.AppliedStatusEffectListener": {
+     "description": "",
+     "max": 1,
+     "name": "Applied Status Effect Listener"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.BurnBabyBurn": {
+     "description": "Burn Damage increased . Effects further increased while you are on fire.<br><font color=\"#70FFFF\">Chance to light yourself on fire when igniting an enemy.</font>",
+     "max": 5,
+     "name": "Burn, Baby, Burn"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.DelusionalDamage": {
+     "description": "All Elemental Status Effects you cause have a chance to light yourself on fire.<br><br>Ignite chances are determined by those accumulated from Burn, Baby, Burn and Fuel the Fire.<br><br><font color=\"#AAAAAA\">(Elemental Status Effects are damage over time from Corrosive, Electrocute, Slag, or Burn damage.)</font>",
+     "max": 1,
+     "name": "Delusional Damage"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.ElementalElation": {
+     "description": "While Elemental Status Effect Damage is being done to enemies you gain stacks of Elemental Elation.<br><br>Fire Rate and Magazine Size increased for each stack of Elemental Elation. Stacks will not decay while you are on fire.",
+     "max": 5,
+     "name": "Elemental Elation"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.ElementalEmpathy": {
+     "description": "A percentage of Elemental Status Effect Damage done to enemies heals you.",
+     "max": 5,
+     "name": "Elemental Empathy"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.FireFiend": {
+     "description": "Melee Attacks have a chance to Ignite enemies. <br><br>Weapon Accuracy and Reload Speed increased while you are on fire.",
+     "max": 5,
+     "name": "Fire Fiend"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.FireStatusDetector": {
+     "description": "",
+     "max": 1,
+     "name": "FireStatusDetector"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.FlameFlare": {
+     "description": "Increases the duration of all Burn Effects on you. Each time you apply a Burn Effect to an enemy, there's a chance another Burn Effect will be applied after a short time.",
+     "max": 5,
+     "name": "Flame Flare"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.FuelTheFire": {
+     "description": "Kill Skill. Killing an enemy increases your chances of causing Elemental Effects. <br><font color=\"#70FFFF\">Chance to light yourself on fire when igniting an enemy.</font>",
+     "max": 5,
+     "name": "Fuel the Fire"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.HellfireHalitosis": {
+     "description": "Melee Override Skill. Pressing [Melee key] causes you to breathe fire in a cone in front of you.",
+     "max": 1,
+     "name": "Hellfire Halitosis"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.NumbedNerves": {
+     "description": "All damage received is reduced while you are on fire.",
+     "max": 5,
+     "name": "Numbed Nerves"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.PainIsPower": {
+     "description": "Weapon Damage increased on all weapons except sniper rifles.<br><br>Critical Hit Damage Bonus reduced on all weapons.<br><br>Melee Damage increased.<br><br>Effects increased while you are on fire.",
+     "max": 5,
+     "name": "Pain is Power"
+    },
+    "GD_Lilac_Skills_Hellborn.Skills.RavingRetribution": {
+     "description": "While you are on fire, taking damage from enemies will spawn homing balls of fire that seek out the attacker and explode on impact. Fireballs only trigger once per second.",
+     "max": 1,
+     "name": "Raving Retribution"
+    },
+    "GD_Lilac_Skills_Mania.Skills.EmbraceThePain": {
+     "description": "Fire Rate is increased when your shields are down.<br><br>Shield Recharge Delay increased.",
+     "max": 5,
+     "name": "Embrace the Pain"
+    },
+    "GD_Lilac_Skills_Mania.Skills.EmptyRage": {
+     "description": "Melee Damage increased.<br><br>Additional bonus damage if your shield is down or when your magazine is empty.",
+     "max": 5,
+     "name": "Empty the Rage"
+    },
+    "GD_Lilac_Skills_Mania.Skills.FeedTheMeat": {
+     "description": "Maximum Health and Shield Recharge Delay increased.",
+     "max": 5,
+     "name": "Feed the Meat"
+    },
+    "GD_Lilac_Skills_Mania.Skills.FuelTheRampage": {
+     "description": "Taking damage recharges Buzz Axe Rampage at a faster rate. Taking health damage increases the bonus even further.<br><br>You can now be damaged by teammates.",
+     "max": 5,
+     "name": "Fuel the Rampage"
+    },
+    "GD_Lilac_Skills_Mania.Skills.LightTheFuse": {
+     "description": "Fight For Your Life is replaced with Light the Fuse. During Light the Fuse you pull out a live bundle of dynamite and can move normally. The bundle detonates when the timer runs out. If you kill someone you are revived.<br><br>Getting a revive with the bundle explosion gives you bonus Movement Speed for the remainder of the time that was left in Light the Fuse.<br><br>Throw dynamite sticks with [Fire key].<br>Detonate bundle by holding [Use key].",
+     "max": 1,
+     "name": "Light the Fuse"
+    },
+    "GD_Lilac_Skills_Mania.Skills.PullThePin": {
+     "description": "When you die, you drop a free grenade. If you kill an enemy with it, you get double XP.",
+     "max": 1,
+     "name": "Pull the Pin"
+    },
+    "GD_Lilac_Skills_Mania.Skills.RedeemTheSoul": {
+     "description": "You can instantly Revive down teammates. After reviving a teammate in this way you must Fight For Your Life. <font color=\"#AAAAAA\">(You may revive in this way only once each time Buzz Axe Rampage is on cooldown.)</font><br><br>Increased time during Fight For Your Life.",
+     "max": 1,
+     "name": "Redeem the Soul"
+    },
+    "GD_Lilac_Skills_Mania.Skills.ReleaseTheBeast": {
+     "description": "Activating Buzz Axe Rampage when at or below 33% of your max health remaining instantly refills your health and transforms you into a Badass Psycho Mutant. You deal increased Melee Damage and receive significant damage reduction for the duration of the rampage.<br><br>When you return to normal, your Buzz Axe Rampage is instantly recharged.<br><font color=\"#70FFFF\">There is an ! next to the health bar when below 33%.</font>",
+     "max": 1,
+     "name": "Release the Beast"
+    },
+    "GD_Lilac_Skills_Mania.Skills.SaltTheWound": {
+     "description": "Taking damage from an enemy while your shield is down adds a stack of Salt the Wound.<br><br>Melee and Shotgun Damage increased for each stack.",
+     "max": 5,
+     "name": "Salt the Wound"
+    },
+    "GD_Lilac_Skills_Mania.Skills.SilenceTheVoices": {
+     "description": "Melee Damage significantly increased.<br><br>Chance when performing a melee attack that you attack yourself.",
+     "max": 5,
+     "name": "Silence the Voices"
+    },
+    "GD_Lilac_Skills_Mania.Skills.StripTheFlesh": {
+     "description": "Explosive Elemental Damage increased.<br><br>Bonus increased when in Fight For Your Life.",
+     "max": 5,
+     "name": "Strip the Flesh"
+    },
+    "GD_Lilac_Skills_Mania.Skills.ThrillOfTheKill": {
+     "description": "A percentage of Overkill Damage <font color=\"#AAAAAA\">(damage that is over and above what was needed to kill the enemy)</font> is returned to you as Health. The lower your health the higher the percentage.",
+     "max": 5,
+     "name": "Thrill of the Kill"
+    }
+   }
+  },
+  "GD_Mercenary.Character.CharClass_Mercenary": {
+   "action": "GD_Mercenary_Skills.ActionSkill.Skill_Gunzerking",
+   "branches": [
+    {
+     "name": "GUN LUST",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Gun_Lust.LockedandLoaded",
+        null,
+        "GD_Mercenary_Skills.Gun_Lust.QuickDraw"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Gun_Lust.ImYourHuckleberry",
+        null,
+        "GD_Mercenary_Skills.Gun_Lust.AllIneedIsOne"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Gun_Lust.DivergentLikness",
+        "GD_Mercenary_Skills.Gun_Lust.AutoLoader",
+        "GD_Mercenary_Skills.Gun_Lust.MoneyShot"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Gun_Lust.LayWaste",
+        "GD_Mercenary_Skills.Gun_Lust.DownNotOut",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Mercenary_Skills.Gun_Lust.KeepItPipingHot",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Mercenary_Skills.Gun_Lust.NoKillLikeOverkill",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "RAMPAGE",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Rampage.Inconceivable",
+        null,
+        "GD_Mercenary_Skills.Rampage.FilledtotheBrim"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Rampage.AllInTheReflexes",
+        null,
+        "GD_Mercenary_Skills.Rampage.LastLonger"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Rampage.ImReadyAlready",
+        "GD_Mercenary_Skills.Rampage.SteadyAsSheGoes",
+        "GD_Mercenary_Skills.Rampage.5Shotsor6"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Rampage.YippeeKiYay",
+        "GD_Mercenary_Skills.Rampage.DoubleYourFun",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Mercenary_Skills.Rampage.GetSome",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Mercenary_Skills.Rampage.KeepFiring",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "BRAWN",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Brawn.Diehard",
+        null,
+        "GD_Mercenary_Skills.Brawn.Incite"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Brawn.Asbestos",
+        null,
+        "GD_Mercenary_Skills.Brawn.ImTheJuggernaut"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Brawn.AintGotTimeToBleed",
+        "GD_Mercenary_Skills.Brawn.FistfulOfHurt",
+        "GD_Mercenary_Skills.Brawn.OutOfBubblegum"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Mercenary_Skills.Brawn.BusThatCantSlowDown",
+        "GD_Mercenary_Skills.Brawn.JustGotReal",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Mercenary_Skills.Brawn.SexualTyrannosaurus",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Mercenary_Skills.Brawn.ComeAtMeBro",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    }
+   ],
+   "class": "mercenary",
+   "skills": {
+    "GD_Mercenary_Skills.ActionSkill.Skill_Gunzerking": {
+     "description": "Action Skill. Press [ActionSkill key] to draw a second gun and go nuts! While Gunzerking you Instantly Regain 50% of Your Total Health, gain Damage Reduction against enemy attacks, and constantly Regenerate Health and Ammo. Does not regenerate rockets.",
+     "max": 1,
+     "name": "Gunzerking"
+    },
+    "GD_Mercenary_Skills.Brawn.AintGotTimeToBleed": {
+     "description": "While Gunzerking you Regenerate Health. The lower your current Health the more powerful the Regeneration.",
+     "max": 5,
+     "name": "Ain't Got Time to Bleed"
+    },
+    "GD_Mercenary_Skills.Brawn.Asbestos": {
+     "description": "Reduces the duration of Status Effects on you (such as being on Fire, Corroded, Electrocuted, or Slagged).",
+     "max": 5,
+     "name": "Asbestos"
+    },
+    "GD_Mercenary_Skills.Brawn.BusThatCantSlowDown": {
+     "description": "Increases your Movement Speed while Gunzerking.",
+     "max": 5,
+     "name": "Bus That Can't Slow Down"
+    },
+    "GD_Mercenary_Skills.Brawn.ComeAtMeBro": {
+     "description": "Action Skill Augment. While Gunzerking press [ActionSkill key] to taunt your enemies and instantly gain Full Health. Taunted enemies are more likely to attack you, but for the next few seconds you gain massive damage reduction.",
+     "max": 1,
+     "name": "Come At Me Bro"
+    },
+    "GD_Mercenary_Skills.Brawn.Diehard": {
+     "description": "Increases your Maximum Health and gives you a small amount of Health Regeneration.",
+     "max": 5,
+     "name": "Hard to Kill"
+    },
+    "GD_Mercenary_Skills.Brawn.FistfulOfHurt": {
+     "description": "Melee Override. Press [Melee key] to throw all your weight into a punch, causing massive damage and knocking back the enemy. Fistful of Hurt has a cooldown. While Fistful of Hurt is on cooldown, [Melee key] will perform a regular melee attack.",
+     "max": 1,
+     "name": "Fistful of Hurt"
+    },
+    "GD_Mercenary_Skills.Brawn.ImTheJuggernaut": {
+     "description": "Kill Skill. Killing an enemy reduces all damage you take for a few seconds.",
+     "max": 5,
+     "name": "I'm the Juggernaut"
+    },
+    "GD_Mercenary_Skills.Brawn.Incite": {
+     "description": "Taking damage from enemies increases your Movement Speed and Reload Speed for a few seconds.",
+     "max": 5,
+     "name": "Incite"
+    },
+    "GD_Mercenary_Skills.Brawn.JustGotReal": {
+     "description": "Increases the Damage you deal with all gun types. The lower your health the greater the damage bonus.",
+     "max": 5,
+     "name": "Just Got Real"
+    },
+    "GD_Mercenary_Skills.Brawn.OutOfBubblegum": {
+     "description": "Increases your Fire Rate with all gun types while your Shields are depleted.",
+     "max": 5,
+     "name": "Out of Bubblegum"
+    },
+    "GD_Mercenary_Skills.Brawn.SexualTyrannosaurus": {
+     "description": "Taking damage gives you Health Regeneration for 5 seconds. This effect does not stack multiple times.",
+     "max": 5,
+     "name": "Sexual Tyrannosaurus"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.AllIneedIsOne": {
+     "description": "Swapping Weapons causes your next shot fired to deal Bonus Damage.",
+     "max": 5,
+     "name": "All I Need is One"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.AutoLoader": {
+     "description": "Killing an enemy Instantly Reloads all of the guns that you have equipped that are not currently in your hands. Swapping guns after Auto-Loader has reloaded a gun triggers Locked & Loaded.",
+     "max": 1,
+     "name": "Auto-Loader"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.DivergentLikness": {
+     "description": "When Gunzerking with two guns of the same type, you deal Bonus Damage. When Gunzerking with two different types of guns you gain Bonus Accuracy.",
+     "max": 5,
+     "name": "Divergent Likeness"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.DownNotOut": {
+     "description": "You can Gunzerk while in Fight For Your Life.",
+     "max": 1,
+     "name": "Down Not Out"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.ImYourHuckleberry": {
+     "description": "Increases Damage and Reload Speed with Pistols.",
+     "max": 5,
+     "name": "I'm Your Huckleberry"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.KeepItPipingHot": {
+     "description": "While Gunzerking is in the process of cooling down you gain bonus Gun Damage, Melee Damage, and Grenade Damage.",
+     "max": 5,
+     "name": "Keep It Piping Hot"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.LayWaste": {
+     "description": "Kill Skill. Killing an enemy gives you increased Fire Rate and Critical Hit Damage with all guns for a short while.",
+     "max": 5,
+     "name": "Lay Waste"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.LockedandLoaded": {
+     "description": "Reloading your gun gives you a Fire Rate bonus for a short time.",
+     "max": 5,
+     "name": "Locked and Loaded"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.MoneyShot": {
+     "description": "The last round fired from your magazine gains massive Bonus Damage. Guns with small magazines receive a smaller bonus. This skill works with all weapon types.",
+     "max": 5,
+     "name": "Money Shot"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.NoKillLikeOverkill": {
+     "description": "When you kill an enemy you gain a bonus to Gun Damage equal to the amount of excess damage you dealt to the enemy you just killed.",
+     "max": 1,
+     "name": "No Kill Like Overkill"
+    },
+    "GD_Mercenary_Skills.Gun_Lust.QuickDraw": {
+     "description": "Increases Weapon Swap Speed and Critical Hit Damage with all gun types.",
+     "max": 5,
+     "name": "Quick Draw"
+    },
+    "GD_Mercenary_Skills.Rampage.5Shotsor6": {
+     "description": "Kill Skill. Killing an enemy causes every shot fired to have a chance to add ammunition into the magazine instead of expending ammunition.",
+     "max": 5,
+     "name": "5 Shots or 6"
+    },
+    "GD_Mercenary_Skills.Rampage.AllInTheReflexes": {
+     "description": "Increases your Reload Speed and Melee Damage.",
+     "max": 5,
+     "name": "All in the Reflexes"
+    },
+    "GD_Mercenary_Skills.Rampage.DoubleYourFun": {
+     "description": "Throwing a Grenade while Gunzerking causes you to throw 2 grenades. The 2nd grenade does not cost ammo.",
+     "max": 1,
+     "name": "Double Your Fun"
+    },
+    "GD_Mercenary_Skills.Rampage.FilledtotheBrim": {
+     "description": "Increases your Magazine Size with all weapon types. Also increases your Ammo Carrying Capacity with all ammo types.",
+     "max": 5,
+     "name": "Filled to the Brim"
+    },
+    "GD_Mercenary_Skills.Rampage.GetSome": {
+     "description": "Shooting an enemy decreases the Cooldown on Gunzerking. This effect can only occur once every 3 seconds.",
+     "max": 5,
+     "name": "Get Some"
+    },
+    "GD_Mercenary_Skills.Rampage.ImReadyAlready": {
+     "description": "Increases the Cooldown Rate of your Gunzerking ability.",
+     "max": 5,
+     "name": "I'm Ready Already"
+    },
+    "GD_Mercenary_Skills.Rampage.Inconceivable": {
+     "description": "Your shots have a chance to not consume ammo. The lower your health and shields, the greater the chance of free ammo.",
+     "max": 5,
+     "name": "Inconceivable"
+    },
+    "GD_Mercenary_Skills.Rampage.KeepFiring": {
+     "description": "While Gunzerking, the longer you hold down the trigger the faster your guns fire and the faster you reload.",
+     "max": 1,
+     "name": "Keep Firing..."
+    },
+    "GD_Mercenary_Skills.Rampage.LastLonger": {
+     "description": "Increases Gunzerking Duration.",
+     "max": 5,
+     "name": "Last Longer"
+    },
+    "GD_Mercenary_Skills.Rampage.SteadyAsSheGoes": {
+     "description": "Reduces Recoil with both guns while Gunzerking. Additionally, each shot that hits an enemy has a chance to improve your Accuracy with both guns.",
+     "max": 1,
+     "name": "Steady as She Goes"
+    },
+    "GD_Mercenary_Skills.Rampage.YippeeKiYay": {
+     "description": "Killing an enemy while Gunzerking increases the amount of time you can Gunzerk.",
+     "max": 5,
+     "name": "Yippee Ki Yay"
+    }
+   }
+  },
+  "GD_Siren.Character.CharClass_Siren": {
+   "action": "GD_Siren_Skills.Phaselock.Skill_Phaselock",
+   "branches": [
+    {
+     "name": "MOTION",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Siren_Skills.Motion.Ward",
+        null,
+        "GD_Siren_Skills.Motion.Accelerate"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Siren_Skills.Motion.Suspension",
+        null,
+        "GD_Siren_Skills.Motion.KineticReflection"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Siren_Skills.Motion.Fleet",
+        "GD_Siren_Skills.Motion.Converge",
+        "GD_Siren_Skills.Motion.Inertia"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Motion.Quicken",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Motion.SubSequence",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Motion.ThoughtLock",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "HARMONY",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Siren_Skills.Harmony.MindsEye",
+        null,
+        "GD_Siren_Skills.Harmony.SweetRelease"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Siren_Skills.Harmony.Restoration",
+        null,
+        "GD_Siren_Skills.Harmony.Wreck"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Siren_Skills.Harmony.Elated",
+        "GD_Siren_Skills.Harmony.Res",
+        "GD_Siren_Skills.Harmony.Recompense"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Harmony.Sustenance",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Harmony.LifeTap",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Harmony.Scorn",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "CATACLYSM",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Siren_Skills.Cataclysm.Flicker",
+        null,
+        "GD_Siren_Skills.Cataclysm.Foresight"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Siren_Skills.Cataclysm.Immolate",
+        null,
+        "GD_Siren_Skills.Cataclysm.Helios"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Siren_Skills.Cataclysm.ChainReaction",
+        "GD_Siren_Skills.Cataclysm.CloudKill",
+        "GD_Siren_Skills.Cataclysm.Backdraft"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Cataclysm.Reaper",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Cataclysm.BlightPhoenix",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Siren_Skills.Cataclysm.Ruin",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    }
+   ],
+   "class": "siren",
+   "skills": {
+    "GD_Siren_Skills.Cataclysm.Backdraft": {
+     "description": "Your melee attacks deal additional Fire Damage. Also, when your shields become depleted you create a fiery explosion, damaging nearby enemies. Your shields must fully recharge between explosions.",
+     "max": 5,
+     "name": "Backdraft"
+    },
+    "GD_Siren_Skills.Cataclysm.BlightPhoenix": {
+     "description": "Kill Skill. Killing an enemy causes you to deal constant Fire and Corrosive Damage to nearby enemies for a short time. The damage is based on your Level and the Level of Blight Phoenix.",
+     "max": 5,
+     "name": "Blight Phoenix"
+    },
+    "GD_Siren_Skills.Cataclysm.ChainReaction": {
+     "description": "While you have an enemy Phaselocked all of your shots that hit enemies have a chance to ricochet and hit another nearby enemy. Chain Reaction only works with bullets.",
+     "max": 5,
+     "name": "Chain Reaction"
+    },
+    "GD_Siren_Skills.Cataclysm.CloudKill": {
+     "description": "Shooting an enemy creates a lingering Acid Cloud, dealing constant Corrosive Damage to enemies who touch it. Only one Acid Cloud can be active at a time.",
+     "max": 1,
+     "name": "Cloud Kill"
+    },
+    "GD_Siren_Skills.Cataclysm.Flicker": {
+     "description": "Increases your chance to cause Status Effects with Fire, Shock, Corrosive and Slag guns.",
+     "max": 5,
+     "name": "Flicker"
+    },
+    "GD_Siren_Skills.Cataclysm.Foresight": {
+     "description": "Increases Magazine Size and Reload Speed with all weapon types.",
+     "max": 5,
+     "name": "Foresight"
+    },
+    "GD_Siren_Skills.Cataclysm.Helios": {
+     "description": "Phaselocking an enemy causes a fiery explosion, damaging all nearby enemies.",
+     "max": 5,
+     "name": "Helios"
+    },
+    "GD_Siren_Skills.Cataclysm.Immolate": {
+     "description": "Adds Fire Damage to all shots fired while in Fight For Your Life. The additional Fire Damage is based on the Damage of the weapon you're firing.",
+     "max": 5,
+     "name": "Immolate"
+    },
+    "GD_Siren_Skills.Cataclysm.Reaper": {
+     "description": "You deal increased Gun Damage to any enemy who has more than 50% of his health remaining.",
+     "max": 5,
+     "name": "Reaper"
+    },
+    "GD_Siren_Skills.Cataclysm.Ruin": {
+     "description": "Action Skill Augmentation. Phaselock now Slags, Electrocutes, and Corrodes all nearby enemies.",
+     "max": 1,
+     "name": "Ruin"
+    },
+    "GD_Siren_Skills.Harmony.Elated": {
+     "description": "While you have an enemy Phaselocked you and your friends Regenerate Health.",
+     "max": 5,
+     "name": "Elated"
+    },
+    "GD_Siren_Skills.Harmony.LifeTap": {
+     "description": "Kill Skill. Killing an enemy causes you to Steal Health from any enemy you damage. This effect lasts a short while.",
+     "max": 5,
+     "name": "Life Tap"
+    },
+    "GD_Siren_Skills.Harmony.MindsEye": {
+     "description": "Increases Critical Hit Damage and Melee Damage.",
+     "max": 5,
+     "name": "Mind's Eye"
+    },
+    "GD_Siren_Skills.Harmony.Recompense": {
+     "description": "When you take Health Damage there is a chance that your attacker takes damage equal to the amount of health you lost.",
+     "max": 5,
+     "name": "Recompense"
+    },
+    "GD_Siren_Skills.Harmony.Res": {
+     "description": "You can instantly revive a friend in Fight For Your Life by using Phaselock on him/her.",
+     "max": 1,
+     "name": "Res"
+    },
+    "GD_Siren_Skills.Harmony.Restoration": {
+     "description": "Shooting other players heals them. Also increases your Maximum Health.",
+     "max": 5,
+     "name": "Restoration"
+    },
+    "GD_Siren_Skills.Harmony.Scorn": {
+     "description": "Melee Override Skill. Press [Melee key] to throw an Orb of Slag that constantly damages enemies near it. This ability has a cooldown. Pressing [Melee key] when Scorn is on cooldown will perform a regular melee attack.",
+     "max": 1,
+     "name": "Scorn"
+    },
+    "GD_Siren_Skills.Harmony.Sustenance": {
+     "description": "You constantly Regenerate Health. The lower your current Health the more powerful the Regeneration.",
+     "max": 5,
+     "name": "Sustenance"
+    },
+    "GD_Siren_Skills.Harmony.SweetRelease": {
+     "description": "If the enemy you have Phaselocked is killed it generates Life Orbs that automatically seek out and heal you and your friends. The healing is stronger when you or your friend's health is low.",
+     "max": 5,
+     "name": "Sweet Release"
+    },
+    "GD_Siren_Skills.Harmony.Wreck": {
+     "description": "While you have an enemy Phaselocked you gain increased Fire Rate and Damage with all gun types.",
+     "max": 5,
+     "name": "Wreck"
+    },
+    "GD_Siren_Skills.Motion.Accelerate": {
+     "description": "Increases Damage and Bullet Speed with all gun types.",
+     "max": 5,
+     "name": "Accelerate"
+    },
+    "GD_Siren_Skills.Motion.Converge": {
+     "description": "Action Skill Augmentation. Your Phaselock ability now also pulls nearby enemies toward the original target. This deals a small amount of damage to the affected enemies.",
+     "max": 1,
+     "name": "Converge"
+    },
+    "GD_Siren_Skills.Motion.Fleet": {
+     "description": "Your Movement Speed increases while your shields are depleted.",
+     "max": 5,
+     "name": "Fleet"
+    },
+    "GD_Siren_Skills.Motion.Inertia": {
+     "description": "Kill Skill. Killing an enemy causes your Shields to quickly regenerate and increases your Reload Speed for a few seconds.",
+     "max": 5,
+     "name": "Inertia"
+    },
+    "GD_Siren_Skills.Motion.KineticReflection": {
+     "description": "Kill Skill. After killing an enemy you gain the ability to deflect enemy bullets, sending them flying toward nearby enemies. You take reduced damage from deflected bullets. Kinetic Reflection only works with bullets. This effect lasts for a short time.",
+     "max": 5,
+     "name": "Kinetic Reflection"
+    },
+    "GD_Siren_Skills.Motion.Quicken": {
+     "description": "Increases the Cooldown Rate of your Phaselock's ability.",
+     "max": 5,
+     "name": "Quicken"
+    },
+    "GD_Siren_Skills.Motion.SubSequence": {
+     "description": "Action Skill Augmentation. When an enemy under the effects of your Phaselock dies there is a chance for your Phaselock ability to seek out and affect another target.",
+     "max": 5,
+     "name": "Sub-Sequence"
+    },
+    "GD_Siren_Skills.Motion.Suspension": {
+     "description": "Increases the duration of Phaselock.",
+     "max": 5,
+     "name": "Suspension"
+    },
+    "GD_Siren_Skills.Motion.ThoughtLock": {
+     "description": "Action Skill Alteration. Phaselock causes enemies to turn on their friends instead of being locked down. Additionally, Phaselock's Duration is increased, but so is its Cooldown.",
+     "max": 1,
+     "name": "Thoughtlock"
+    },
+    "GD_Siren_Skills.Motion.Ward": {
+     "description": "Improves your Shield Capacity and Shield Recharge Delay.",
+     "max": 5,
+     "name": "Ward"
+    },
+    "GD_Siren_Skills.Phaselock.Skill_Phaselock": {
+     "description": "Action Skill. Press [ActionSkill key] to lock an enemy in another dimension, preventing him from fighting back for a short while. Some enemies cannot be Phaselocked and instead instantly take damage.",
+     "max": 1,
+     "name": "Phaselock"
+    }
+   }
+  },
+  "GD_Soldier.Character.CharClass_Soldier": {
+   "action": "GD_Soldier_Skills.Scorpio.Skill_Scorpio",
+   "branches": [
+    {
+     "name": "GUERRILLA",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Soldier_Skills.Guerrilla.Sentry",
+        null,
+        "GD_Soldier_Skills.Guerrilla.Ready"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Guerrilla.LaserSight",
+        null,
+        "GD_Soldier_Skills.Guerrilla.Willing"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Guerrilla.Onslaught",
+        "GD_Soldier_Skills.Guerrilla.ScorchedEarth",
+        "GD_Soldier_Skills.Guerrilla.Able"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Guerrilla.Grenadier",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Guerrilla.CrisisManagement",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Guerrilla.DoubleUp",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "GUNPOWDER",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Soldier_Skills.Gunpowder.Impact",
+        null,
+        "GD_Soldier_Skills.Gunpowder.Expertise"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Gunpowder.Overload",
+        null,
+        "GD_Soldier_Skills.Gunpowder.MetalStorm"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Gunpowder.Steady",
+        "GD_Soldier_Skills.Gunpowder.LongBowTurret",
+        "GD_Soldier_Skills.Gunpowder.Battlefront"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Gunpowder.DutyCalls",
+        "GD_Soldier_Skills.Gunpowder.DoOrDie",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Gunpowder.Ranger",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Gunpowder.Nuke",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "SURVIVAL",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Soldier_Skills.Survival.HealthY",
+        null,
+        "GD_Soldier_Skills.Survival.Preparation"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Survival.LastDitchEffort",
+        null,
+        "GD_Soldier_Skills.Survival.Pressure"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Survival.Forbearance",
+        "GD_Soldier_Skills.Survival.PhalanxShield",
+        "GD_Soldier_Skills.Survival.QuickCharge"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Soldier_Skills.Survival.Resourceful",
+        "GD_Soldier_Skills.Survival.Mag-Lock",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Survival.Grit",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Soldier_Skills.Survival.Gemini",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    }
+   ],
+   "class": "soldier",
+   "skills": {
+    "GD_Soldier_Skills.Guerrilla.Able": {
+     "description": "Damaging an enemy causes you to Regenerate Health for a few seconds. This effect does not stack multiple times.",
+     "max": 5,
+     "name": "Able"
+    },
+    "GD_Soldier_Skills.Guerrilla.CrisisManagement": {
+     "description": "You gain bonus Gun Damage and Melee Damage while your shields are depleted.",
+     "max": 5,
+     "name": "Crisis Management"
+    },
+    "GD_Soldier_Skills.Guerrilla.DoubleUp": {
+     "description": "Adds a 2nd Gun to your Sabre Turret and changes both guns to fire Slag bullets. Slagged enemies take bonus damage from all Non-Slag attacks.",
+     "max": 1,
+     "name": "Double Up"
+    },
+    "GD_Soldier_Skills.Guerrilla.Grenadier": {
+     "description": "Increases the maximum number of Grenades you can carry.",
+     "max": 5,
+     "name": "Grenadier"
+    },
+    "GD_Soldier_Skills.Guerrilla.LaserSight": {
+     "description": "Increases the Accuracy of your Sabre Turret.",
+     "max": 5,
+     "name": "Laser Sight"
+    },
+    "GD_Soldier_Skills.Guerrilla.Onslaught": {
+     "description": "Kill Skill. Killing an enemy increases your Gun Damage and Movement Speed for a short time.",
+     "max": 5,
+     "name": "Onslaught"
+    },
+    "GD_Soldier_Skills.Guerrilla.Ready": {
+     "description": "Increases your Reload Speed.",
+     "max": 5,
+     "name": "Ready"
+    },
+    "GD_Soldier_Skills.Guerrilla.ScorchedEarth": {
+     "description": "Adds Multi-Rocket Pods to your Sabre Turret.",
+     "max": 1,
+     "name": "Scorched Earth"
+    },
+    "GD_Soldier_Skills.Guerrilla.Sentry": {
+     "description": "Increases the number of shots your Sabre Turret fires in each burst. Also increases your Sabre Turret's Duration.",
+     "max": 5,
+     "name": "Sentry"
+    },
+    "GD_Soldier_Skills.Guerrilla.Willing": {
+     "description": "Improves your Shield Recharge Rate and Shield Recharge Delay.",
+     "max": 5,
+     "name": "Willing"
+    },
+    "GD_Soldier_Skills.Gunpowder.Battlefront": {
+     "description": "While your Sabre Turret is deployed you deal increased Damage.",
+     "max": 5,
+     "name": "Battlefront"
+    },
+    "GD_Soldier_Skills.Gunpowder.DoOrDie": {
+     "description": "Allows you to throw grenades while in Fight For Your Life. Also increases your Grenade Damage and Rocket Launcher Damage.",
+     "max": 1,
+     "name": "Do or Die"
+    },
+    "GD_Soldier_Skills.Gunpowder.DutyCalls": {
+     "description": "Increases the Damage and Fire Rate of non-elemental guns.",
+     "max": 5,
+     "name": "Duty Calls"
+    },
+    "GD_Soldier_Skills.Gunpowder.Expertise": {
+     "description": "Increases your Weapon Swap Speed and Aim Speed. Also, your Movement Speed is increased while aiming.",
+     "max": 5,
+     "name": "Expertise"
+    },
+    "GD_Soldier_Skills.Gunpowder.Impact": {
+     "description": "Increases Gun Damage and Melee Damage.",
+     "max": 5,
+     "name": "Impact"
+    },
+    "GD_Soldier_Skills.Gunpowder.LongBowTurret": {
+     "description": "Your Sabre Turret can be deployed using Longbow technology, allowing you to deploy it much further away. Also, increases the Health of your Sabre Turret.",
+     "max": 1,
+     "name": "Longbow Turret"
+    },
+    "GD_Soldier_Skills.Gunpowder.MetalStorm": {
+     "description": "Kill Skill. Killing an enemy dramatically increases your Fire Rate and reduces Recoil for a short period of time.",
+     "max": 5,
+     "name": "Metal Storm"
+    },
+    "GD_Soldier_Skills.Gunpowder.Nuke": {
+     "description": "Deploying your Sabre Turret sets off a small Nuclear Blast.",
+     "max": 1,
+     "name": "Nuke"
+    },
+    "GD_Soldier_Skills.Gunpowder.Overload": {
+     "description": "Increases Magazine Size with Assault Rifles.",
+     "max": 5,
+     "name": "Overload"
+    },
+    "GD_Soldier_Skills.Gunpowder.Ranger": {
+     "description": "Makes you better at just about Everything.",
+     "max": 5,
+     "name": "Ranger"
+    },
+    "GD_Soldier_Skills.Gunpowder.Steady": {
+     "description": "Reduces Recoil with all weapon types and increases Grenade Damage and Rocket Launcher Damage.",
+     "max": 5,
+     "name": "Steady"
+    },
+    "GD_Soldier_Skills.Scorpio.Skill_Scorpio": {
+     "description": "Action Skill. Press [ActionSkill key] to deploy a Sabre Turret that automatically fires at enemies. When you're near the Sabre Turret press [Use key] to reclaim it and refund some of your Cooldown.",
+     "max": 1,
+     "name": "Sabre Turret"
+    },
+    "GD_Soldier_Skills.Survival.Forbearance": {
+     "description": "Reduces the duration of Status Effects on you (Burned, Corroded, Electrocuted, and Slagged). Also increases Maximum Health.",
+     "max": 5,
+     "name": "Forbearance"
+    },
+    "GD_Soldier_Skills.Survival.Gemini": {
+     "description": "Allows you to deploy Two Sabre Turrets. Once the first Sabre Turret is deployed press [ActionSkill key] again to deploy the 2nd.",
+     "max": 1,
+     "name": "Gemini"
+    },
+    "GD_Soldier_Skills.Survival.Grit": {
+     "description": "You gain a chance to ignore damage that would otherwise kill you. In addition to not taking damage from the attack you will Regenerate half your Maximum Health.",
+     "max": 5,
+     "name": "Grit"
+    },
+    "GD_Soldier_Skills.Survival.HealthY": {
+     "description": "Increases your Maximum Health.",
+     "max": 5,
+     "name": "Healthy"
+    },
+    "GD_Soldier_Skills.Survival.LastDitchEffort": {
+     "description": "Increases your Gun Damage and Movement Speed while in Fight For Your Life.",
+     "max": 5,
+     "name": "Last Ditch Effort"
+    },
+    "GD_Soldier_Skills.Survival.Mag-Lock": {
+     "description": "Your Sabre Turret can be deployed on walls and ceilings.",
+     "max": 1,
+     "name": "Mag-Lock"
+    },
+    "GD_Soldier_Skills.Survival.PhalanxShield": {
+     "description": "Your Sabre Turret projects a Protective Shield. The Shield attempts to block enemy ranged attacks, but lets friendly ranged attacks pass through. Enemy movement and melee attacks are not affected.",
+     "max": 1,
+     "name": "Phalanx Shield"
+    },
+    "GD_Soldier_Skills.Survival.Preparation": {
+     "description": "Increases your Shield Capacity. Also, when your shield is full you Regenerate Health.",
+     "max": 5,
+     "name": "Preparation"
+    },
+    "GD_Soldier_Skills.Survival.Pressure": {
+     "description": "Improves your Reload Speed and Shield Recharge Delay based on how much Health you have. The lower your Health the higher the bonuses.",
+     "max": 5,
+     "name": "Pressure"
+    },
+    "GD_Soldier_Skills.Survival.QuickCharge": {
+     "description": "Kill Skill. Killing an enemy causes your Shields to quickly regenerate for a short time.",
+     "max": 5,
+     "name": "Quick Charge"
+    },
+    "GD_Soldier_Skills.Survival.Resourceful": {
+     "description": "Increases your Cooldown Rate on your Sabre Turret Action Skill.",
+     "max": 5,
+     "name": "Resourceful"
+    }
+   }
+  },
+  "GD_Tulip_Mechromancer.Character.CharClass_Mechromancer": {
+   "action": "GD_Tulip_Mechromancer_Skills.Action.Skill_DeathTrap",
+   "branches": [
+    {
+     "name": "BEST FRIENDS FOREVER",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.CloseEnough",
+        null,
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.CookingUpTrouble"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.FancyMathematics",
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.BuckUp",
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.TheBetterHalf"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.PotentAsAPony",
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.UpshotRobot",
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.UnstoppableForce"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.ExplosiveClap",
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.MadeOfSternerStuff",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.20PercentCooler",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Tulip_Mechromancer_Skills.BestFriendsForever.SharingIsCaring",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "LITTLE BIG TROUBLE",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.MorePep",
+        null,
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.Myelin"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ShockStorm",
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.TheStare",
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.StrengthOfFiveGorillas"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ElectricalBurn",
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ShockAndAAAGGGHHH",
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.EvilEnchantress"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.OneTwoBoom",
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.WiresDontTalk",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.InterspersedOutburst",
+        null
+       ],
+       "hidden": [
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.LightningStrike"
+       ]
+      },
+      {
+       "cells": [
+        null,
+        "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.MakeItSparkle",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    },
+    {
+     "name": "ORDERED CHAOS",
+     "tiers": [
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.SmallerLighterFaster",
+        null,
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.Anarchy"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.PreshrunkCyberpunk",
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.RobotRampage",
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.BloodSoakedShields"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.AnnoyedAndroid",
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.Discord",
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.TypecastIconoclast"
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.RationalAnarchist",
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.DeathFromAbove",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.TheNthDegree",
+        null
+       ],
+       "hidden": []
+      },
+      {
+       "cells": [
+        null,
+        "GD_Tulip_Mechromancer_Skills.EmbraceChaos.WithClaws",
+        null
+       ],
+       "hidden": []
+      }
+     ]
+    }
+   ],
+   "class": "mechromancer",
+   "skills": {
+    "GD_Tulip_Mechromancer_Skills.Action.Skill_DeathTrap": {
+     "description": "Action Skill. Press [ActionSkill key] to summon Deathtrap to fight for you.",
+     "max": 1,
+     "name": "Summon Deathtrap"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.20PercentCooler": {
+     "description": "Increases the Cooldown Rate of your Action Skill.",
+     "max": 5,
+     "name": "20% Cooler"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.BuckUp": {
+     "description": "Deathtrap Ability. Deathtrap restores the Shields of one ally.",
+     "max": 1,
+     "name": "Buck Up"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.CloseEnough": {
+     "description": "Your bullets that hit walls or other objects have a chance to ricochet off toward a nearby enemy. Ricocheted bullets deal reduced damage.",
+     "max": 5,
+     "name": "Close Enough"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.CookingUpTrouble": {
+     "description": "While your gun's Magazine is full you Regenerate Health.",
+     "max": 5,
+     "name": "Cooking Up Trouble"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.ExplosiveClap": {
+     "description": "Deathtrap Ability. Deathtrap causes an explosion in front of him, dealing Explosive Damage to all nearby enemies.",
+     "max": 1,
+     "name": "Explosive Clap"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.FancyMathematics": {
+     "description": "Improves Shield Recharge Delay and Shield Recharge Rate based on how low your Health is. The lower your Health the greater the bonuses.",
+     "max": 5,
+     "name": "Fancy Mathematics"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.MadeOfSternerStuff": {
+     "description": "You and Deathtrap gain Damage Reduction against All Damage Types. Additionally, Deathtrap gains bonus Melee Damage.",
+     "max": 5,
+     "name": "Made of Sterner Stuff"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.PotentAsAPony": {
+     "description": "Increases Maximum Health for you and Deathtrap.",
+     "max": 5,
+     "name": "Potent as a Pony"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.SharingIsCaring": {
+     "description": "Grants a copy of your Shield to Deathtrap.",
+     "max": 1,
+     "name": "Sharing is Caring"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.TheBetterHalf": {
+     "description": "When your Magazine is half empty you gain a Fire Rate bonus.",
+     "max": 5,
+     "name": "The Better Half"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.UnstoppableForce": {
+     "description": "Kill Skill. Killing an enemy grants you bonus Movement Speed and causes your Shield to regenerate for a short while.",
+     "max": 5,
+     "name": "Unstoppable Force"
+    },
+    "GD_Tulip_Mechromancer_Skills.BestFriendsForever.UpshotRobot": {
+     "description": "While Deathtrap is active if you or Deathtrap kill an enemy it increases Deathtrap's Duration and grants both of you a stackable Melee Damage bonus. Bonuses are lost when Deathtrap goes away.",
+     "max": 1,
+     "name": "Upshot Robot"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.Anarchy": {
+     "description": "Killing an enemy or fully emptying your gun's Magazine while in combat grants you a stack of Anarchy. For every stack of Anarchy you have you gain bonus Gun Damage, but your Accuracy is decreased. Prematurely reloading your gun removes all stacks of Anarchy. Anarchy stacks are quickly lost while in \"Fight for your Life.\"",
+     "max": 1,
+     "name": "Anarchy"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.AnnoyedAndroid": {
+     "description": "Increases the Movement Speed of Deathtrap.",
+     "max": 5,
+     "name": "Annoyed Android"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.BloodSoakedShields": {
+     "description": "Killing an enemy immediately restores a portion of your Shields but you lose a portion of your Health.",
+     "max": 5,
+     "name": "Blood Soaked Shields"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.DeathFromAbove": {
+     "description": "Shooting an enemy while in midair consumes stacks of Anarchy and causes a Digi-splosion, damaging nearby enemies.",
+     "max": 5,
+     "name": "Death from Above"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.Discord": {
+     "description": "Prematurely reloading activates Discord, granting you bonus Accuracy, Fire Rate, and Health Regeneration. You constantly lose Anarchy stacks while Discord is active. Discord can be shut off by prematurely reloading again.",
+     "max": 1,
+     "name": "Discord"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.PreshrunkCyberpunk": {
+     "description": "Increases the maximum number of Anarchy stacks you can have.",
+     "max": 5,
+     "name": "Preshrunk Cyberpunk"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.RationalAnarchist": {
+     "description": "If you have 0 stacks of Anarchy then the next time you would gain an Anarchy stack you instead gain 25.",
+     "max": 1,
+     "name": "Rational Anarchist"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.RobotRampage": {
+     "description": "Deathtrap Ability. Deathtrap lashes out with a flurry of attacks.",
+     "max": 1,
+     "name": "Robot Rampage"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.SmallerLighterFaster": {
+     "description": "Increases your Reload Speed, but decreases your Magazine Size.",
+     "max": 4,
+     "name": "Smaller, Lighter, Faster"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.TheNthDegree": {
+     "description": "Every Nth bullet that hits an enemy will ricochet toward another nearby enemy.",
+     "max": 5,
+     "name": "The Nth Degree"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.TypecastIconoclast": {
+     "description": "Whenever you get a stack of Anarchy there is a chance that you gain an additional stack.",
+     "max": 5,
+     "name": "Typecast Iconoclast"
+    },
+    "GD_Tulip_Mechromancer_Skills.EmbraceChaos.WithClaws": {
+     "description": "Melee Override Skill. While you have a stack of Anarchy press [Melee key] to Digistruct Claws and swipe twice at an enemy, dealing damage based on the number of Anarchy stacks you currently have and Restoring Health. The lower your health the more health you gain. This attack consumes an Anarchy stack.",
+     "max": 1,
+     "name": "With Claws"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ElectricalBurn": {
+     "description": "When your Electrocute Status Effects deal damage to enemies there is a chance they will burst into flames and take Burn Damage. The amount of Burn Damage is based on the Electrocute damage dealt.",
+     "max": 5,
+     "name": "Electrical Burn"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.EvilEnchantress": {
+     "description": "Kill Skill. Killing an enemy increases the Damage that your Burn, Electrocute, and Corrode status effects deal for a short period of time.",
+     "max": 5,
+     "name": "Evil Enchantress"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.InterspersedOutburst": {
+     "description": "Not shooting an enemy for a short time grants you a stack of Interspersed Outburst. The next time you shoot an enemy all stacks of Interspersed Outburst are consumed and you deal bonus Slag Damage. The more stacks consumed the higher the skill rank the greater the chance of slagging the target.",
+     "max": 5,
+     "name": "Interspersed Outburst"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.LightningStrike": {
+     "description": "Deathtrap Ability. Deathtrap charges his blades with electricity and attacks an enemy dealing Shock Damage.",
+     "max": 1,
+     "name": "Lightning Strike"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.MakeItSparkle": {
+     "description": "Shooting Deathtrap with an elemental weapon charges him with that element, causing his melee attacks to deal additional damage of that element.",
+     "max": 1,
+     "name": "Make It Sparkle"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.MorePep": {
+     "description": "Increases your chances of applying Burn, Electrocute, Corrode, and Slag Status Effects.",
+     "max": 5,
+     "name": "More Pep"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.Myelin": {
+     "description": "Grants you Resistance to Shock Damage. Also increases your Shield Capacity.",
+     "max": 5,
+     "name": "Myelin"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.OneTwoBoom": {
+     "description": "Deathtrap Ability. Deathtrap shoots out an orb of energy at an enemy. If you shoot the orb it will explode, dealing massive Shock Damage to nearby enemies.",
+     "max": 1,
+     "name": "One Two Boom"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ShockAndAAAGGGHHH": {
+     "description": "Reloading your gun causes an Electrical Explosion, damaging nearby enemies.",
+     "max": 1,
+     "name": "Shock and \"AAAGGGGHHH!\""
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ShockStorm": {
+     "description": "Killing an enemy with a Critical Hit causes an Electrical Storm, dealing Electrocute Damage to nearby enemies. Electrical Storms are also caused by Deathtrap whenever he kills an enemy.",
+     "max": 5,
+     "name": "Shock Storm"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.StrengthOfFiveGorillas": {
+     "description": "Increases Melee Damage for you and Deathtrap.",
+     "max": 5,
+     "name": "Strength of Five Gorillas"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.TheStare": {
+     "description": "Deathtrap Ability. Deathtrap fires a laser beam and sweeps it across the battlefield, dealing Burn Damage and possibly Igniting enemies.",
+     "max": 1,
+     "name": "The Stare"
+    },
+    "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.WiresDontTalk": {
+     "description": "Increases all Shock and Electrocute Damage that you inflict.",
+     "max": 5,
+     "name": "Wires Don't Talk"
+    }
+   }
+  }
+ },
+ "generated_from": "installed Borderlands 2 packages",
+ "provenance": "Object paths, branch/tier/column layout, display names, descriptions and max ranks extracted from the installed Borderlands 2 packages (WillowGame/CookedPCConsole/*_Streaming_SF.upk). Data (object names) only; see assets/data/PROVENANCE.md.",
+ "schema": 1
+}

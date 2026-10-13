@@ -460,34 +460,48 @@ pub fn dropdown(ui: &mut egui::Ui, id: &str, current: &str, options: &[String]) 
 pub fn nav_row(
     ui: &egui::Ui,
     rect: Rect,
+    icon: crate::ui::pixel::NavIcon,
     label: &str,
     active: bool,
     count: Option<usize>,
+    reveal: f32,
 ) -> Response {
     let p = palette(ui);
     let response = respond(ui, rect, &format!("nav-{label}"), Sense::click());
-    let hovered = response.hovered();
     if active {
         ui.painter().rect_filled(rect, 0.0, p.acc);
     }
     let color = if active { p.on } else { p.fg };
-    let galley = ui.painter().layout_job(job_with_nums(label, color, 15.0));
-    let lh = galley.size().y;
-    ui.painter().galley(
-        pos2(rect.left() + 10.0, rect.center().y - lh / 2.0),
-        galley,
+    // The icon slides from the left edge (expanded) to the centre (rail); the
+    // label cross-fades out as `reveal` falls to 0.
+    let icon_x = rect.center().x + (rect.left() + 16.0 - rect.center().x) * reveal;
+    crate::ui::pixel::nav_icon(
+        ui.painter(),
+        egui::pos2(icon_x, rect.center().y),
+        icon,
         color,
+        1.0,
+        ppp(ui),
     );
-    if let Some(n) = count {
-        ui.painter().text(
-            rect.right_center() - egui::vec2(10.0, 0.0),
-            egui::Align2::RIGHT_CENTER,
-            n.to_string(),
-            num_font(15.0),
-            color,
+    if reveal > 0.02 {
+        let faded = color.gamma_multiply(reveal);
+        let galley = ui.painter().layout_job(job_with_nums(label, faded, 15.0));
+        let lh = galley.size().y;
+        ui.painter().galley(
+            pos2(rect.left() + 38.0, rect.center().y - lh / 2.0),
+            galley,
+            faded,
         );
+        if let Some(n) = count {
+            ui.painter().text(
+                rect.right_center() - egui::vec2(10.0, 0.0),
+                egui::Align2::RIGHT_CENTER,
+                n.to_string(),
+                num_font(15.0),
+                faded,
+            );
+        }
     }
-    let _ = hovered;
     let a11y = match count {
         Some(n) => format!("{label} ({n})"),
         None => label.to_string(),

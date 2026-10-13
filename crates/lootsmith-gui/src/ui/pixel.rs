@@ -16,6 +16,237 @@
 use crate::theme::Palette;
 use eframe::egui::{self, pos2, vec2, Align2, Color32, FontId, Pos2, Rect, Stroke, TextureOptions};
 
+/// A drawn navigation glyph for the sidebar (no font symbol, so it never
+/// renders as tofu). About 18 px at `scale` 1.0.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NavIcon {
+    Cog,
+    Person,
+    Star,
+    Coin,
+    Bag,
+    Vault,
+    Bullet,
+    List,
+    Pin,
+    Globe,
+    Wheel,
+    Braces,
+    Info,
+    Badge,
+    Import,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+}
+
+/// Paint a [`NavIcon`] centred on `center`. Border widths are snapped to whole
+/// physical pixels (the design-rule gate).
+pub fn nav_icon(
+    painter: &egui::Painter,
+    center: Pos2,
+    icon: NavIcon,
+    color: Color32,
+    scale: f32,
+    ppp: f32,
+) {
+    let s = scale;
+    let stroke = Stroke::new(snap_len((1.6 * s).max(1.0), ppp).max(1.0), color);
+    let r = 7.0 * s;
+    let seg = |a: Pos2, b: Pos2| painter.line_segment([a, b], stroke);
+    match icon {
+        NavIcon::Cog => {
+            painter.circle_filled(center, r * 0.42, color);
+            for i in 0..8 {
+                let a = i as f32 * std::f32::consts::TAU / 8.0;
+                let d = vec2(a.cos(), a.sin());
+                seg(center + d * r * 0.62, center + d * r);
+            }
+        }
+        NavIcon::Person => {
+            painter.circle_filled(center + vec2(0.0, -r * 0.42), r * 0.34, color);
+            seg(
+                center + vec2(-r * 0.7, r * 0.82),
+                center + vec2(-r * 0.42, r * 0.08),
+            );
+            seg(
+                center + vec2(-r * 0.42, r * 0.08),
+                center + vec2(r * 0.42, r * 0.08),
+            );
+            seg(
+                center + vec2(r * 0.42, r * 0.08),
+                center + vec2(r * 0.7, r * 0.82),
+            );
+        }
+        NavIcon::Star => {
+            let mut pts = Vec::with_capacity(10);
+            for i in 0..10 {
+                let rad = if i % 2 == 0 { r } else { r * 0.44 };
+                let a = -std::f32::consts::FRAC_PI_2 + i as f32 * std::f32::consts::PI / 5.0;
+                pts.push(center + vec2(a.cos(), a.sin()) * rad);
+            }
+            painter.add(egui::Shape::convex_polygon(pts, color, Stroke::NONE));
+        }
+        NavIcon::Coin => {
+            painter.circle_stroke(center, r * 0.85, stroke);
+            painter.circle_stroke(center, r * 0.45, stroke);
+        }
+        NavIcon::Bag => {
+            let b = Rect::from_center_size(center + vec2(0.0, r * 0.18), vec2(r * 1.5, r * 1.3));
+            painter.rect_stroke(b, 1.0, stroke, egui::StrokeKind::Inside);
+            painter.add(egui::Shape::line(
+                vec![
+                    pos2(b.left() + r * 0.2, b.top()),
+                    pos2(b.left() + r * 0.2, center.y - r * 0.55),
+                    pos2(b.right() - r * 0.2, center.y - r * 0.55),
+                    pos2(b.right() - r * 0.2, b.top()),
+                ],
+                stroke,
+            ));
+        }
+        NavIcon::Vault => {
+            let b = Rect::from_center_size(center, vec2(r * 1.7, r * 1.5));
+            painter.rect_stroke(b, 1.0, stroke, egui::StrokeKind::Inside);
+            painter.circle_stroke(center, r * 0.4, stroke);
+            seg(center, center + vec2(0.0, -r * 0.4));
+        }
+        NavIcon::Bullet => {
+            let b = Rect::from_center_size(center + vec2(0.0, r * 0.32), vec2(r * 0.7, r * 1.1));
+            painter.rect_filled(b, 1.0, color);
+            painter.add(egui::Shape::convex_polygon(
+                vec![
+                    pos2(b.left(), b.top()),
+                    pos2(b.right(), b.top()),
+                    pos2(center.x, center.y - r * 0.7),
+                ],
+                color,
+                Stroke::NONE,
+            ));
+        }
+        NavIcon::List => {
+            for i in 0..3 {
+                let y = center.y + (i as f32 - 1.0) * r * 0.62;
+                painter.circle_filled(pos2(center.x - r * 0.7, y), r * 0.12, color);
+                seg(pos2(center.x - r * 0.4, y), pos2(center.x + r * 0.75, y));
+            }
+        }
+        NavIcon::Pin => {
+            painter.circle_stroke(center + vec2(0.0, -r * 0.3), r * 0.55, stroke);
+            painter.circle_filled(center + vec2(0.0, -r * 0.3), r * 0.16, color);
+            seg(
+                center + vec2(-r * 0.32, r * 0.12),
+                center + vec2(0.0, r * 0.85),
+            );
+            seg(
+                center + vec2(r * 0.32, r * 0.12),
+                center + vec2(0.0, r * 0.85),
+            );
+        }
+        NavIcon::Globe => {
+            painter.circle_stroke(center, r * 0.85, stroke);
+            seg(center + vec2(-r * 0.85, 0.0), center + vec2(r * 0.85, 0.0));
+            painter.add(egui::Shape::line(
+                vec![
+                    pos2(center.x - r * 0.45, center.y - r * 0.72),
+                    pos2(center.x, center.y),
+                    pos2(center.x - r * 0.45, center.y + r * 0.72),
+                ],
+                stroke,
+            ));
+            painter.add(egui::Shape::line(
+                vec![
+                    pos2(center.x + r * 0.45, center.y - r * 0.72),
+                    pos2(center.x, center.y),
+                    pos2(center.x + r * 0.45, center.y + r * 0.72),
+                ],
+                stroke,
+            ));
+        }
+        NavIcon::Wheel => {
+            painter.circle_stroke(center, r * 0.85, stroke);
+            painter.circle_filled(center, r * 0.2, color);
+            for i in 0..4 {
+                let a = i as f32 * std::f32::consts::TAU / 4.0;
+                let d = vec2(a.cos(), a.sin());
+                seg(center + d * r * 0.2, center + d * r * 0.85);
+            }
+        }
+        NavIcon::Braces => {
+            for (dx, sgn) in [(-r * 0.45, -1.0f32), (r * 0.45, 1.0f32)] {
+                painter.add(egui::Shape::line(
+                    vec![
+                        pos2(center.x + dx + sgn * r * 0.22, center.y - r * 0.65),
+                        pos2(center.x + dx, center.y),
+                        pos2(center.x + dx + sgn * r * 0.22, center.y + r * 0.65),
+                    ],
+                    stroke,
+                ));
+            }
+        }
+        NavIcon::Info => {
+            painter.circle_stroke(center, r * 0.85, stroke);
+            painter.circle_filled(center + vec2(0.0, -r * 0.35), r * 0.1, color);
+            seg(center + vec2(0.0, -r * 0.05), center + vec2(0.0, r * 0.5));
+        }
+        NavIcon::Badge => {
+            let b = Rect::from_center_size(center, vec2(r * 1.5, r * 1.7));
+            painter.rect_stroke(b, 1.0, stroke, egui::StrokeKind::Inside);
+            painter.circle_filled(center + vec2(0.0, -r * 0.35), r * 0.24, color);
+            seg(
+                center + vec2(-r * 0.35, r * 0.5),
+                center + vec2(-r * 0.2, r * 0.15),
+            );
+            seg(
+                center + vec2(r * 0.35, r * 0.5),
+                center + vec2(r * 0.2, r * 0.15),
+            );
+        }
+        NavIcon::Import => {
+            seg(center + vec2(0.0, -r * 0.8), center + vec2(0.0, r * 0.15));
+            painter.add(egui::Shape::convex_polygon(
+                vec![
+                    pos2(center.x - r * 0.35, center.y - r * 0.15),
+                    pos2(center.x + r * 0.35, center.y - r * 0.15),
+                    pos2(center.x, center.y + r * 0.3),
+                ],
+                color,
+                Stroke::NONE,
+            ));
+            painter.add(egui::Shape::line(
+                vec![
+                    pos2(center.x - r * 0.75, center.y + r * 0.35),
+                    pos2(center.x - r * 0.75, center.y + r * 0.8),
+                    pos2(center.x + r * 0.75, center.y + r * 0.8),
+                    pos2(center.x + r * 0.75, center.y + r * 0.35),
+                ],
+                stroke,
+            ));
+        }
+        NavIcon::Search => {
+            painter.circle_stroke(center + vec2(-r * 0.18, -r * 0.18), r * 0.6, stroke);
+            seg(
+                center + vec2(r * 0.26, r * 0.26),
+                center + vec2(r * 0.85, r * 0.85),
+            );
+        }
+        NavIcon::ChevronLeft | NavIcon::ChevronRight => {
+            let sgn = if icon == NavIcon::ChevronLeft {
+                -1.0
+            } else {
+                1.0
+            };
+            painter.add(egui::Shape::line(
+                vec![
+                    pos2(center.x - sgn * r * 0.3, center.y - r * 0.5),
+                    pos2(center.x + sgn * r * 0.3, center.y),
+                    pos2(center.x - sgn * r * 0.3, center.y + r * 0.5),
+                ],
+                stroke,
+            ));
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Snapping (spec rule 7)
 // ---------------------------------------------------------------------------

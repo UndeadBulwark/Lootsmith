@@ -48,16 +48,20 @@ fn build(ui: &mut egui::Ui, g: &mut G) {
     nav_row(
         ui,
         Rect::from_min_size(pos2(8.0, 194.0), vec2(160.0, 28.0)),
+        lootsmith_gui::ui::pixel::NavIcon::Cog,
         "General",
         true,
         Some(3),
+        1.0,
     );
     nav_row(
         ui,
         Rect::from_min_size(pos2(8.0, 226.0), vec2(160.0, 28.0)),
+        lootsmith_gui::ui::pixel::NavIcon::Star,
         "Skills",
         false,
         None,
+        1.0,
     );
     if button(
         ui,

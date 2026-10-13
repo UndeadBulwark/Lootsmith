@@ -1,6 +1,11 @@
 {
  "classes": {
   "GD_Assassin.Character.CharClass_Assassin": {
+   "action_skill": {
+    "icon": "assassin-actionskill.png",
+    "id": "GD_Assassin_Skills.ActionSkill.Skill_Deception",
+    "name": "Decepti0n"
+   },
    "class": "Assassin",
    "name": "Zer0",
    "page": "assassin",
@@ -14,14 +19,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Critical Hit Damage per level .",
+         "col": 0,
+         "desc": "Increases Critical Hit Damage.",
          "icon": "assassin-sniping-0.png",
+         "id": "GD_Assassin_Skills.Sniping.HeadShot",
          "max": 5,
-         "skill": "HeadSh0t"
+         "skill": "Headsh0t"
         },
         {
-         "desc": "% Zoom, % Aim Steadiness, and % Aim Speed (reduces aim disruption when taking damage) per level .",
+         "col": 2,
+         "desc": "Increases your Zoom with all gun types. Also, your Aim is not disrupted as much when taking damage.",
          "icon": "assassin-sniping-1.png",
+         "id": "GD_Assassin_Skills.Sniping.Optics",
          "max": 5,
          "skill": "0ptics"
         }
@@ -31,14 +40,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy gives you % Critical Hit Damage and % Reload Speed per level for a few seconds.",
+         "col": 0,
+         "desc": "Kill Skill. Killing an enemy gives you bonus Critical Hit Damage and Reload Speed for a few seconds.",
          "icon": "assassin-sniping-2.png",
+         "id": "GD_Assassin_Skills.Sniping.Killer",
          "max": 5,
          "skill": "Killer"
         },
         {
-         "desc": "% Accuracy per level .",
+         "col": 2,
+         "desc": "Improves your Accuracy with all gun types.",
          "icon": "assassin-sniping-3.png",
+         "id": "GD_Assassin_Skills.Sniping.Precision",
          "max": 5,
          "skill": "Precisi0n"
         }
@@ -48,20 +61,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "The first shot from a fully loaded magazine deals % Damage per level .",
+         "col": 0,
+         "desc": "The first shot fired from a fully loaded magazine causes Bonus Damage.",
          "icon": "assassin-sniping-4.png",
+         "id": "GD_Assassin_Skills.Sniping.OneShotOneKill",
          "max": 5,
          "skill": "0ne Sh0t 0ne Kill"
         },
         {
-         "desc": "Shots pierce through enemies, gaining % damage per enemy pierced. Enemy crit locations highlighted in Decepti0n.",
+         "col": 1,
+         "desc": "Your shots pierce through enemies. If your shot hits an enemy after piercing an enemy, it causes massive Bonus Damage. B0re does not work with rockets and some special projectiles. Also, while Deception is active, your visor will highlight enemy crit locations.",
          "icon": "assassin-sniping-5.png",
+         "id": "GD_Assassin_Skills.Sniping.Bore",
          "max": 1,
          "skill": "B0re"
         },
         {
-         "desc": "% Bullet Speed, % Critical Hit Damage, and % Gun Damage per level .",
+         "col": 2,
+         "desc": "Increases Bullet Speed, Damage, and Critical Hit Damage with all guns.",
          "icon": "assassin-sniping-6.png",
+         "id": "GD_Assassin_Skills.Sniping.Velocity",
          "max": 5,
          "skill": "Vel0city"
         }
@@ -71,8 +90,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Up to % Critical Hit Damage per level depending on how long you aim down the sights.",
+         "col": 1,
+         "desc": "Aiming Down the Sights with your gun grants you a bonus to Critical Hit Damage. The longer you aim down the sights, the greater the bonus.",
          "icon": "assassin-sniping-7.png",
+         "id": "GD_Assassin_Skills.Sniping.KillConfirmed",
          "max": 5,
          "skill": "Kill C0nfirmed"
         }
@@ -82,8 +103,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "% Hip-Shot accuracy, % Reload Speed, and Magazine Size with Sniper Rifles per level .",
+         "col": 1,
+         "desc": "Greatly improves your Accuracy with Sniper Rifles when shooting from the hip. Also increases your Reload Speed and Magazine Size with Sniper Rifles.",
          "icon": "assassin-sniping-8.png",
+         "id": "GD_Assassin_Skills.Sniping.AtOneWithTheGun",
          "max": 5,
          "skill": "At 0ne with the Gun"
         }
@@ -93,8 +116,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Scoring a Critical Hit with a Sniper Rifle gives you % Critical Hit Damage and % Damage with Sniper Rifles. Can stack up to 999 times. Stacks begin to decay if you haven't scored a critical hit in a while.",
+         "col": 1,
+         "desc": "Scoring a Critical Hit with a Sniper Rifle increases your Damage and Critical Hit Damage with Sniper Rifles. This effect can stack up to 999 times. Stacks slowly decay if you haven't scored a critical hit in awhile.",
          "icon": "assassin-sniping-9.png",
+         "id": "GD_Assassin_Skills.Sniping.CriticalAscention",
          "max": 1,
          "skill": "Critical Ascensi0n"
         }
@@ -110,14 +135,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Reload Speed and % Weapon Swap Speed per level .",
+         "col": 0,
+         "desc": "Increases your Reload Speed and Weapon Swap Speed.",
          "icon": "assassin-cunning-0.png",
+         "id": "GD_Assassin_Skills.Cunning.FastHands",
          "max": 5,
          "skill": "Fast Hands"
         },
         {
-         "desc": "After getting hit, your next melee attack has a chance to deal % damage per level .",
+         "col": 2,
+         "desc": "After getting hit, your next Melee Attack has a chance to deal massive Melee Damage.",
          "icon": "assassin-cunning-1.png",
+         "id": "GD_Assassin_Skills.Cunning.CounterStrike",
          "max": 5,
          "skill": "C0unter Strike"
         }
@@ -127,14 +156,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy regenerates % of your shield per second and gives % Action Skill cooldown rate per level for a few seconds.",
-         "icon": "assassin-bloodshed-2.png",
+         "col": 0,
+         "desc": "While your Shield is depleted you gain increased Gun Damage and Fire Rate.",
+         "icon": "assassin-cunning-2.png",
+         "id": "GD_Assassin_Skills.Cunning.Fearless",
          "max": 5,
-         "skill": "Grim"
+         "skill": "Fearless"
         },
         {
-         "desc": "% damage per level when attacking enemies from behind or when attacking an enemy who is targeting someone other than you.",
+         "col": 2,
+         "desc": "Increases Damage when attacking from behind or when attacking an enemy who is targeting someone other than you.",
          "icon": "assassin-cunning-3.png",
+         "id": "GD_Assassin_Skills.Cunning.Ambush",
          "max": 5,
          "skill": "Ambush"
         }
@@ -144,22 +177,28 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Each successful ranged or melee attack gives you % Gun Damage and % Melee Damage per level for a short time. This bonus can stack up to 5 times. Faster weapons can gain stacks more quickly, but slower weapons retain stacks for a longer period of time.",
+         "col": 0,
+         "desc": "Each successful Ranged or Melee Attack gives you a Damage bonus for a short time. This bonus can stack up to 5 times. Faster weapons can gain stacks more quickly, but slower weapons retain stacks for a longer period of time.",
          "icon": "assassin-cunning-4.png",
+         "id": "GD_Assassin_Skills.Cunning.RisingShot",
          "max": 5,
          "skill": "Rising Sh0t"
         },
         {
-         "desc": "Dealing melee damage marks a target for 8 seconds. Marked targets take % additional damage from all sources.",
+         "col": 1,
+         "desc": "Dealing Melee Damage marks the target for a short duration. Marked targets take additional Damage from all sources. Also, it's not an easy thing to live with.",
          "icon": "assassin-cunning-5.png",
+         "id": "GD_Assassin_Skills.Cunning.DeathMark",
          "max": 1,
          "skill": "Death Mark"
         },
         {
-         "desc": "Your holographic decoy explodes when you become visible again, causing shock damage to nearby enemies. Damage increases per level .",
+         "col": 2,
+         "desc": "Your holographic decoy explodes when you become visible again, causing Shock Damage to nearby enemies.",
          "icon": "assassin-cunning-6.png",
+         "id": "GD_Assassin_Skills.Cunning.Unforseen",
          "max": 5,
-         "skill": "Unf0rseen"
+         "skill": "Unf0reseen"
         }
        ]
       },
@@ -167,8 +206,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "While Decepti0n is active you gain % Status Effects Duration Reduction, % Movement Speed, and regenerate % of your Maximum Health per second per level .",
+         "col": 1,
+         "desc": "While Deception is active you gain increased Gun Damage, Health Regeneration, and Movement Speed.",
          "icon": "assassin-cunning-7.png",
+         "id": "GD_Assassin_Skills.Cunning.Innervate",
          "max": 5,
          "skill": "Innervate"
         }
@@ -178,8 +219,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Every time you fire you have a % chance per level to fire twice.",
+         "col": 1,
+         "desc": "Every time you fire a gun you have a chance to fire twice.",
          "icon": "assassin-cunning-8.png",
+         "id": "GD_Assassin_Skills.Cunning.TwoFang",
          "max": 5,
          "skill": "Tw0 Fang"
         }
@@ -189,8 +232,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Action Skill Augment. Throws a handful of Kunai knives. Has a random elemental effect. Does not take character out of Decepti0n. Can be used five times per cooldown. Can apply Death Mark.",
+         "col": 1,
+         "desc": "Action Skill Augment. Press [ActionSkill key] while Deception is active to throw a handful of kunai. Each kunai will explode with a random elemental type. Kunai do not benefit from the Deception damage bonuses, but throwing kunai does not end Deception and can apply Death Mark.",
          "icon": "assassin-cunning-9.png",
+         "id": "GD_Assassin_Skills.Cunning.DeathBlossom",
          "max": 1,
          "skill": "Death Bl0ss0m"
         }
@@ -206,14 +251,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Melee Damage per level against enemies with low health.",
+         "col": 0,
+         "desc": "Massively increases Melee Damage against enemies with low health.",
          "icon": "assassin-bloodshed-0.png",
+         "id": "GD_Assassin_Skills.Bloodshed.KillingBlow",
          "max": 5,
          "skill": "Killing Bl0w"
         },
         {
-         "desc": "% Melee Damage and Damage Reduction per level .",
+         "col": 2,
+         "desc": "Increases your Melee Damage and your Maximum Health.",
          "icon": "assassin-bloodshed-1.png",
+         "id": "GD_Assassin_Skills.Bloodshed.IronHand",
          "max": 5,
          "skill": "Ir0n Hand"
         }
@@ -223,14 +272,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Fire Rate and % Health Regeneration per level when your shield is depleted.",
-         "icon": "assassin-cunning-2.png",
+         "col": 0,
+         "desc": "Kill Skill. Killing an enemy causes your Shields to quickly regenerate and increases your Action Skill Cooldown Rate for a few seconds.",
+         "icon": "assassin-bloodshed-2.png",
+         "id": "GD_Assassin_Skills.Bloodshed.Grim",
          "max": 5,
-         "skill": "Fearless"
+         "skill": "Grim"
         },
         {
-         "desc": "Shooting an enemy gives % damage per level to your next melee attack. Melee Attacks give % damage per level to your next gun attack.",
+         "col": 2,
+         "desc": "Shooting an enemy improves the Melee Damage of your next Melee Attack. Melee Attacks improve the Shooting Damage of your next shot.",
          "icon": "assassin-bloodshed-3.png",
+         "id": "GD_Assassin_Skills.Bloodshed.BeLikeWater",
          "max": 5,
          "skill": "Be Like Water"
         }
@@ -240,20 +293,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy gives % Movement Speed, % Gun Damage, and % Melee Damage per level for a few seconds.",
+         "col": 0,
+         "desc": "Kill Skill. Killing an enemy increases your Movement Speed, Melee Damage, and Gun Damage for a few seconds.",
          "icon": "assassin-bloodshed-4.png",
+         "id": "GD_Assassin_Skills.Bloodshed.Followthrough",
          "max": 5,
          "skill": "F0ll0wthr0ugh"
         },
         {
-         "desc": "Melee Override Skill. While Decepti0n is active and a target is under your crosshairs, melee to dash forward a short distance and perform a special melee attack. Has a range of 3 meters.",
+         "col": 1,
+         "desc": "Melee Override Skill. While Deception is active and a target is under your crosshairs, press [Melee key] to dash forward a short distance and perform a Special Melee Attack, dealing massive damage.",
          "icon": "assassin-bloodshed-5.png",
+         "id": "GD_Assassin_Skills.Bloodshed.Execute",
          "max": 1,
          "skill": "Execute"
         },
         {
-         "desc": "Your melee attacks deal % damage per level when hitting an enemy in the back, dealing massive damage.",
+         "col": 2,
+         "desc": "Your Melee Attacks deal Bonus Melee Damage when hitting an enemy in the back.",
          "icon": "assassin-bloodshed-6.png",
+         "id": "GD_Assassin_Skills.Bloodshed.Backstab",
          "max": 5,
          "skill": "Backstab"
         }
@@ -263,8 +322,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Killing an enemy with a melee attack restores up to % of your health per level depending on how low your health is.",
+         "col": 1,
+         "desc": "Killing an enemy with a Melee Attack restores Health. The lower your health, the more health you receive.",
          "icon": "assassin-bloodshed-7.png",
+         "id": "GD_Assassin_Skills.Bloodshed.Resurgence",
          "max": 5,
          "skill": "Resurgence"
         }
@@ -274,10 +335,12 @@
        "level": 4,
        "skills": [
         {
-         "desc": "",
+         "col": 1,
+         "desc": "While moving you gain increased Melee Damage and Gun Damage.",
          "icon": "assassin-bloodshed-8.png",
+         "id": "GD_Assassin_Skills.Bloodshed.LikeTheWind",
          "max": 5,
-         "skill": "Like The Wind"
+         "skill": "Like the Wind"
         }
        ]
       },
@@ -285,8 +348,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Killing an enemy with a Melee Attack during Decepti0n deploys an additional holographic decoy and extends the duration of Decepti0n instead of ending it.",
+         "col": 1,
+         "desc": "Killing an enemy with a Melee Attack while Deception is active causes you to deploy another holographic decoy, re-stealth, and add time to Deception's duration. This can be done multiple times in succession.",
          "icon": "assassin-bloodshed-9.png",
+         "id": "GD_Assassin_Skills.Bloodshed.ManyMustFall",
          "max": 1,
          "skill": "Many Must Fall"
         }
@@ -297,6 +362,11 @@
    ]
   },
   "GD_Lilac_PlayerClass.Character.CharClass_LilacPlayerClass": {
+   "action_skill": {
+    "icon": "psycho-actionskill.png",
+    "id": "GD_Lilac_SkillsBase.ActionSkill.Skill_Psycho",
+    "name": "Buzz Axe Rampage"
+   },
    "class": "Psycho",
    "name": "Krieg",
    "page": "psycho",
@@ -310,14 +380,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Magazine Size per Bloodlust stack per level .",
+         "col": 0,
+         "desc": "Magazine Size of all weapons increased for each stack of Bloodlust.<br><br><font color=\"#70FFFF\">Dealing damage to an enemy adds a stack of Bloodlust. Stacks decay after a few seconds if you haven't dealt damage.</font>",
          "icon": "psycho-bloodlust-0.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BloodfilledGuns",
          "max": 5,
          "skill": "Blood-filled Guns"
         },
         {
-         "desc": "% Weapon Swap speed per Bloodlust stack per level .",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy increases your Weapon Swap Speed for each stack of Bloodlust. <br><br><font color=\"#70FFFF\">Dealing damage to an enemy adds a stack of Bloodlust. Stacks decay after a few seconds if you haven't dealt damage.</font>",
          "icon": "psycho-bloodlust-1.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BloodyTwitch",
          "max": 5,
          "skill": "Blood Twitch"
         }
@@ -327,20 +401,26 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% damage reduction during Buzz Axe Rampage per Bloodlust stack per level . Bloodlust stacks per kill per level during Buzz Axe Rampage.",
+         "col": 0,
+         "desc": "During Buzz Axe Rampage, all damage you suffer is reduced. Damage reduction is increased for each stack of Bloodlust.<br><br>Killing an enemy during Buzz Axe Rampage adds extra stacks of Bloodlust.",
          "icon": "psycho-bloodlust-2.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.TasteOfBlood",
          "max": 5,
          "skill": "Taste of Blood"
         },
         {
-         "desc": "% Gun damage during Fight For Your Life per Bloodlust stack per level .",
+         "col": 1,
+         "desc": "Assault Rifle Damage during Fight For Your Life increased for each stack of Bloodlust.",
          "icon": "psycho-bloodlust-3.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BloodyRevival",
          "max": 5,
          "skill": "Bloody Revival"
         },
         {
-         "desc": "Kill Skill. Killing an enemy gives % Melee Damage and s Grenade Fuse Time per Bloodlust stack per level for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy with a bullet increases your Melee Damage and reduces Grenade Fuse Time for each stack of Bloodlust.",
          "icon": "psycho-bloodlust-4.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BloodOverdrive",
          "max": 5,
          "skill": "Blood Overdrive"
         }
@@ -350,20 +430,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy with a grenade or explosion gives % weapon damage per Bloodlust stack per level for a short time. Enemies killed this way have a % chance per level of dropping Grenade ammunition.",
+         "col": 0,
+         "desc": "Kill Skill. Killing an enemy with a grenade or explosion increases Weapon Damage for each stack of Bloodlust. An enemy killed this way has a greater chance to drop grenade ammo.",
          "icon": "psycho-bloodlust-5.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BloodBath",
          "max": 5,
-         "skill": "Bloodbath"
+         "skill": "Blood Bath"
         },
         {
+         "col": 1,
          "desc": "When thrown, your buzz axe now has Dynamite attached to it which explodes on impact.",
          "icon": "psycho-bloodlust-6.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BuzzAxeBombadier",
          "max": 1,
          "skill": "Buzz Axe Bombardier"
         },
         {
-         "desc": "Kill Skill. Killing an enemy with a melee attack gives % Grenade Damage per Bloodlust stack per level for a short time and adds Bloodlust stacks per level .",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy with melee increases Grenade Damage for each stack of Bloodlust and adds bonus stacks to Bloodlust.",
          "icon": "psycho-bloodlust-7.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.FuelTheBlood",
          "max": 5,
          "skill": "Fuel the Blood"
         }
@@ -373,20 +459,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Increases the duration of Buzz Axe Rampage by seconds per Bloodlust stack (at time of activation) per level .",
+         "col": 0,
+         "desc": "Duration of Buzz Axe Rampage is increased for each stack of Bloodlust at the time of activation.",
          "icon": "psycho-bloodlust-8.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BloodTrance",
          "max": 5,
          "skill": "Blood Trance"
         },
         {
-         "desc": "Instantly heal for 0.6% Maximum Health per Bloodlust stack when kill skills end",
-         "icon": "assassin-bloodshed-4.png",
-         "max": 1,
-         "skill": "Blood Euphoria"
-        },
-        {
-         "desc": "Increases the time before Bloodlust stacks start to decay by seconds per level .",
+         "col": 2,
+         "desc": "Increases the time before Bloodlust stacks start to decay.",
          "icon": "psycho-bloodlust-9.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.BoilingBlood",
          "max": 5,
          "skill": "Boiling Blood"
         }
@@ -396,8 +480,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy gives % Reload Speed per Bloodlust stack per level for a short time.",
+         "col": 1,
+         "desc": "Kill Skill. Killing an enemy increases your Reload Speed for each stack of Bloodlust.",
          "icon": "psycho-bloodlust-10.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.NervousBlood",
          "max": 5,
          "skill": "Nervous Blood"
         }
@@ -407,8 +493,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Killing an enemy causes them to explode with an Elemental Nova matching the element of the damage that killed it (Non-elemental damage will cause an explosive nova). Overkill damage is added to this damage. Each Bloodlust stacks increases this damage by 5%.",
+         "col": 1,
+         "desc": "Killing an enemy causes them to explode with an Elemental Nova matching the element of the damage that killed it <font color=\"#AAAAAA\">(Non-elemental damage will cause an explosive nova)</font>. Nova damage increased for each stack of Bloodlust.<br><br>Any Overkill Damage is also added to damage caused by an Elemental Nova.",
          "icon": "psycho-bloodlust-11.png",
+         "id": "GD_Lilac_Skills_Bloodlust.Skills.Bloodsplosion",
          "max": 1,
          "skill": "Bloodsplosion"
         }
@@ -424,20 +512,26 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Melee Damage per level ; additional % per level when shields or magazine is empty.",
+         "col": 0,
+         "desc": "Melee Damage increased.<br><br>Additional bonus damage if your shield is down or when your magazine is empty.",
          "icon": "psycho-mania-0.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.EmptyRage",
          "max": 5,
          "skill": "Empty the Rage"
         },
         {
-         "desc": "When you die, you drop a free grenade. If you kill an enemy with it, you get double XP. Additionally increases Grenade Damage by 10%.",
+         "col": 1,
+         "desc": "When you die, you drop a free grenade. If you kill an enemy with it, you get double XP.",
          "icon": "psycho-mania-1.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.PullThePin",
          "max": 1,
          "skill": "Pull the Pin"
         },
         {
-         "desc": "% Max Health and sec Shield Recharge Delay per level .",
+         "col": 2,
+         "desc": "Maximum Health and Shield Recharge Delay increased.",
          "icon": "psycho-mania-2.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.FeedTheMeat",
          "max": 5,
          "skill": "Feed the Meat"
         }
@@ -447,14 +541,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Fire Rate per level when shields are down. sec Shield Recharge Delay per level .",
+         "col": 0,
+         "desc": "Fire Rate is increased when your shields are down.<br><br>Shield Recharge Delay increased.",
          "icon": "psycho-mania-3.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.EmbraceThePain",
          "max": 5,
          "skill": "Embrace the Pain"
         },
         {
-         "desc": "% Buzz Axe Rampage cooldown from taking damage per level ; additional % per level from Health damage. You can now be damaged by teammates; friendly fire damage is % per level .",
+         "col": 2,
+         "desc": "Taking damage recharges Buzz Axe Rampage at a faster rate. Taking health damage increases the bonus even further.<br><br>You can now be damaged by teammates.",
          "icon": "psycho-mania-4.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.FuelTheRampage",
          "max": 5,
          "skill": "Fuel the Rampage"
         }
@@ -464,20 +562,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Up to % per level of overkill damage is returned to you as Health, depending on how low your health is.",
+         "col": 0,
+         "desc": "A percentage of Overkill Damage <font color=\"#AAAAAA\">(damage that is over and above what was needed to kill the enemy)</font> is returned to you as Health. The lower your health the higher the percentage.",
          "icon": "psycho-mania-5.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.ThrillOfTheKill",
          "max": 5,
          "skill": "Thrill of the Kill"
         },
         {
-         "desc": "Fight For Your Life is replaced with Light the Fuse. During Light the Fuse you pull out a live bundle of dynamite and can move normally. The bundle detonates when the timer runs out. If you kill someone you are revived. Getting a revive with the bundle explosion gives you bonus Movement Speed for the remainder of the time that was left in Light the Fuse. Throw Dynamite sticks with Fire. Detonate bundle by holding Action.",
+         "col": 1,
+         "desc": "Fight For Your Life is replaced with Light the Fuse. During Light the Fuse you pull out a live bundle of dynamite and can move normally. The bundle detonates when the timer runs out. If you kill someone you are revived.<br><br>Getting a revive with the bundle explosion gives you bonus Movement Speed for the remainder of the time that was left in Light the Fuse.<br><br>Throw dynamite sticks with [Fire key].<br>Detonate bundle by holding [Use key].",
          "icon": "psycho-mania-6.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.LightTheFuse",
          "max": 1,
          "skill": "Light the Fuse"
         },
         {
-         "desc": "% Explosive damage per level ; additional % per level in Fight For Your Life.",
+         "col": 2,
+         "desc": "Explosive Elemental Damage increased.<br><br>Bonus increased when in Fight For Your Life.",
          "icon": "psycho-mania-7.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.StripTheFlesh",
          "max": 5,
          "skill": "Strip the Flesh"
         }
@@ -487,14 +591,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "You can instantly Revive teammates at the cost of downing yourself. You may revive in this way only once each time Buzz axe Rampage is on cooldown. % Fight For Your Life time.",
+         "col": 0,
+         "desc": "You can instantly Revive down teammates. After reviving a teammate in this way you must Fight For Your Life. <font color=\"#AAAAAA\">(You may revive in this way only once each time Buzz Axe Rampage is on cooldown.)</font><br><br>Increased time during Fight For Your Life.",
          "icon": "psycho-mania-8.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.RedeemTheSoul",
          "max": 1,
          "skill": "Redeem the Soul"
         },
         {
-         "desc": "Taking damage from an enemy while your shield is down adds a stack of Salt the Wound to a maximum of 20. % Melee Damage and % Shotgun damage per stack per level .",
+         "col": 1,
+         "desc": "Taking damage from an enemy while your shield is down adds a stack of Salt the Wound.<br><br>Melee and Shotgun Damage increased for each stack.",
          "icon": "psycho-mania-9.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.SaltTheWound",
          "max": 5,
          "skill": "Salt the Wound"
         }
@@ -504,8 +612,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "% Melee Damage per level . % per level chance to attack yourself with melee attacks.",
+         "col": 1,
+         "desc": "Melee Damage significantly increased.<br><br>Chance when performing a melee attack that you attack yourself.",
          "icon": "psycho-mania-10.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.SilenceTheVoices",
          "max": 5,
          "skill": "Silence the Voices"
         }
@@ -515,8 +625,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Activating the Buzz Axe Rampage when at or below 33% of your max health remaining (i.e., when the ! is showing) instantly refills your health and transforms you into a Badass Psycho Mutant with % Melee Damage and % Damage Reduction. Buzz Axe Rampage is instantly recharged afterwards.",
+         "col": 1,
+         "desc": "Activating Buzz Axe Rampage when at or below 33% of your max health remaining instantly refills your health and transforms you into a Badass Psycho Mutant. You deal increased Melee Damage and receive significant damage reduction for the duration of the rampage.<br><br>When you return to normal, your Buzz Axe Rampage is instantly recharged.<br><font color=\"#70FFFF\">There is an ! next to the health bar when below 33%.</font>",
          "icon": "psycho-mania-11.png",
+         "id": "GD_Lilac_Skills_Mania.Skills.ReleaseTheBeast",
          "max": 1,
          "skill": "Release the Beast"
         }
@@ -532,14 +644,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% ( % when on fire) burn damage per level . % chance per level per fire attack to set self on fire.",
+         "col": 0,
+         "desc": "Burn Damage increased . Effects further increased while you are on fire.<br><font color=\"#70FFFF\">Chance to light yourself on fire when igniting an enemy.</font>",
          "icon": "psycho-hellborn-0.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.BurnBabyBurn",
          "max": 5,
          "skill": "Burn, Baby, Burn"
         },
         {
-         "desc": "Kill Skill. % chance per level per fire attack to set self on fire. Killing an enemy gives % Elemental Effect Chance per level for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy increases your chances of causing Elemental Effects. <br><font color=\"#70FFFF\">Chance to light yourself on fire when igniting an enemy.</font>",
          "icon": "psycho-hellborn-1.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.FuelTheFire",
          "max": 5,
          "skill": "Fuel the Fire"
         }
@@ -549,14 +665,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% damage reduction per level when on fire.",
+         "col": 0,
+         "desc": "All damage received is reduced while you are on fire.",
          "icon": "psycho-hellborn-2.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.NumbedNerves",
          "max": 5,
          "skill": "Numbed Nerves"
         },
         {
-         "desc": "% ( % when on fire) Weapon and Melee Damage per level (except for Sniper Rifles). % Critical Hit Damage per level",
+         "col": 2,
+         "desc": "Weapon Damage increased on all weapons except sniper rifles.<br><br>Critical Hit Damage Bonus reduced on all weapons.<br><br>Melee Damage increased.<br><br>Effects increased while you are on fire.",
          "icon": "psycho-hellborn-3.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.PainIsPower",
          "max": 5,
          "skill": "Pain is Power"
         }
@@ -566,20 +686,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "When Elemental Status Effect Damage is being done to enemies you gain stacks of Elemental Elation up to a maximum of 20. Each stack gives % Fire Rate and Magazine Size per level . Stacks will not decay while you are on fire.",
+         "col": 0,
+         "desc": "While Elemental Status Effect Damage is being done to enemies you gain stacks of Elemental Elation.<br><br>Fire Rate and Magazine Size increased for each stack of Elemental Elation. Stacks will not decay while you are on fire.",
          "icon": "psycho-hellborn-4.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.ElementalElation",
          "max": 5,
          "skill": "Elemental Elation"
         },
         {
-         "desc": "All Elemental Status Effects you cause have a chance to light yourself on fire. Ignite chances are determined by those accumulated from Burn, Baby, Burn and Fuel the Fire.",
+         "col": 1,
+         "desc": "All Elemental Status Effects you cause have a chance to light yourself on fire.<br><br>Ignite chances are determined by those accumulated from Burn, Baby, Burn and Fuel the Fire.<br><br><font color=\"#AAAAAA\">(Elemental Status Effects are damage over time from Corrosive, Electrocute, Slag, or Burn damage.)</font>",
          "icon": "psycho-hellborn-5.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.DelusionalDamage",
          "max": 1,
          "skill": "Delusional Damage"
         },
         {
-         "desc": "Melee Attacks have a 10% per level chance to Ignite enemies. % Weapon Accuracy and % Reload Speed when on fire.",
+         "col": 2,
+         "desc": "Melee Attacks have a chance to Ignite enemies. <br><br>Weapon Accuracy and Reload Speed increased while you are on fire.",
          "icon": "psycho-hellborn-6.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.FireFiend",
          "max": 5,
          "skill": "Fire Fiend"
         }
@@ -589,14 +715,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "% Burn Duration on you per level . 15% chance per level for your Burn effects to apply another Burn effect.",
+         "col": 1,
+         "desc": "Increases the duration of all Burn Effects on you. Each time you apply a Burn Effect to an enemy, there's a chance another Burn Effect will be applied after a short time.",
          "icon": "psycho-hellborn-7.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.FlameFlare",
          "max": 5,
          "skill": "Flame Flare"
         },
         {
-         "desc": "Melee Override Skill. Pressing Melee causes you to breathe fire in a cone in front of you. Cooldown is 15 seconds.",
+         "col": 2,
+         "desc": "Melee Override Skill. Pressing [Melee key] causes you to breathe fire in a cone in front of you.",
          "icon": "psycho-hellborn-8.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.HellfireHalitosis",
          "max": 1,
          "skill": "Hellfire Halitosis"
         }
@@ -606,8 +736,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Burn status effect damage heals you for % of the damage dealt per level .",
+         "col": 1,
+         "desc": "A percentage of Elemental Status Effect Damage done to enemies heals you.",
          "icon": "psycho-hellborn-9.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.ElementalEmpathy",
          "max": 5,
          "skill": "Elemental Empathy"
         }
@@ -617,8 +749,10 @@
        "level": 5,
        "skills": [
         {
+         "col": 1,
          "desc": "While you are on fire, taking damage from enemies will spawn homing balls of fire that seek out the attacker and explode on impact. Fireballs only trigger once per second.",
          "icon": "psycho-hellborn-10.png",
+         "id": "GD_Lilac_Skills_Hellborn.Skills.RavingRetribution",
          "max": 1,
          "skill": "Raving Retribution"
         }
@@ -629,6 +763,11 @@
    ]
   },
   "GD_Mercenary.Character.CharClass_Mercenary": {
+   "action_skill": {
+    "icon": "gunzerker-actionskill.png",
+    "id": "GD_Mercenary_Skills.ActionSkill.Skill_Gunzerking",
+    "name": "Gunzerking"
+   },
    "class": "Gunzerker",
    "name": "Salvador",
    "page": "gunzerker",
@@ -642,14 +781,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "Reloading your gun gives you % Fire Rate per level for a short time.",
+         "col": 0,
+         "desc": "Reloading your gun gives you a Fire Rate bonus for a short time.",
          "icon": "gunzerker-gunlust-0.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.LockedandLoaded",
          "max": 5,
-         "skill": "Locked And Loaded"
+         "skill": "Locked and Loaded"
         },
         {
-         "desc": "% Weapon Swap Speed and % Critical Hit Damage per level .",
+         "col": 2,
+         "desc": "Increases Weapon Swap Speed and Critical Hit Damage with all gun types.",
          "icon": "gunzerker-gunlust-1.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.QuickDraw",
          "max": 5,
          "skill": "Quick Draw"
         }
@@ -659,14 +802,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Damage and Reload Speed per level with pistols.",
+         "col": 0,
+         "desc": "Increases Damage and Reload Speed with Pistols.",
          "icon": "gunzerker-gunlust-2.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.ImYourHuckleberry",
          "max": 5,
          "skill": "I'm Your Huckleberry"
         },
         {
-         "desc": "Swapping weapons causes your next shot fired to deal % damage per level .",
+         "col": 2,
+         "desc": "Swapping Weapons causes your next shot fired to deal Bonus Damage.",
          "icon": "gunzerker-gunlust-3.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.AllIneedIsOne",
          "max": 5,
          "skill": "All I Need is One"
         }
@@ -676,20 +823,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "% Damage when Gunzerking with two of the same type of guns. % Accuracy when Gunzerking with two different types of guns.",
+         "col": 0,
+         "desc": "When Gunzerking with two guns of the same type, you deal Bonus Damage. When Gunzerking with two different types of guns you gain Bonus Accuracy.",
          "icon": "gunzerker-gunlust-4.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.DivergentLikness",
          "max": 5,
          "skill": "Divergent Likeness"
         },
         {
-         "desc": "Killing an enemy Instantly Reloads all of the guns that you have equipped that are not currently in your hands. Swapping guns after Auto-Loader has reloaded a gun triggers Locked &amp; Loaded. Additionally passively increases Salvador's Reload Speed by 15% now.",
+         "col": 1,
+         "desc": "Killing an enemy Instantly Reloads all of the guns that you have equipped that are not currently in your hands. Swapping guns after Auto-Loader has reloaded a gun triggers Locked & Loaded.",
          "icon": "gunzerker-gunlust-5.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.AutoLoader",
          "max": 1,
          "skill": "Auto-Loader"
         },
         {
-         "desc": "The last bullet fired from any gun does % damage per level per magazine size, up to % damage per level .",
+         "col": 2,
+         "desc": "The last round fired from your magazine gains massive Bonus Damage. Guns with small magazines receive a smaller bonus. This skill works with all weapon types.",
          "icon": "gunzerker-gunlust-6.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.MoneyShot",
          "max": 5,
          "skill": "Money Shot"
         }
@@ -699,14 +852,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy gives % Fire Rate and % Critical Hit Damage with Guns per level for a short time.",
+         "col": 0,
+         "desc": "Kill Skill. Killing an enemy gives you increased Fire Rate and Critical Hit Damage with all guns for a short while.",
          "icon": "gunzerker-gunlust-7.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.LayWaste",
          "max": 5,
          "skill": "Lay Waste"
         },
         {
-         "desc": "You can Gunzerk while in Fight for Your Life.",
+         "col": 1,
+         "desc": "You can Gunzerk while in Fight For Your Life.",
          "icon": "gunzerker-gunlust-8.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.DownNotOut",
          "max": 1,
          "skill": "Down Not Out"
         }
@@ -716,8 +873,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "While Gunzerking is in the process of cooling down you gain % Gun Damage, % Melee Damage, and % Grenade Damage per level .",
+         "col": 1,
+         "desc": "While Gunzerking is in the process of cooling down you gain bonus Gun Damage, Melee Damage, and Grenade Damage.",
          "icon": "gunzerker-gunlust-9.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.KeepItPipingHot",
          "max": 5,
          "skill": "Keep It Piping Hot"
         }
@@ -727,8 +886,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Any excess damage dealt to an enemy that kills them is transferred to the next enemy fired at.",
+         "col": 1,
+         "desc": "When you kill an enemy you gain a bonus to Gun Damage equal to the amount of excess damage you dealt to the enemy you just killed.",
          "icon": "gunzerker-gunlust-10.png",
+         "id": "GD_Mercenary_Skills.Gun_Lust.NoKillLikeOverkill",
          "max": 1,
          "skill": "No Kill Like Overkill"
         }
@@ -744,14 +905,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "Up to % chance per level for shots not to consume ammo depending on how low your health and shields are.",
+         "col": 0,
+         "desc": "Your shots have a chance to not consume ammo. The lower your health and shields, the greater the chance of free ammo.",
          "icon": "gunzerker-rampage-0.png",
+         "id": "GD_Mercenary_Skills.Rampage.Inconceivable",
          "max": 5,
          "skill": "Inconceivable"
         },
         {
-         "desc": "% Magazine Capacity and % Ammunition Capacity per level for all weapon types.",
+         "col": 2,
+         "desc": "Increases your Magazine Size with all weapon types. Also increases your Ammo Carrying Capacity with all ammo types.",
          "icon": "gunzerker-rampage-1.png",
+         "id": "GD_Mercenary_Skills.Rampage.FilledtotheBrim",
          "max": 5,
          "skill": "Filled to the Brim"
         }
@@ -761,14 +926,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Reload Speed and % Melee Damage per level .",
+         "col": 0,
+         "desc": "Increases your Reload Speed and Melee Damage.",
          "icon": "gunzerker-rampage-2.png",
+         "id": "GD_Mercenary_Skills.Rampage.AllInTheReflexes",
          "max": 5,
          "skill": "All in the Reflexes"
         },
         {
-         "desc": "seconds Gunzerking duration per level .",
+         "col": 2,
+         "desc": "Increases Gunzerking Duration.",
          "icon": "gunzerker-rampage-3.png",
+         "id": "GD_Mercenary_Skills.Rampage.LastLonger",
          "max": 5,
          "skill": "Last Longer"
         }
@@ -778,20 +947,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "% Gunzerking Cooldown Rate.",
+         "col": 0,
+         "desc": "Increases the Cooldown Rate of your Gunzerking ability.",
          "icon": "gunzerker-rampage-4.png",
+         "id": "GD_Mercenary_Skills.Rampage.ImReadyAlready",
          "max": 5,
          "skill": "I'm Ready Already"
         },
         {
-         "desc": "% Recoil Reduction and % chance to improve Accuracy on hit when Gunzerking.",
+         "col": 1,
+         "desc": "Reduces Recoil with both guns while Gunzerking. Additionally, each shot that hits an enemy has a chance to improve your Accuracy with both guns.",
          "icon": "gunzerker-rampage-5.png",
+         "id": "GD_Mercenary_Skills.Rampage.SteadyAsSheGoes",
          "max": 1,
          "skill": "Steady as She Goes"
         },
         {
-         "desc": "Grants a % chance per level to add an extra round of ammunition when firing instead of expending ammunition.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy causes every shot fired to have a chance to add ammunition into the magazine instead of expending ammunition.",
          "icon": "gunzerker-rampage-6.png",
+         "id": "GD_Mercenary_Skills.Rampage.5Shotsor6",
          "max": 5,
          "skill": "5 Shots or 6"
         }
@@ -801,14 +976,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Increases the duration of Gunzerking by seconds per level every time an enemy is killed while Gunzerking.",
+         "col": 0,
+         "desc": "Killing an enemy while Gunzerking increases the amount of time you can Gunzerk.",
          "icon": "gunzerker-rampage-7.png",
+         "id": "GD_Mercenary_Skills.Rampage.YippeeKiYay",
          "max": 5,
-         "skill": "Yippie Ki Yay"
+         "skill": "Yippee Ki Yay"
         },
         {
-         "desc": "Throwing a grenade while Gunzerking throws two grenades instead of one. The second grenade doesn't cost ammo.",
+         "col": 1,
+         "desc": "Throwing a Grenade while Gunzerking causes you to throw 2 grenades. The 2nd grenade does not cost ammo.",
          "icon": "gunzerker-rampage-8.png",
+         "id": "GD_Mercenary_Skills.Rampage.DoubleYourFun",
          "max": 1,
          "skill": "Double Your Fun"
         }
@@ -818,8 +997,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Shooting an enemy decreases Gunzerking cooldown by seconds per level . Has a cooldown of 3 seconds.",
+         "col": 1,
+         "desc": "Shooting an enemy decreases the Cooldown on Gunzerking. This effect can only occur once every 3 seconds.",
          "icon": "gunzerker-rampage-9.png",
+         "id": "GD_Mercenary_Skills.Rampage.GetSome",
          "max": 5,
          "skill": "Get Some"
         }
@@ -829,10 +1010,12 @@
        "level": 5,
        "skills": [
         {
-         "desc": "While Gunzerking, you gain up to % Fire Rate and % Reload Speed depending on how long you hold down the trigger.",
+         "col": 1,
+         "desc": "While Gunzerking, the longer you hold down the trigger the faster your guns fire and the faster you reload.",
          "icon": "gunzerker-rampage-10.png",
+         "id": "GD_Mercenary_Skills.Rampage.KeepFiring",
          "max": 1,
-         "skill": "Keep Firing"
+         "skill": "Keep Firing..."
         }
        ]
       }
@@ -846,14 +1029,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Maximum Health and regenerate % of your Maximum Health per second per level .",
+         "col": 0,
+         "desc": "Increases your Maximum Health and gives you a small amount of Health Regeneration.",
          "icon": "gunzerker-brawn-0.png",
+         "id": "GD_Mercenary_Skills.Brawn.Diehard",
          "max": 5,
          "skill": "Hard to Kill"
         },
         {
-         "desc": "Taking damage gives % Movement Speed and % Reload Speed per level for a few seconds.",
+         "col": 2,
+         "desc": "Taking damage from enemies increases your Movement Speed and Reload Speed for a few seconds.",
          "icon": "gunzerker-brawn-1.png",
+         "id": "GD_Mercenary_Skills.Brawn.Incite",
          "max": 5,
          "skill": "Incite"
         }
@@ -863,14 +1050,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Negative Status Effect Duration per level .",
+         "col": 0,
+         "desc": "Reduces the duration of Status Effects on you (such as being on Fire, Corroded, Electrocuted, or Slagged).",
          "icon": "gunzerker-brawn-2.png",
+         "id": "GD_Mercenary_Skills.Brawn.Asbestos",
          "max": 5,
          "skill": "Asbestos"
         },
         {
-         "desc": "Kill Skill. Killing an enemy gives % Damage Reduction for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy reduces all damage you take for a few seconds.",
          "icon": "gunzerker-brawn-3.png",
+         "id": "GD_Mercenary_Skills.Brawn.ImTheJuggernaut",
          "max": 5,
          "skill": "I'm the Juggernaut"
         }
@@ -880,22 +1071,28 @@
        "level": 2,
        "skills": [
         {
-         "desc": "While Gunzerking you regenerate up to % of your Maximum Health per second per level depending on how low your health is.",
+         "col": 0,
+         "desc": "While Gunzerking you Regenerate Health. The lower your current Health the more powerful the Regeneration.",
          "icon": "gunzerker-brawn-4.png",
+         "id": "GD_Mercenary_Skills.Brawn.AintGotTimeToBleed",
          "max": 5,
-         "skill": "Ain't Got Time To Bleed"
+         "skill": "Ain't Got Time to Bleed"
         },
         {
-         "desc": "Melee Override. Throw a heavy punch dealing massive damage and knockback. Has a cooldown of 15 seconds.",
+         "col": 1,
+         "desc": "Melee Override. Press [Melee key] to throw all your weight into a punch, causing massive damage and knocking back the enemy. Fistful of Hurt has a cooldown. While Fistful of Hurt is on cooldown, [Melee key] will perform a regular melee attack.",
          "icon": "gunzerker-brawn-5.png",
+         "id": "GD_Mercenary_Skills.Brawn.FistfulOfHurt",
          "max": 1,
          "skill": "Fistful of Hurt"
         },
         {
-         "desc": "% Fire Rate per level when shield is depleted.",
+         "col": 2,
+         "desc": "Increases your Fire Rate with all gun types while your Shields are depleted.",
          "icon": "gunzerker-brawn-6.png",
+         "id": "GD_Mercenary_Skills.Brawn.OutOfBubblegum",
          "max": 5,
-         "skill": "All Out of Bubblegum"
+         "skill": "Out of Bubblegum"
         }
        ]
       },
@@ -903,14 +1100,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "% Movement Speed per level while Gunzerking.",
+         "col": 0,
+         "desc": "Increases your Movement Speed while Gunzerking.",
          "icon": "gunzerker-brawn-7.png",
+         "id": "GD_Mercenary_Skills.Brawn.BusThatCantSlowDown",
          "max": 5,
          "skill": "Bus That Can't Slow Down"
         },
         {
-         "desc": "Up to % Gun Damage per level depending on how low your health is.",
+         "col": 1,
+         "desc": "Increases the Damage you deal with all gun types. The lower your health the greater the damage bonus.",
          "icon": "gunzerker-brawn-8.png",
+         "id": "GD_Mercenary_Skills.Brawn.JustGotReal",
          "max": 5,
          "skill": "Just Got Real"
         }
@@ -920,8 +1121,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Taking damage gives % Health Regeneration per level for 5 seconds. This effect does not stack.",
+         "col": 1,
+         "desc": "Taking damage gives you Health Regeneration for 5 seconds. This effect does not stack multiple times.",
          "icon": "gunzerker-brawn-9.png",
+         "id": "GD_Mercenary_Skills.Brawn.SexualTyrannosaurus",
          "max": 5,
          "skill": "Sexual Tyrannosaurus"
         }
@@ -931,16 +1134,12 @@
        "level": 5,
        "skills": [
         {
-         "desc": "While Gunzerking, you can press [Action Skill] to taunt your enemies into attacking you. You instantly heal to Full Health and gain massive damage reduction for a few seconds.",
+         "col": 1,
+         "desc": "Action Skill Augment. While Gunzerking press [ActionSkill key] to taunt your enemies and instantly gain Full Health. Taunted enemies are more likely to attack you, but for the next few seconds you gain massive damage reduction.",
          "icon": "gunzerker-brawn-10.png",
+         "id": "GD_Mercenary_Skills.Brawn.ComeAtMeBro",
          "max": 1,
-         "skill": "Come At Me, Bro"
-        },
-        {
-         "desc": "\\3",
-         "icon": "class-tree-\\i(0)",
-         "max": 5,
-         "skill": "\\1"
+         "skill": "Come At Me Bro"
         }
        ]
       }
@@ -949,6 +1148,11 @@
    ]
   },
   "GD_Siren.Character.CharClass_Siren": {
+   "action_skill": {
+    "icon": "siren-actionskill.png",
+    "id": "GD_Siren_Skills.Phaselock.Skill_Phaselock",
+    "name": "Phaselock"
+   },
    "class": "Siren",
    "name": "Maya",
    "page": "siren",
@@ -962,14 +1166,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Shield Capacity and % Shield Recharge Delay per level .",
+         "col": 0,
+         "desc": "Improves your Shield Capacity and Shield Recharge Delay.",
          "icon": "siren-motion-0.png",
+         "id": "GD_Siren_Skills.Motion.Ward",
          "max": 5,
          "skill": "Ward"
         },
         {
-         "desc": "% Gun Damage and % Bullet Speed per level .",
+         "col": 2,
+         "desc": "Increases Damage and Bullet Speed with all gun types.",
          "icon": "siren-motion-1.png",
+         "id": "GD_Siren_Skills.Motion.Accelerate",
          "max": 5,
          "skill": "Accelerate"
         }
@@ -979,14 +1187,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Increases the duration of Phaselock by s per level .",
+         "col": 0,
+         "desc": "Increases the duration of Phaselock.",
          "icon": "siren-motion-2.png",
+         "id": "GD_Siren_Skills.Motion.Suspension",
          "max": 5,
          "skill": "Suspension"
         },
         {
-         "desc": "Kill Skill. Killing an enemy causes you to deflect bullets against nearby enemies, reducing damage to you by % and dealing % damage per level for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. After killing an enemy you gain the ability to deflect enemy bullets, sending them flying toward nearby enemies. You take reduced damage from deflected bullets. Kinetic Reflection only works with bullets. This effect lasts for a short time.",
          "icon": "siren-motion-3.png",
+         "id": "GD_Siren_Skills.Motion.KineticReflection",
          "max": 5,
          "skill": "Kinetic Reflection"
         }
@@ -996,20 +1208,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Your Movement Speed increases by % per level while your shields are depleted.",
+         "col": 0,
+         "desc": "Your Movement Speed increases while your shields are depleted.",
          "icon": "siren-motion-4.png",
+         "id": "GD_Siren_Skills.Motion.Fleet",
          "max": 5,
          "skill": "Fleet"
         },
         {
-         "desc": "Your Phaselock ability now also pulls nearby enemies toward the original target.",
+         "col": 1,
+         "desc": "Action Skill Augmentation. Your Phaselock ability now also pulls nearby enemies toward the original target. This deals a small amount of damage to the affected enemies.",
          "icon": "siren-motion-5.png",
+         "id": "GD_Siren_Skills.Motion.Converge",
          "max": 1,
          "skill": "Converge"
         },
         {
-         "desc": "Kill Skill. Killing an enemy regenerates % of your Shield per second and increases your Reload Speed by % per level for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy causes your Shields to quickly regenerate and increases your Reload Speed for a few seconds.",
          "icon": "siren-motion-6.png",
+         "id": "GD_Siren_Skills.Motion.Inertia",
          "max": 5,
          "skill": "Inertia"
         }
@@ -1019,8 +1237,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Increases the Cooldown Rate of your Phaselock's Ability by % per level .",
+         "col": 1,
+         "desc": "Increases the Cooldown Rate of your Phaselock's ability.",
          "icon": "siren-motion-7.png",
+         "id": "GD_Siren_Skills.Motion.Quicken",
          "max": 5,
          "skill": "Quicken"
         }
@@ -1030,8 +1250,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "When an enemy dies under the effects of Phaselock, there is a chance for your Phaselock to seek out and affect another target ( % chance per level ).",
+         "col": 1,
+         "desc": "Action Skill Augmentation. When an enemy under the effects of your Phaselock dies there is a chance for your Phaselock ability to seek out and affect another target.",
          "icon": "siren-motion-8.png",
+         "id": "GD_Siren_Skills.Motion.SubSequence",
          "max": 5,
          "skill": "Sub-Sequence"
         }
@@ -1041,8 +1263,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Phaselock causes enemies to switch allegiance and fight amongst themselves. Additionally, Phaselock's duration is increased by 4s.",
+         "col": 1,
+         "desc": "Action Skill Alteration. Phaselock causes enemies to turn on their friends instead of being locked down. Additionally, Phaselock's Duration is increased, but so is its Cooldown.",
          "icon": "siren-motion-9.png",
+         "id": "GD_Siren_Skills.Motion.ThoughtLock",
          "max": 1,
          "skill": "Thoughtlock"
         }
@@ -1058,14 +1282,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Critical Hit Damage and % Accuracy per level .",
+         "col": 0,
+         "desc": "Increases Critical Hit Damage and Melee Damage.",
          "icon": "siren-harmony-0.png",
+         "id": "GD_Siren_Skills.Harmony.MindsEye",
          "max": 5,
          "skill": "Mind's Eye"
         },
         {
-         "desc": "Killing an enemy who is currently Phaselocked creates Life Orb per level which automatically seeks out and heals you and your friends. The healing is stronger when you or your friend's health is low (up to 15% per Orb).",
+         "col": 2,
+         "desc": "If the enemy you have Phaselocked is killed it generates Life Orbs that automatically seek out and heal you and your friends. The healing is stronger when you or your friend's health is low.",
          "icon": "siren-harmony-1.png",
+         "id": "GD_Siren_Skills.Harmony.SweetRelease",
          "max": 5,
          "skill": "Sweet Release"
         }
@@ -1075,14 +1303,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Maximum Health and attack allies to heal them for % of the attack damage per level .",
+         "col": 0,
+         "desc": "Shooting other players heals them. Also increases your Maximum Health.",
          "icon": "siren-harmony-2.png",
+         "id": "GD_Siren_Skills.Harmony.Restoration",
          "max": 5,
          "skill": "Restoration"
         },
         {
-         "desc": "% Fire Rate and % Damage with guns per level while you have an enemy Phaselocked.",
+         "col": 2,
+         "desc": "While you have an enemy Phaselocked you gain increased Fire Rate and Damage with all gun types.",
          "icon": "siren-harmony-3.png",
+         "id": "GD_Siren_Skills.Harmony.Wreck",
          "max": 5,
          "skill": "Wreck"
         }
@@ -1092,20 +1324,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "You and your friends regenerate % health per second per level while you have an enemy Phaselocked.",
+         "col": 0,
+         "desc": "While you have an enemy Phaselocked you and your friends Regenerate Health.",
          "icon": "siren-harmony-4.png",
+         "id": "GD_Siren_Skills.Harmony.Elated",
          "max": 5,
          "skill": "Elated"
         },
         {
-         "desc": "You can instantly revive a friend in Fight for Your Life by using Phaselock on him/her. +35% Fight For your Life time",
+         "col": 1,
+         "desc": "You can instantly revive a friend in Fight For Your Life by using Phaselock on him/her.",
          "icon": "siren-harmony-5.png",
+         "id": "GD_Siren_Skills.Harmony.Res",
          "max": 1,
          "skill": "Res"
         },
         {
-         "desc": "Taking Health damage has a % chance per level of dealing an equal amount of damage to your attacker.",
+         "col": 2,
+         "desc": "When you take Health Damage there is a chance that your attacker takes damage equal to the amount of health you lost.",
          "icon": "siren-harmony-6.png",
+         "id": "GD_Siren_Skills.Harmony.Recompense",
          "max": 5,
          "skill": "Recompense"
         }
@@ -1115,8 +1353,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Regenerate up to % of your missing Health per second per level . The lower your health the more powerful the regeneration.",
+         "col": 1,
+         "desc": "You constantly Regenerate Health. The lower your current Health the more powerful the Regeneration.",
          "icon": "siren-harmony-7.png",
+         "id": "GD_Siren_Skills.Harmony.Sustenance",
          "max": 5,
          "skill": "Sustenance"
         }
@@ -1126,8 +1366,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy gives you % Life Steal per level for a short while.",
+         "col": 1,
+         "desc": "Kill Skill. Killing an enemy causes you to Steal Health from any enemy you damage. This effect lasts a short while.",
          "icon": "siren-harmony-8.png",
+         "id": "GD_Siren_Skills.Harmony.LifeTap",
          "max": 5,
          "skill": "Life Tap"
         }
@@ -1137,8 +1379,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Melee Override. Press [melee] to throw an Orb of Slag that constantly damages enemies near it. This ability has a 10 second cooldown. Pressing [melee] when Scorn is on cooldown will perform a regular melee attack.",
+         "col": 1,
+         "desc": "Melee Override Skill. Press [Melee key] to throw an Orb of Slag that constantly damages enemies near it. This ability has a cooldown. Pressing [Melee key] when Scorn is on cooldown will perform a regular melee attack.",
          "icon": "siren-harmony-9.png",
+         "id": "GD_Siren_Skills.Harmony.Scorn",
          "max": 1,
          "skill": "Scorn"
         }
@@ -1154,14 +1398,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Elemental Effect Chance per level .",
+         "col": 0,
+         "desc": "Increases your chance to cause Status Effects with Fire, Shock, Corrosive and Slag guns.",
          "icon": "siren-cataclysm-0.png",
+         "id": "GD_Siren_Skills.Cataclysm.Flicker",
          "max": 5,
          "skill": "Flicker"
         },
         {
-         "desc": "Increases Magazine Size and Reload Speed with all weapon types. % Magazine Size and % Reload Speed per level .",
+         "col": 2,
+         "desc": "Increases Magazine Size and Reload Speed with all weapon types.",
          "icon": "siren-cataclysm-1.png",
+         "id": "GD_Siren_Skills.Cataclysm.Foresight",
          "max": 5,
          "skill": "Foresight"
         }
@@ -1171,14 +1419,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Adds % Damage per level as Fire Damage to all shots fired when in Fight For Your Life.",
+         "col": 0,
+         "desc": "Adds Fire Damage to all shots fired while in Fight For Your Life. The additional Fire Damage is based on the Damage of the weapon you're firing.",
          "icon": "siren-cataclysm-2.png",
+         "id": "GD_Siren_Skills.Cataclysm.Immolate",
          "max": 5,
          "skill": "Immolate"
         },
         {
-         "desc": "Phaselocking an enemy causes a fiery explosion, damaging all nearby enemies. Helios Damage Rank per level .",
+         "col": 2,
+         "desc": "Phaselocking an enemy causes a fiery explosion, damaging all nearby enemies.",
          "icon": "siren-cataclysm-3.png",
+         "id": "GD_Siren_Skills.Cataclysm.Helios",
          "max": 5,
          "skill": "Helios"
         }
@@ -1188,20 +1440,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "While you have an enemy Phaselocked all of your bullets that hit enemies have a % chance per level to ricochet and hit another nearby enemy.",
+         "col": 0,
+         "desc": "While you have an enemy Phaselocked all of your shots that hit enemies have a chance to ricochet and hit another nearby enemy. Chain Reaction only works with bullets.",
          "icon": "siren-cataclysm-4.png",
+         "id": "GD_Siren_Skills.Cataclysm.ChainReaction",
          "max": 5,
          "skill": "Chain Reaction"
         },
         {
-         "desc": "Shooting an enemy creates a lingering Acid Cloud, which lasts for 5 seconds, dealing constant Corrosive Damage to enemies who touch it. Only one Acid Cloud can be active at a time.",
+         "col": 1,
+         "desc": "Shooting an enemy creates a lingering Acid Cloud, dealing constant Corrosive Damage to enemies who touch it. Only one Acid Cloud can be active at a time.",
          "icon": "siren-cataclysm-5.png",
+         "id": "GD_Siren_Skills.Cataclysm.CloudKill",
          "max": 1,
          "skill": "Cloud Kill"
         },
         {
-         "desc": "Your melee attacks deal additional Fire Damage. Also, when your shields become depleted you create a fiery explosion, damaging nearby enemies. Your shields must fully recharge between explosions. Backdraft Damage Rank per level .",
+         "col": 2,
+         "desc": "Your melee attacks deal additional Fire Damage. Also, when your shields become depleted you create a fiery explosion, damaging nearby enemies. Your shields must fully recharge between explosions.",
          "icon": "siren-cataclysm-6.png",
+         "id": "GD_Siren_Skills.Cataclysm.Backdraft",
          "max": 5,
          "skill": "Backdraft"
         }
@@ -1211,8 +1469,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "You deal % increased Gun Damage per level to any enemy who has more than 50% of his health remaining.",
+         "col": 1,
+         "desc": "You deal increased Gun Damage to any enemy who has more than 50% of his health remaining.",
          "icon": "siren-cataclysm-7.png",
+         "id": "GD_Siren_Skills.Cataclysm.Reaper",
          "max": 5,
          "skill": "Reaper"
         }
@@ -1222,8 +1482,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy causes you to deal constant Fire and Corrosive Damage to nearby enemies for a short time. The damage is based on your Level and the Level of the Blight Phoenix.",
+         "col": 1,
+         "desc": "Kill Skill. Killing an enemy causes you to deal constant Fire and Corrosive Damage to nearby enemies for a short time. The damage is based on your Level and the Level of Blight Phoenix.",
          "icon": "siren-cataclysm-8.png",
+         "id": "GD_Siren_Skills.Cataclysm.BlightPhoenix",
          "max": 5,
          "skill": "Blight Phoenix"
         }
@@ -1233,16 +1495,12 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Action Skill Augmentation. Phaselock now slags, corrodes and electrocutes all nearby enemies.",
+         "col": 1,
+         "desc": "Action Skill Augmentation. Phaselock now Slags, Electrocutes, and Corrodes all nearby enemies.",
          "icon": "siren-cataclysm-9.png",
+         "id": "GD_Siren_Skills.Cataclysm.Ruin",
          "max": 1,
          "skill": "Ruin"
-        },
-        {
-         "desc": "\\3",
-         "icon": "class-tree-\\i(0)",
-         "max": 5,
-         "skill": "\\1"
         }
        ]
       }
@@ -1251,6 +1509,11 @@
    ]
   },
   "GD_Soldier.Character.CharClass_Soldier": {
+   "action_skill": {
+    "icon": "commando-actionskill.png",
+    "id": "GD_Soldier_Skills.Scorpio.Skill_Scorpio",
+    "name": "Sabre Turret"
+   },
    "class": "Commando",
    "name": "Axton",
    "page": "commando",
@@ -1264,14 +1527,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% fire rate for Sabre Turret per level .",
+         "col": 0,
+         "desc": "Increases the number of shots your Sabre Turret fires in each burst. Also increases your Sabre Turret's Duration.",
          "icon": "commando-guerilla-0.png",
+         "id": "GD_Soldier_Skills.Guerrilla.Sentry",
          "max": 5,
          "skill": "Sentry"
         },
         {
-         "desc": "% Reload Speed per level .",
+         "col": 2,
+         "desc": "Increases your Reload Speed.",
          "icon": "commando-guerilla-1.png",
+         "id": "GD_Soldier_Skills.Guerrilla.Ready",
          "max": 5,
          "skill": "Ready"
         }
@@ -1281,14 +1548,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Turret Accuracy and % Turret Damage per level.",
+         "col": 0,
+         "desc": "Increases the Accuracy of your Sabre Turret.",
          "icon": "commando-guerilla-2.png",
+         "id": "GD_Soldier_Skills.Guerrilla.LaserSight",
          "max": 5,
          "skill": "Laser Sight"
         },
         {
-         "desc": "% Shield Recharge Rate and % Shield Recharge Delay per level .",
+         "col": 2,
+         "desc": "Improves your Shield Recharge Rate and Shield Recharge Delay.",
          "icon": "commando-guerilla-3.png",
+         "id": "GD_Soldier_Skills.Guerrilla.Willing",
          "max": 5,
          "skill": "Willing"
         }
@@ -1298,20 +1569,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Kill Skill. Killing an enemy gives you % Gun Damage and % Movement Speed per level for a short time.",
+         "col": 0,
+         "desc": "Kill Skill. Killing an enemy increases your Gun Damage and Movement Speed for a short time.",
          "icon": "commando-guerilla-4.png",
+         "id": "GD_Soldier_Skills.Guerrilla.Onslaught",
          "max": 5,
          "skill": "Onslaught"
         },
         {
-         "desc": "Adds Multi-Rocket Pods to your Sabre Turret. 22 Rockets per Volley. Also Increases Axton's Explosive Damage by 10%",
+         "col": 1,
+         "desc": "Adds Multi-Rocket Pods to your Sabre Turret.",
          "icon": "commando-guerilla-5.png",
+         "id": "GD_Soldier_Skills.Guerrilla.ScorchedEarth",
          "max": 1,
          "skill": "Scorched Earth"
         },
         {
-         "desc": "Damaging an enemy regenerates % of your Maximum Health per second per level for 3 seconds.",
+         "col": 2,
+         "desc": "Damaging an enemy causes you to Regenerate Health for a few seconds. This effect does not stack multiple times.",
          "icon": "commando-guerilla-6.png",
+         "id": "GD_Soldier_Skills.Guerrilla.Able",
          "max": 5,
          "skill": "Able"
         }
@@ -1321,8 +1598,10 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Grenade Capacity per level .",
+         "col": 1,
+         "desc": "Increases the maximum number of Grenades you can carry.",
          "icon": "commando-guerilla-7.png",
+         "id": "GD_Soldier_Skills.Guerrilla.Grenadier",
          "max": 5,
          "skill": "Grenadier"
         }
@@ -1332,10 +1611,12 @@
        "level": 4,
        "skills": [
         {
-         "desc": "% Action Skill Cooldown Rate per level .",
-         "icon": "commando-survival-7.png",
+         "col": 1,
+         "desc": "You gain bonus Gun Damage and Melee Damage while your shields are depleted.",
+         "icon": "commando-guerilla-8.png",
+         "id": "GD_Soldier_Skills.Guerrilla.CrisisManagement",
          "max": 5,
-         "skill": "Resourceful"
+         "skill": "Crisis Management"
         }
        ]
       },
@@ -1343,8 +1624,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Adds a second gun to the Sabre Turret and both guns fire Slag bullets. Also increases Sabre Turret Damage by 30%.",
+         "col": 1,
+         "desc": "Adds a 2nd Gun to your Sabre Turret and changes both guns to fire Slag bullets. Slagged enemies take bonus damage from all Non-Slag attacks.",
          "icon": "commando-guerilla-9.png",
+         "id": "GD_Soldier_Skills.Guerrilla.DoubleUp",
          "max": 1,
          "skill": "Double Up"
         }
@@ -1360,14 +1643,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Gun Damage and % Accuracy per level .",
+         "col": 0,
+         "desc": "Increases Gun Damage and Melee Damage.",
          "icon": "commando-gunpowder-0.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Impact",
          "max": 5,
          "skill": "Impact"
         },
         {
-         "desc": "% weapon swap and aim speed per level ; % movement speed when aiming per level .",
+         "col": 2,
+         "desc": "Increases your Weapon Swap Speed and Aim Speed. Also, your Movement Speed is increased while aiming.",
          "icon": "commando-gunpowder-1.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Expertise",
          "max": 5,
          "skill": "Expertise"
         }
@@ -1377,14 +1664,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Magazine Size.",
+         "col": 0,
+         "desc": "Increases Magazine Size with Assault Rifles.",
          "icon": "commando-gunpowder-2.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Overload",
          "max": 5,
          "skill": "Overload"
         },
         {
-         "desc": "Kill Skill. Killing an enemy gives % Fire Rate and % Recoil Reduction per level for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy dramatically increases your Fire Rate and reduces Recoil for a short period of time.",
          "icon": "commando-gunpowder-3.png",
+         "id": "GD_Soldier_Skills.Gunpowder.MetalStorm",
          "max": 5,
          "skill": "Metal Storm"
         }
@@ -1394,20 +1685,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "% Recoil Reduction, % Grenade Damage, and % Rocket Launcher damage per level .",
+         "col": 0,
+         "desc": "Reduces Recoil with all weapon types and increases Grenade Damage and Rocket Launcher Damage.",
          "icon": "commando-gunpowder-4.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Steady",
          "max": 5,
          "skill": "Steady"
         },
         {
-         "desc": "% Turret Deploy Range, % Turret Health.",
+         "col": 1,
+         "desc": "Your Sabre Turret can be deployed using Longbow technology, allowing you to deploy it much further away. Also, increases the Health of your Sabre Turret.",
          "icon": "commando-gunpowder-5.png",
+         "id": "GD_Soldier_Skills.Gunpowder.LongBowTurret",
          "max": 1,
          "skill": "Longbow Turret"
         },
         {
-         "desc": "% Gun, Critical Hit Damage, and Grenade damage per level while turret is deployed.",
+         "col": 2,
+         "desc": "While your Sabre Turret is deployed you deal increased Damage.",
          "icon": "commando-gunpowder-6.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Battlefront",
          "max": 5,
          "skill": "Battlefront"
         }
@@ -1417,14 +1714,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "% Gun Damage and % Critical Hit Damage with non-elemental guns.",
+         "col": 0,
+         "desc": "Increases the Damage and Fire Rate of non-elemental guns.",
          "icon": "commando-gunpowder-7.png",
+         "id": "GD_Soldier_Skills.Gunpowder.DutyCalls",
          "max": 5,
          "skill": "Duty Calls"
         },
         {
-         "desc": "Allows you to throw grenades while in Fight for Your Life. % Grenade and Rocket Launcher damage.",
+         "col": 1,
+         "desc": "Allows you to throw grenades while in Fight For Your Life. Also increases your Grenade Damage and Rocket Launcher Damage.",
          "icon": "commando-gunpowder-8.png",
+         "id": "GD_Soldier_Skills.Gunpowder.DoOrDie",
          "max": 1,
          "skill": "Do or Die"
         }
@@ -1434,8 +1735,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "% Gun Damage, Accuracy, Critical Hit Damage, Fire Rate, Magazine Size, Reload Speed, and Maximum Health per level .",
+         "col": 1,
+         "desc": "Makes you better at just about Everything.",
          "icon": "commando-gunpowder-9.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Ranger",
          "max": 5,
          "skill": "Ranger"
         }
@@ -1445,8 +1748,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Deploying your Sabre Turret sets off a small Nuclear Blast and passively increase Axton's Cooldown Rate by 20%.",
+         "col": 1,
+         "desc": "Deploying your Sabre Turret sets off a small Nuclear Blast.",
          "icon": "commando-gunpowder-10.png",
+         "id": "GD_Soldier_Skills.Gunpowder.Nuke",
          "max": 1,
          "skill": "Nuke"
         }
@@ -1462,14 +1767,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "% Maximum Health per level .",
+         "col": 0,
+         "desc": "Increases your Maximum Health.",
          "icon": "commando-survival-0.png",
+         "id": "GD_Soldier_Skills.Survival.HealthY",
          "max": 5,
          "skill": "Healthy"
         },
         {
-         "desc": "% shield capacity per level ; regenerate % health per second per level when shields are full.",
+         "col": 2,
+         "desc": "Increases your Shield Capacity. Also, when your shield is full you Regenerate Health.",
          "icon": "commando-survival-1.png",
+         "id": "GD_Soldier_Skills.Survival.Preparation",
          "max": 5,
          "skill": "Preparation"
         }
@@ -1479,14 +1788,18 @@
        "level": 1,
        "skills": [
         {
-         "desc": "% Gun Damage and % Movement Speed per level during Fight For Your Life.",
+         "col": 0,
+         "desc": "Increases your Gun Damage and Movement Speed while in Fight For Your Life.",
          "icon": "commando-survival-2.png",
+         "id": "GD_Soldier_Skills.Survival.LastDitchEffort",
          "max": 5,
          "skill": "Last Ditch Effort"
         },
         {
-         "desc": "Up to % Reload Speed and % Shield Recharge Delay per level depending on how low your health is.",
+         "col": 2,
+         "desc": "Improves your Reload Speed and Shield Recharge Delay based on how much Health you have. The lower your Health the higher the bonuses.",
          "icon": "commando-survival-3.png",
+         "id": "GD_Soldier_Skills.Survival.Pressure",
          "max": 5,
          "skill": "Pressure"
         }
@@ -1496,20 +1809,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "% Status Effect duration on you and % Damage Reduction per level .",
+         "col": 0,
+         "desc": "Reduces the duration of Status Effects on you (Burned, Corroded, Electrocuted, and Slagged). Also increases Maximum Health.",
          "icon": "commando-survival-4.png",
+         "id": "GD_Soldier_Skills.Survival.Forbearance",
          "max": 5,
          "skill": "Forbearance"
         },
         {
-         "desc": "Your Sabre Turret projects a shield that attempts to block enemy ranged fire but lets friendly ranged attacks pass through and passively increases Axton's Shield Capacity by 20%",
+         "col": 1,
+         "desc": "Your Sabre Turret projects a Protective Shield. The Shield attempts to block enemy ranged attacks, but lets friendly ranged attacks pass through. Enemy movement and melee attacks are not affected.",
          "icon": "commando-survival-5.png",
+         "id": "GD_Soldier_Skills.Survival.PhalanxShield",
          "max": 1,
          "skill": "Phalanx Shield"
         },
         {
-         "desc": "Kill Skill. Killing an enemy regenerates % of your shield per second per level for a short time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy causes your Shields to quickly regenerate for a short time.",
          "icon": "commando-survival-6.png",
+         "id": "GD_Soldier_Skills.Survival.QuickCharge",
          "max": 5,
          "skill": "Quick Charge"
         }
@@ -1519,14 +1838,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "% Gun Damage and % Damage Reduction per level when shields are depleted.",
-         "icon": "commando-guerilla-8.png",
+         "col": 0,
+         "desc": "Increases your Cooldown Rate on your Sabre Turret Action Skill.",
+         "icon": "commando-survival-7.png",
+         "id": "GD_Soldier_Skills.Survival.Resourceful",
          "max": 5,
-         "skill": "Crisis Management"
+         "skill": "Resourceful"
         },
         {
+         "col": 1,
          "desc": "Your Sabre Turret can be deployed on walls and ceilings.",
          "icon": "commando-survival-8.png",
+         "id": "GD_Soldier_Skills.Survival.Mag-Lock",
          "max": 1,
          "skill": "Mag-Lock"
         }
@@ -1536,8 +1859,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "You have a % chance per level to ignore damage that would otherwise kill you. In addition to not taking damage from the attack, you will also regain half your Maximum health.",
+         "col": 1,
+         "desc": "You gain a chance to ignore damage that would otherwise kill you. In addition to not taking damage from the attack you will Regenerate half your Maximum Health.",
          "icon": "commando-survival-9.png",
+         "id": "GD_Soldier_Skills.Survival.Grit",
          "max": 5,
          "skill": "Grit"
         }
@@ -1547,8 +1872,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Allows you to deploy two Sabre Turrets. Additionally gives the turret 30% Fire Rate and 3 more shots per burst.",
+         "col": 1,
+         "desc": "Allows you to deploy Two Sabre Turrets. Once the first Sabre Turret is deployed press [ActionSkill key] again to deploy the 2nd.",
          "icon": "commando-survival-10.png",
+         "id": "GD_Soldier_Skills.Survival.Gemini",
          "max": 1,
          "skill": "Gemini"
         }
@@ -1559,6 +1886,11 @@
    ]
   },
   "GD_Tulip_Mechromancer.Character.CharClass_Mechromancer": {
+   "action_skill": {
+    "icon": "mechromancer-actionskill.png",
+    "id": "GD_Tulip_Mechromancer_Skills.Action.Skill_DeathTrap",
+    "name": "Summon Deathtrap"
+   },
    "class": "Mechromancer",
    "name": "Gaige",
    "page": "mechromancer",
@@ -1572,14 +1904,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "Your bullets that hit walls or other objects have a % chance per level to ricochet toward a nearby enemy dealing 50% damage.",
+         "col": 0,
+         "desc": "Your bullets that hit walls or other objects have a chance to ricochet off toward a nearby enemy. Ricocheted bullets deal reduced damage.",
          "icon": "mechromancer-bestfriendsforever-0.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.CloseEnough",
          "max": 5,
          "skill": "Close Enough"
         },
         {
-         "desc": "While your gun's magazine is full you regenerate % per level of maximum health per second.",
+         "col": 2,
+         "desc": "While your gun's Magazine is full you Regenerate Health.",
          "icon": "mechromancer-bestfriendsforever-1.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.CookingUpTrouble",
          "max": 5,
          "skill": "Cooking Up Trouble"
         }
@@ -1589,20 +1925,26 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Improves shield recharge delay (up to % per level ) and shield recharge rate (up to % per level ) based on how low your health is. The lower your health the greater the bonuses.",
+         "col": 0,
+         "desc": "Improves Shield Recharge Delay and Shield Recharge Rate based on how low your Health is. The lower your Health the greater the bonuses.",
          "icon": "mechromancer-bestfriendsforever-2.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.FancyMathematics",
          "max": 5,
          "skill": "Fancy Mathematics"
         },
         {
-         "desc": "Deathtrap Ability. Deathtrap restores the shields of one ally by 30%. Additionally increases Gaige's Shield Capacity by 15%.",
+         "col": 1,
+         "desc": "Deathtrap Ability. Deathtrap restores the Shields of one ally.",
          "icon": "mechromancer-bestfriendsforever-3.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.BuckUp",
          "max": 1,
          "skill": "Buck Up"
         },
         {
-         "desc": "When your magazine is at least half empty you gain fire rate % per level .",
+         "col": 2,
+         "desc": "When your Magazine is half empty you gain a Fire Rate bonus.",
          "icon": "mechromancer-bestfriendsforever-4.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.TheBetterHalf",
          "max": 5,
          "skill": "The Better Half"
         }
@@ -1612,20 +1954,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Increases maximum health for you ( % per level ) and Deathtrap ( % per level ).",
+         "col": 0,
+         "desc": "Increases Maximum Health for you and Deathtrap.",
          "icon": "mechromancer-bestfriendsforever-5.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.PotentAsAPony",
          "max": 5,
          "skill": "Potent as a Pony"
         },
         {
-         "desc": "While Deathtrap is active, if you or Deathtrap kill an enemy it increases Deathtrap's duration by 5 seconds and grants both of you a 4% stackable melee damage bonus. Bonuses are lost when Deathtrap goes away.",
+         "col": 1,
+         "desc": "While Deathtrap is active if you or Deathtrap kill an enemy it increases Deathtrap's Duration and grants both of you a stackable Melee Damage bonus. Bonuses are lost when Deathtrap goes away.",
          "icon": "mechromancer-bestfriendsforever-6.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.UpshotRobot",
          "max": 1,
          "skill": "Upshot Robot"
         },
         {
-         "desc": "Killing an enemy grants you % per level movement speed and % shield regeneration per level for a short while.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy grants you bonus Movement Speed and causes your Shield to regenerate for a short while.",
          "icon": "mechromancer-bestfriendsforever-7.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.UnstoppableForce",
          "max": 5,
          "skill": "Unstoppable Force"
         }
@@ -1635,14 +1983,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Deathtrap Ability. Deathtrap causes an explosion in front of him, dealing explosive damage to all nearby enemies. Additionally increases Gaige's Melee Damage by 20%.",
+         "col": 0,
+         "desc": "Deathtrap Ability. Deathtrap causes an explosion in front of him, dealing Explosive Damage to all nearby enemies.",
          "icon": "mechromancer-bestfriendsforever-8.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.ExplosiveClap",
          "max": 1,
          "skill": "Explosive Clap"
         },
         {
-         "desc": "You and Deathtrap gain % per level damage reduction against all damage types. Deathtrap gains % per level melee damage.",
+         "col": 1,
+         "desc": "You and Deathtrap gain Damage Reduction against All Damage Types. Additionally, Deathtrap gains bonus Melee Damage.",
          "icon": "mechromancer-bestfriendsforever-9.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.MadeOfSternerStuff",
          "max": 5,
          "skill": "Made of Sterner Stuff"
         }
@@ -1652,8 +2004,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Increases the cooldown rate of your action skill by % per level .",
+         "col": 1,
+         "desc": "Increases the Cooldown Rate of your Action Skill.",
          "icon": "mechromancer-bestfriendsforever-10.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.20PercentCooler",
          "max": 5,
          "skill": "20% Cooler"
         }
@@ -1663,8 +2017,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Grants a copy of your shield to Deathtrap. Additionally increases both Gaige's Shield Capacity and Recharge Rate by 20% and gives -20% Shield Recharge Delay.",
+         "col": 1,
+         "desc": "Grants a copy of your Shield to Deathtrap.",
          "icon": "mechromancer-bestfriendsforever-11.png",
+         "id": "GD_Tulip_Mechromancer_Skills.BestFriendsForever.SharingIsCaring",
          "max": 1,
          "skill": "Sharing is Caring"
         }
@@ -1680,14 +2036,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "Increases your chances of applying Burn ( % per level ), Electrocute ( % per level ), Corrode ( % per level ), and Slag ( % per level ) Status Effects.",
+         "col": 0,
+         "desc": "Increases your chances of applying Burn, Electrocute, Corrode, and Slag Status Effects.",
          "icon": "mechromancer-littlebigtrouble-0.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.MorePep",
          "max": 5,
          "skill": "More Pep"
         },
         {
-         "desc": "Grants you % per level Resistance to Shock Damage. Also increases your Shield Capacity by % per level .",
+         "col": 2,
+         "desc": "Grants you Resistance to Shock Damage. Also increases your Shield Capacity.",
          "icon": "mechromancer-littlebigtrouble-1.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.Myelin",
          "max": 5,
          "skill": "Myelin"
         }
@@ -1697,20 +2057,26 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Killing an enemy with a Critical Hit causes an Electric Storm, dealing Rank ( per level) Electrocute Damage to nearby enemies. Electrical Storms are also caused by Deathtrap whenever he kills an enemy.",
+         "col": 0,
+         "desc": "Killing an enemy with a Critical Hit causes an Electrical Storm, dealing Electrocute Damage to nearby enemies. Electrical Storms are also caused by Deathtrap whenever he kills an enemy.",
          "icon": "mechromancer-littlebigtrouble-2.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ShockStorm",
          "max": 5,
          "skill": "Shock Storm"
         },
         {
+         "col": 1,
          "desc": "Deathtrap Ability. Deathtrap fires a laser beam and sweeps it across the battlefield, dealing Burn Damage and possibly Igniting enemies.",
          "icon": "mechromancer-littlebigtrouble-3.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.TheStare",
          "max": 1,
          "skill": "The Stare"
         },
         {
-         "desc": "Increases Melee Damage for you and Deathtrap by % per level . Additionally increases Gun Damage by 3% per level.",
+         "col": 2,
+         "desc": "Increases Melee Damage for you and Deathtrap.",
          "icon": "mechromancer-littlebigtrouble-4.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.StrengthOfFiveGorillas",
          "max": 5,
          "skill": "Strength of Five Gorillas"
         }
@@ -1720,20 +2086,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "When your Electrocute Status Effects deal damage to enemies, there is a % (per level) chance they will burst into flames and take Burn Damage. The amount of Burn Damage is based on the Electrocute damage dealt.",
+         "col": 0,
+         "desc": "When your Electrocute Status Effects deal damage to enemies there is a chance they will burst into flames and take Burn Damage. The amount of Burn Damage is based on the Electrocute damage dealt.",
          "icon": "mechromancer-littlebigtrouble-5.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ElectricalBurn",
          "max": 5,
          "skill": "Electrical Burn"
         },
         {
-         "desc": "Reloading your gun causes an Electrical Explosion, damaging nearby enemies. Additionally passively increases Gaige's reload speed by 25%.",
+         "col": 1,
+         "desc": "Reloading your gun causes an Electrical Explosion, damaging nearby enemies.",
          "icon": "mechromancer-littlebigtrouble-6.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.ShockAndAAAGGGHHH",
          "max": 1,
          "skill": "Shock and \"AAAGGGGHHH!\""
         },
         {
-         "desc": "Kill Skill. Killing an enemy increases by % per level the Damage that your Burn, Electrocute, and Corrode status effects deal for a short period of time.",
+         "col": 2,
+         "desc": "Kill Skill. Killing an enemy increases the Damage that your Burn, Electrocute, and Corrode status effects deal for a short period of time.",
          "icon": "mechromancer-littlebigtrouble-7.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.EvilEnchantress",
          "max": 5,
          "skill": "Evil Enchantress"
         }
@@ -1743,14 +2115,18 @@
        "level": 3,
        "skills": [
         {
-         "desc": "Deathtrap Ability. Deathtrap shoots out an orb of energy at an enemy. If you shoot the orb it will explode, dealing massive Shock Damage to nearby enemies. Additionally increases Gaige's Explosive Damage by 15%.",
+         "col": 0,
+         "desc": "Deathtrap Ability. Deathtrap shoots out an orb of energy at an enemy. If you shoot the orb it will explode, dealing massive Shock Damage to nearby enemies.",
          "icon": "mechromancer-littlebigtrouble-8.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.OneTwoBoom",
          "max": 1,
          "skill": "One Two Boom"
         },
         {
-         "desc": "Increases all Shock and Electrocute Damage that you inflict by % per level .",
+         "col": 1,
+         "desc": "Increases all Shock and Electrocute Damage that you inflict.",
          "icon": "mechromancer-littlebigtrouble-9.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.WiresDontTalk",
          "max": 5,
          "skill": "Wires Don't Talk"
         }
@@ -1760,8 +2136,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Not shooting an enemy for a short time grants you a stack of Interspersed Outburst (up to 5 stacks). The next time you shoot an enemy, all stacks of Interspersed Outburst are consumed and you deal Rank ( per level) Slag Damage. The more stacks are consumed, the greater the chance of slagging the target.",
+         "col": 1,
+         "desc": "Not shooting an enemy for a short time grants you a stack of Interspersed Outburst. The next time you shoot an enemy all stacks of Interspersed Outburst are consumed and you deal bonus Slag Damage. The more stacks consumed the higher the skill rank the greater the chance of slagging the target.",
          "icon": "mechromancer-littlebigtrouble-10.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.InterspersedOutburst",
          "max": 5,
          "skill": "Interspersed Outburst"
         }
@@ -1771,10 +2149,12 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Shooting Deathtrap with an elemental weapon charges him with that element, causing his melee attacks to deal additional damage of that element. Additionally passively increases Gaige's Elemental Effect Chance and Damage by 30%.",
+         "col": 1,
+         "desc": "Shooting Deathtrap with an elemental weapon charges him with that element, causing his melee attacks to deal additional damage of that element.",
          "icon": "mechromancer-littlebigtrouble-11.png",
+         "id": "GD_Tulip_Mechromancer_Skills.LittleBigTrouble.MakeItSparkle",
          "max": 1,
-         "skill": "Make it Sparkle"
+         "skill": "Make It Sparkle"
         }
        ]
       }
@@ -1788,14 +2168,18 @@
        "level": 0,
        "skills": [
         {
-         "desc": "Increases you reload speed % per level but decreases your magazine size % per level .",
+         "col": 0,
+         "desc": "Increases your Reload Speed, but decreases your Magazine Size.",
          "icon": "mechromancer-orderedchaos-0.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.SmallerLighterFaster",
          "max": 4,
          "skill": "Smaller, Lighter, Faster"
         },
         {
-         "desc": "Killing an enemy or fully emptying your gun's magazine while in combat grants you a stack of Anarchy (up to 150 stacks). For every stack of Anarchy you have, you gain +1.75% bonus gun damage, but your accuracy is decreased -1.75%. Prematurely reloading your guns removes all stacks of Anarchy. Anarchy stacks are quickly lost while in \"Fight for Your Life.\"",
+         "col": 2,
+         "desc": "Killing an enemy or fully emptying your gun's Magazine while in combat grants you a stack of Anarchy. For every stack of Anarchy you have you gain bonus Gun Damage, but your Accuracy is decreased. Prematurely reloading your gun removes all stacks of Anarchy. Anarchy stacks are quickly lost while in \"Fight for your Life.\"",
          "icon": "mechromancer-orderedchaos-1.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.Anarchy",
          "max": 1,
          "skill": "Anarchy"
         }
@@ -1805,20 +2189,26 @@
        "level": 1,
        "skills": [
         {
-         "desc": "Increases the maximum number of Anarchy stacks you can have by per level .",
+         "col": 0,
+         "desc": "Increases the maximum number of Anarchy stacks you can have.",
          "icon": "mechromancer-orderedchaos-2.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.PreshrunkCyberpunk",
          "max": 5,
          "skill": "Preshrunk Cyberpunk"
         },
         {
-         "desc": "Deathtrap Ability. Deathtrap lashes out with a flurry of attacks. Additionally passively increases Gaige's Gun Damage by 20%.",
+         "col": 1,
+         "desc": "Deathtrap Ability. Deathtrap lashes out with a flurry of attacks.",
          "icon": "mechromancer-orderedchaos-3.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.RobotRampage",
          "max": 1,
          "skill": "Robot Rampage"
         },
         {
-         "desc": "Killing an enemy immediately restores % of your shields per level , but you lose % of your current health per level .",
+         "col": 2,
+         "desc": "Killing an enemy immediately restores a portion of your Shields but you lose a portion of your Health.",
          "icon": "mechromancer-orderedchaos-4.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.BloodSoakedShields",
          "max": 5,
          "skill": "Blood Soaked Shields"
         }
@@ -1828,20 +2218,26 @@
        "level": 2,
        "skills": [
         {
-         "desc": "Increases the movement speed of Deathtrap by % and increases the Deathtrap's damage by % per point per level.",
+         "col": 0,
+         "desc": "Increases the Movement Speed of Deathtrap.",
          "icon": "mechromancer-orderedchaos-5.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.AnnoyedAndroid",
          "max": 5,
          "skill": "Annoyed Android"
         },
         {
-         "desc": "Prematurely reloading activates Discord granting you +65% accuracy, +25% fire rate, and 3% per second health regeneration. You constantly lose Anarchy stacks while Discord is active. Discord can be shut off by prematurely reloading again.",
+         "col": 1,
+         "desc": "Prematurely reloading activates Discord, granting you bonus Accuracy, Fire Rate, and Health Regeneration. You constantly lose Anarchy stacks while Discord is active. Discord can be shut off by prematurely reloading again.",
          "icon": "mechromancer-orderedchaos-6.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.Discord",
          "max": 1,
          "skill": "Discord"
         },
         {
-         "desc": "Whenever you get a stack of Anarchy there is a % per level chance you get an additional stack.",
+         "col": 2,
+         "desc": "Whenever you get a stack of Anarchy there is a chance that you gain an additional stack.",
          "icon": "mechromancer-orderedchaos-7.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.TypecastIconoclast",
          "max": 5,
          "skill": "Typecast Iconoclast"
         }
@@ -1851,16 +2247,20 @@
        "level": 3,
        "skills": [
         {
-         "desc": "If you have 0 stacks of Anarchy, then the next time you would gain an Anarchy stack you instead gain 25.",
+         "col": 0,
+         "desc": "If you have 0 stacks of Anarchy then the next time you would gain an Anarchy stack you instead gain 25.",
          "icon": "mechromancer-orderedchaos-8.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.RationalAnarchist",
          "max": 1,
          "skill": "Rational Anarchist"
         },
         {
-         "desc": "Shooting an enemy while in midair consumes stacks of Anarchy (1 per level) and causes a Rank ( per level) Digi-splosion, damaging nearby enemies.",
+         "col": 1,
+         "desc": "Shooting an enemy while in midair consumes stacks of Anarchy and causes a Digi-splosion, damaging nearby enemies.",
          "icon": "mechromancer-orderedchaos-9.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.DeathFromAbove",
          "max": 5,
-         "skill": "Death From Above"
+         "skill": "Death from Above"
         }
        ]
       },
@@ -1868,8 +2268,10 @@
        "level": 4,
        "skills": [
         {
-         "desc": "Every per level bullets that hits an enemy, one of them will ricochet toward another nearby enemy.",
+         "col": 1,
+         "desc": "Every Nth bullet that hits an enemy will ricochet toward another nearby enemy.",
          "icon": "mechromancer-orderedchaos-10.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.TheNthDegree",
          "max": 5,
          "skill": "The Nth Degree"
         }
@@ -1879,8 +2281,10 @@
        "level": 5,
        "skills": [
         {
-         "desc": "Melee Override Skill. While you have a stack of Anarchy, melee to digistruct claws and swipe twice at an enemy, dealing +1.25% melee damage per Anarchy stack and restoring health. The lower your health the more health you gain. This attack consumes an Anarchy stack. Additionally increases Swap Speed by 0.625% per Anarchy stack",
+         "col": 1,
+         "desc": "Melee Override Skill. While you have a stack of Anarchy press [Melee key] to Digistruct Claws and swipe twice at an enemy, dealing damage based on the number of Anarchy stacks you currently have and Restoring Health. The lower your health the more health you gain. This attack consumes an Anarchy stack.",
          "icon": "mechromancer-orderedchaos-11.png",
+         "id": "GD_Tulip_Mechromancer_Skills.EmbraceChaos.WithClaws",
          "max": 1,
          "skill": "With Claws"
         }
@@ -1891,5 +2295,5 @@
    ]
   }
  },
- "version": 1
+ "version": 3
 }

@@ -88,6 +88,7 @@ pub fn harness() -> Harness<'static, LootsmithApp> {
 pub fn harness_with(save: &str, dumps: Option<&str>) -> Harness<'static, LootsmithApp> {
     Harness::builder()
         .with_size(Vec2::new(1280.0, 800.0))
+        .with_max_steps(240)
         .build_ui_state(
             |ui, app: &mut LootsmithApp| app.build(ui),
             LootsmithApp::new(Some(save.to_string()), dumps.map(str::to_string)),
@@ -102,10 +103,13 @@ pub fn harness_sized(
     dumps: Option<&str>,
     size: Vec2,
 ) -> Harness<'static, LootsmithApp> {
-    Harness::builder().with_size(size).build_ui_state(
-        |ui, app: &mut LootsmithApp| app.build(ui),
-        LootsmithApp::new(Some(save.to_string()), dumps.map(str::to_string)),
-    )
+    Harness::builder()
+        .with_size(size)
+        .with_max_steps(240)
+        .build_ui_state(
+            |ui, app: &mut LootsmithApp| app.build(ui),
+            LootsmithApp::new(Some(save.to_string()), dumps.map(str::to_string)),
+        )
 }
 
 /// A harness whose app is **isolated** from the host (`LootsmithApp::new_isolated`):
@@ -115,6 +119,7 @@ pub fn harness_sized(
 pub fn harness_isolated(save: &str) -> Harness<'static, LootsmithApp> {
     Harness::builder()
         .with_size(Vec2::new(1280.0, 800.0))
+        .with_max_steps(240)
         .build_ui_state(
             |ui, app: &mut LootsmithApp| app.build(ui),
             LootsmithApp::new_isolated(Some(save.to_string())),

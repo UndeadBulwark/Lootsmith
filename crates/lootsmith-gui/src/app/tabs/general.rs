@@ -76,12 +76,6 @@ impl LootsmithApp {
                     changed |=
                         crate::ui::widgets::checkbox(ui, &mut self.form.badass, "").changed();
                     ui.end_row();
-                    ui.label("Golden keys");
-                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                        ui.add(egui::DragValue::new(&mut self.form.golden_keys))
-                    })
-                    .changed();
-                    ui.end_row();
                     ui.label("Bank slots");
                     changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
                         ui.add(egui::DragValue::new(&mut self.form.bank_slots))

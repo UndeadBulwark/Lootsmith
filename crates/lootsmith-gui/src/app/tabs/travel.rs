@@ -39,6 +39,23 @@ impl LootsmithApp {
                 }
             }
         }
+        // Visited teleporters the station table does not know (Gibbed lists
+        // these under "Unknown") so they stay visible and un-checkable rather
+        // than silently hidden.
+        let unknown: Vec<(String, String)> = self
+            .travel
+            .iter()
+            .filter(|name| {
+                !groups
+                    .iter()
+                    .any(|(_, rows)| rows.iter().any(|(resource, _)| resource == *name))
+            })
+            .map(|name| (name.clone(), name.clone()))
+            .collect();
+        if !unknown.is_empty() {
+            groups.push(("Unknown".to_string(), unknown));
+        }
+
         let p = *theme::active(ui.ctx());
         let visited = format!("visited: {} / {}", self.travel.len(), stations.len());
         crate::ui::widgets::label_nums(ui, &visited, p.dim, 15.0);

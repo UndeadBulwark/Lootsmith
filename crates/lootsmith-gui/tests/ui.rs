@@ -560,7 +560,7 @@ fn bundled_tables_resolve_names_with_no_game_data_folder() {
     assert!(state.manager.is_some(), "bundled asset library is loaded");
     assert!(state.dumps_bundled, "and it is flagged as bundled");
     assert!(state.name_parts.is_some(), "bundled name parts");
-    assert!(state.part_lists.is_some(), "bundled balance part lists");
+    assert!(state.defs.is_some(), "bundled part definitions");
     assert!(state.stations.is_some(), "bundled travel stations");
     assert!(state.customizations.is_some(), "bundled customizations");
     assert!(state.missions_data.is_some(), "bundled missions");
@@ -603,7 +603,9 @@ fn ui_scale_auto_matches_the_monitor_size() {
 fn ui_scale_control_selects_3x() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Menu").click();
+    h.get_by_label("File").click();
+    h.run();
+    h.get_by_label("Preferences…").click();
     h.run();
     h.get_by_label("3x").click();
     h.run();
@@ -615,7 +617,9 @@ fn ui_scale_control_selects_3x() {
 fn ui_scale_control_selects_2x() {
     let mut h = harness();
     h.run();
-    h.get_by_label("Menu").click();
+    h.get_by_label("File").click();
+    h.run();
+    h.get_by_label("Preferences…").click();
     h.run();
     h.get_by_label("2x").click();
     h.run();

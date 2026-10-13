@@ -6,9 +6,12 @@ use eframe::egui;
 
 impl LootsmithApp {
     pub fn change_class(&mut self, player_class: &str) {
-        let Some(save_game) = self.save_game.as_mut() else {
+        if self.save_game.is_none() {
             return;
-        };
+        }
+        // DLC class package ids, resolved from `Player Classes.json` ->
+        // `Downloadable Packages.json`: Krieg (`GD_LilacPackageDef`) = 6,
+        // Gaige (`GD_TulipPackageDef`) = 2. (Verified against the dumps.)
         let is_dlc = player_class.contains("Lilac") || player_class.contains("Tulip");
         let package = if player_class.contains("Lilac") {
             6 // Psycho Pack
@@ -17,15 +20,52 @@ impl LootsmithApp {
         } else {
             0
         };
-        save_game.set_str(1, player_class);
-        save_game.set_bool(44, is_dlc);
-        save_game.set_i32(45, package);
+        let refund: i32 = self.skills.iter().map(|s| s.grade.max(0)).sum();
+        {
+            let Some(save_game) = self.save_game.as_mut() else {
+                return;
+            };
+            save_game.set_str(1, player_class);
+            save_game.set_bool(44, is_dlc);
+            save_game.set_i32(45, package);
+        }
+        self.form.general_skill_points += refund;
+
+        // The new class has a different skill list: rebuild it from the class's
+        // canonical objects (all grade 0) so its tree is editable. Refund every
+        // spent point so the header is consistent with the fresh list.
+        match crate::skills::for_player_class(player_class) {
+            Some(class) => self.rebuild_skill_list(class),
+            None => {
+                for row in self.skills.iter_mut() {
+                    row.grade = 0;
+                    row.points = 0;
+                }
+            }
+        }
+        self.apply_skills();
+
         self.read_info.player_class = player_class.to_string();
         self.dirty = true;
         self.status = format!(
-            "class changed to {} — skills and the action skill may need re-spending",
+            "class changed to {} — skill list rebuilt, {refund} point(s) refunded",
             crate::skills::class_display_name(player_class)
         );
+    }
+
+    /// Replace the save's `SkillData` list with `class`'s canonical object list
+    /// (all rows grade 0) and refresh the cached rows. Used when the class changes
+    /// and to repair a save whose skill list belongs to another class.
+    pub fn rebuild_skill_list(&mut self, class: &crate::skills::SkillClass) {
+        let order = class.save_order();
+        {
+            let Some(save_game) = self.save_game.as_mut() else {
+                return;
+            };
+            save_game.set_skill_list(&order);
+        }
+        self.refresh_skills();
+        self.dirty = true;
     }
 
     /// How many one-off level challenges (Digistruct Peak OP levels) the
@@ -80,7 +120,9 @@ impl LootsmithApp {
                                 for id in &classes {
                                     let label = crate::skills::class_display_name(id);
                                     let selected = *id == self.read_info.player_class;
-                                    if ui.selectable_label(selected, label).clicked() {
+                                    // Re-picking the current class must not rebuild
+                                    // (and zero) the skill list.
+                                    if ui.selectable_label(selected, label).clicked() && !selected {
                                         change_class = Some((*id).to_string());
                                     }
                                 }

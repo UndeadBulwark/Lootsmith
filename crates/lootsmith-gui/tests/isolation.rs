@@ -72,7 +72,7 @@ fn isolated_app_ignores_env_and_uses_bundled_tables() {
     );
     assert!(iso.manager.is_some(), "bundled asset library");
     assert!(iso.name_parts.is_some(), "bundled name parts");
-    assert!(iso.part_lists.is_some(), "bundled part lists");
+    assert!(iso.defs.is_some(), "bundled part definitions");
     assert!(iso.stations.is_some(), "bundled travel stations");
     assert!(iso.customizations.is_some(), "bundled customizations");
     assert!(iso.missions_data.is_some(), "bundled missions");

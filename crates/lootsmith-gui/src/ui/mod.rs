@@ -3,4 +3,5 @@
 pub mod auto_scale;
 pub mod item_table;
 pub mod pixel;
+pub mod skill_board;
 pub mod widgets;

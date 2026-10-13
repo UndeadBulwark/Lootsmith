@@ -167,12 +167,11 @@ fn workbench_lists_the_last_part_row_at_every_scale() {
     }
 }
 
-/// Gibbed-style part exclusion: the workbench shows the item's own parts **plus**
-/// the balance's candidates, with type/balance/manufacturer pinned. The fixture
-/// Dahl pistol carries grip/barrel/material/prefix/title and its balance offers
-/// {accessory1, body, material, sight}, so Stock/Elemental/Accessory 2 must not show.
+/// Gibbed-style part slots: the workbench always shows every weapon slot,
+/// including ones the balance does not cover (Stock / Elemental / Accessory 2)
+/// — those simply offer only "None" (`BaseWeaponView.xaml`).
 #[test]
-fn workbench_shows_the_items_parts_and_balance_candidates() {
+fn workbench_shows_every_weapon_part_slot() {
     let save = synthetic("parts");
     let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
     h.state_mut().set_tab(Tab::Backpack);
@@ -191,32 +190,47 @@ fn workbench_shows_the_items_parts_and_balance_candidates() {
         "Grip",
         "Barrel",
         "Sight",
+        "Stock",
+        "Elemental",
         "Accessory 1",
+        "Accessory 2",
         "Material",
         "Prefix",
         "Title",
     ] {
         assert!(has(present), "expected {present:?} in the parts grid");
     }
-    for absent in ["Stock", "Elemental", "Accessory 2"] {
-        assert!(!has(absent), "{absent:?} must not appear for this item");
-    }
 
-    // The item's own parts win: an elemental part shows even though the balance
-    // omits it.
-    let _ = h.state_mut().set_selected_part(
-        "elemental",
-        "GD_Weap_Pistol.elemental.Pistol_Elemental_Fire",
+    // Each slot's candidates are the resolved balance set (Gibbed's `Create`),
+    // not the whole asset library: the Dahl pistol inherits grip/barrel from its
+    // base chain, and the list stays small.
+    let grip = h.state().slot_choices(
+        true,
+        Some("GD_Weap_Pistol.A_Weapons.WeaponType_Dahl_Pistol"),
+        "GD_Weap_Pistol.A_Weapons.Pistol_Dahl_4_VeryRare",
+        "grip",
+        lootsmith_core::AssetGroup::WeaponParts,
     );
-    h.run();
-    let runs = {
-        let out = h.output();
-        extract(out).0
-    };
+    assert!(!grip.is_empty(), "grip candidates must resolve");
     assert!(
-        runs.iter().any(|r| r.text.trim() == "Elemental"),
-        "an existing elemental part must be editable"
+        grip.len() < 20,
+        "grip candidates must be the resolved set, got {} entries",
+        grip.len()
     );
+    assert!(
+        grip.iter().any(|p| p.ends_with("Pistol_Grip_Dahl")),
+        "the Dahl grip must be a candidate: {grip:?}"
+    );
+
+    // A slot the balance omits still exists, with no candidates of its own.
+    let stock = h.state().slot_choices(
+        true,
+        Some("GD_Weap_Pistol.A_Weapons.WeaponType_Dahl_Pistol"),
+        "GD_Weap_Pistol.A_Weapons.Pistol_Dahl_4_VeryRare",
+        "stock",
+        lootsmith_core::AssetGroup::WeaponParts,
+    );
+    assert!(stock.is_empty(), "stock has no legal parts here: {stock:?}");
 }
 
 /// The workbench stat blocks are LEVEL / GRADE / SLOT (or STATUS) / MARK, editable,
@@ -241,4 +255,33 @@ fn workbench_stat_blocks_are_editable_and_deduplicated() {
         h.query_all_by_label("Quick slot").count() == 0,
         "the redundant Quick slot row must be gone"
     );
+}
+
+/// Warn-only legality: a part outside the balance's resolved list is flagged in
+/// the status bar but still written, and a legal part is accepted.
+#[test]
+fn illegal_parts_are_warned_but_still_written() {
+    let save = synthetic("legality");
+    let mut h = common::harness_sized(&save, None, Vec2::new(1280.0, 1600.0));
+    h.state_mut().set_tab(Tab::Backpack);
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+    // A sniper body is not a legal body for the fixture pistol (only
+    // `Pistol_Body_Dahl_4` is), but it must still be written.
+    assert!(
+        h.state_mut()
+            .set_selected_part("body", "GD_Weap_SniperRifles.Body.SR_Body_Dahl")
+            .is_ok(),
+        "warn-only must not reject the write"
+    );
+    assert!(
+        h.state().status.contains("warning"),
+        "an illegal part should warn: {}",
+        h.state().status
+    );
+    // A legal part is accepted with no warning.
+    assert!(h
+        .state_mut()
+        .set_selected_part("body", "GD_Weap_Pistol.Body.Pistol_Body_Dahl_4")
+        .is_ok());
 }

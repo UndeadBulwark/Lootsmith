@@ -33,6 +33,7 @@ impl LootsmithApp {
             .collect();
         let selected = self.selected;
         let manager = self.manager.clone();
+        let name_parts = self.name_parts.clone();
         let mut edit_opt = self.item_edit.take();
 
         let area = ui.max_rect();
@@ -265,6 +266,16 @@ impl LootsmithApp {
                 crate::ui::widgets::ribbon(ui, rr, "Item workbench");
                 ui.add_space(12.0);
                 let balance_name = resolve_balance(&Some(manager.clone()), &edit.decoded);
+                // The weapon type / item definition path, used to resolve the
+                // per-slot legal parts (`GameDefs`).
+                let type_path = edit.decoded.part("type").and_then(|(r, g)| {
+                    if r.is_none() {
+                        return None;
+                    }
+                    manager
+                        .lookup_asset(g, set, r.asset_index, r.sublibrary_index, r.use_set_id)
+                        .ok()
+                });
                 let rarity = lootsmith_core::RarityRules::embedded().classify(&balance_name);
                 let name = item_name(
                     &edit.decoded,
@@ -446,9 +457,7 @@ impl LootsmithApp {
                     .num_columns(2)
                     .spacing([10.0, 6.0])
                     .show(ui, |ui| {
-                        for (slot, label) in
-                            self.slots_for_balance(is_weapon, &balance_name, &edit.decoded)
-                        {
+                        for (slot, label) in self.part_slots(is_weapon) {
                             crate::ui::widgets::label_nums(ui, label, p.dim, 12.0);
                             let group = items::slot_group(&edit.decoded.slot, slot).unwrap();
                             let current = match edit.decoded.part(slot) {
@@ -465,15 +474,20 @@ impl LootsmithApp {
                                     }),
                                 None => "-".to_string(),
                             };
-                            let choices = self.balanced_choices(
-                                &edit.decoded.asset_library_set_id,
+                            let choices = self.slot_choices(
+                                is_weapon,
+                                type_path.as_deref(),
                                 &balance_name,
-                                group,
                                 slot,
+                                group,
                             );
+                            let current_label =
+                                part_label(name_parts.as_deref(), group, slot, &current);
                             egui::ComboBox::from_id_salt(format!("slot_{slot}"))
                                 .selected_text(crate::ui::widgets::text_with_nums(
-                                    &current, p.fg, 15.0,
+                                    &current_label,
+                                    p.fg,
+                                    15.0,
                                 ))
                                 .width(270.0)
                                 .show_ui(ui, |ui| {
@@ -482,7 +496,9 @@ impl LootsmithApp {
                                         edit.dirty = true;
                                     }
                                     for choice in &choices {
-                                        if ui.selectable_label(false, choice).clicked() {
+                                        let label =
+                                            part_label(name_parts.as_deref(), group, slot, choice);
+                                        if ui.selectable_label(false, label).clicked() {
                                             let _ = edit.decoded.set_part(manager, slot, choice);
                                             edit.dirty = true;
                                         }

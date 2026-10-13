@@ -27,8 +27,10 @@ fn switched(save: &str, theme: Theme, scale: f32, click: &str) -> RgbaImage {
     h.state_mut().set_theme(theme);
     h.state_mut().set_ui_scale(scale);
     h.run();
-    // The theme and scale controls live in the settings dialog.
-    h.get_by_label("Menu").click();
+    // The theme and scale controls live in the Preferences dialog.
+    h.get_by_label("File").click();
+    h.run();
+    h.get_by_label("Preferences…").click();
     h.run();
     h.get_by_label(click).click();
     h.run();

@@ -63,7 +63,13 @@ fn approx(a: f32, b: f32) -> bool {
 #[test]
 fn shell_rects_match_the_spec_sizes_at_1x_and_2x() {
     for scale in [1.0_f32, 2.0] {
-        let mut h = common::harness_isolated(&save_path());
+        // A fixed scale of 2× needs twice the physical window so the logical
+        // layout stays 1280 pt wide (and the sidebar stays expanded).
+        let mut h = common::harness_sized(
+            &save_path(),
+            None,
+            eframe::egui::Vec2::new(1280.0 * scale, 800.0 * scale),
+        );
         h.state_mut().set_ui_scale(scale);
         h.run();
         let r = h.state().shell;
@@ -152,4 +158,42 @@ fn every_screen_renders_inside_the_shell() {
             "{label}: sidebar label gone"
         );
     }
+}
+
+#[test]
+fn sidebar_collapses_to_a_narrow_rail() {
+    let mut h = common::harness_isolated(&save_path());
+    h.run();
+    assert!(
+        approx(h.state().shell.sidebar.width(), 204.0),
+        "expanded by default"
+    );
+    h.state_mut().set_sidebar_collapsed(true);
+    h.run();
+    assert!(
+        approx(h.state().shell.sidebar.width(), 64.0),
+        "collapsed to the rail"
+    );
+    // Every screen is still reachable from the rail (icons keep the labels).
+    for tab in SCREENS {
+        let label = sidebar_label(h.state(), tab);
+        assert!(
+            h.query_all_by_label(&label).count() >= 1,
+            "rail missing {label:?}"
+        );
+    }
+}
+
+/// The logo itself is the collapse toggle (no tiny chevron).
+#[test]
+fn the_logo_toggles_the_sidebar() {
+    let mut h = common::harness_isolated(&save_path());
+    h.run();
+    assert!(!h.state().sidebar_collapsed, "expanded by default");
+    h.get_by_label("sidebar toggle").click();
+    h.run_steps(30); // let the 180 ms collapse settle
+    assert!(h.state().sidebar_collapsed, "clicking the logo collapses");
+    h.get_by_label("sidebar toggle").click();
+    h.run_steps(30);
+    assert!(!h.state().sidebar_collapsed, "clicking it again expands");
 }

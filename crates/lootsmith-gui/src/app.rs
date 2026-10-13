@@ -8,7 +8,7 @@ pub(crate) use lootsmith_core::savegame::Kind;
 pub(crate) use lootsmith_core::{
     container, items, mission_status_name, player_mark_name, AssetGroup, AssetLibraryConfigs,
     AssetLibraryManager, ChallengeStat, ChallengeStats, Container, Customizations, DlcTitles,
-    Missions, NameParts, PackedEntry, PartLists, Platform, Profile, Resource, SaveCandidate,
+    GameDefs, Missions, NameParts, PackedEntry, Platform, Profile, Resource, SaveCandidate,
     SaveGame, TravelStations, VehicleCustomization, MISSION_STATUSES, PLAYER_MARKS, STAT_NAMES,
     VEHICLE_FAMILIES,
 };
@@ -146,7 +146,6 @@ pub struct Form {
     pub playthroughs: i32,
     pub total_play_time: i32,
     pub badass: bool,
-    pub golden_keys: i32,
     pub bank_slots: i32,
     pub currency: Vec<i32>,
 }
@@ -164,7 +163,6 @@ impl Default for Form {
             playthroughs: 0,
             total_play_time: 0,
             badass: false,
-            golden_keys: 0,
             bank_slots: 0,
             currency: Vec::new(),
         }
@@ -405,6 +403,26 @@ const NAV_GROUPS: [(&str, &[Tab]); 5] = [
     ("Tools", &[Tab::Raw, Tab::About]),
 ];
 
+/// The drawn sidebar glyph for a tab.
+fn nav_icon_for(tab: Tab) -> crate::ui::pixel::NavIcon {
+    use crate::ui::pixel::NavIcon as I;
+    match tab {
+        Tab::General => I::Cog,
+        Tab::Character => I::Person,
+        Tab::Skills => I::Star,
+        Tab::Currency => I::Coin,
+        Tab::Backpack => I::Bag,
+        Tab::Bank => I::Vault,
+        Tab::Ammo => I::Bullet,
+        Tab::Missions => I::List,
+        Tab::Travel => I::Pin,
+        Tab::World => I::Globe,
+        Tab::Vehicles => I::Wheel,
+        Tab::Raw => I::Braces,
+        Tab::About => I::Info,
+    }
+}
+
 /// The four shell regions, in logical points, recomputed every frame. The shell
 /// test asserts these rects (spec §2.2: 56 px top bar, 204 px sidebar, 34 px
 /// status bar).
@@ -436,8 +454,9 @@ pub struct LootsmithApp {
     pub vehicles: Vec<VehicleRow>,
     pub steering_mode: i32,
     pub customizations: Option<Arc<Customizations>>,
-    /// Balance → allowed parts, for balance-constrained part pickers.
-    pub part_lists: Option<Arc<PartLists>>,
+    /// Weapon-type / item-definition / balance-chain tables that resolve the
+    /// per-slot part lists (Gibbed's `Create`).
+    pub defs: Option<Arc<GameDefs>>,
     /// Prefix/title part words, for item display names.
     pub name_parts: Option<Arc<NameParts>>,
     /// DLC chapter titles, for grouping fast-travel stations.
@@ -482,6 +501,12 @@ pub struct LootsmithApp {
     pub raw_filter: String,
     /// Show the trailing reserved/unused currency slots.
     pub currency_show_unused: bool,
+    /// Skills: block a rank add when no points are available (default on).
+    pub enforce_budget: bool,
+    /// Skills: a pasted `LS2:` build string to apply.
+    pub skill_build: String,
+    /// Skills: the first Respec click arms, the second confirms.
+    pub respec_armed: bool,
     pub theme: Theme,
     theme_applied: bool,
     /// UI scale: 1.0, 1.5 or 2.0 (spec §2.1 rule 7). Applied via
@@ -492,6 +517,13 @@ pub struct LootsmithApp {
     logo_tex: Option<egui::TextureHandle>,
     /// The shell rects computed by `build` (top bar, sidebar, status bar, content).
     pub shell: ShellRects,
+    /// Whether the sidebar is collapsed to the icon rail.
+    pub sidebar_collapsed: bool,
+    /// Animated collapse progress (0 = expanded, 1 = rail).
+    pub sidebar_anim: f32,
+    /// Set each frame when the window is too narrow for the expanded sidebar.
+    /// Kept separate so the automatic collapse never overwrites the user's choice.
+    pub sidebar_narrow: bool,
     /// Settings-dialog visibility (top-bar "Menu").
     pub show_settings: bool,
     /// The Ctrl+K action-search text.
@@ -566,7 +598,7 @@ impl LootsmithApp {
             vehicles: Vec::new(),
             steering_mode: 0,
             customizations: None,
-            part_lists: None,
+            defs: None,
             name_parts: None,
             dlc_titles: None,
             ammo: Vec::new(),
@@ -594,6 +626,9 @@ impl LootsmithApp {
             raw: Vec::new(),
             raw_filter: String::new(),
             currency_show_unused: false,
+            enforce_budget: true,
+            skill_build: String::new(),
+            respec_armed: false,
             theme: Theme::Dark,
             theme_applied: false,
             ui_scale: 1.0,
@@ -605,6 +640,9 @@ impl LootsmithApp {
                 status: egui::Rect::ZERO,
                 content: egui::Rect::ZERO,
             },
+            sidebar_collapsed: false,
+            sidebar_anim: 0.0,
+            sidebar_narrow: false,
             show_settings: false,
             action_search: String::new(),
             show_palette: false,
@@ -685,6 +723,12 @@ impl LootsmithApp {
     /// The permitted integer UI scales (spec §2.1 rule 7). Fractional scales
     /// blur pixel art, so only whole multiples are offered.
     pub const UI_SCALES: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
+
+    /// Logical width the shell is designed for. A narrower window shrinks the whole
+    /// UI to fit (the one fractional-scale exception to rule 7).
+    pub const DESIGN_W: f32 = 1280.0;
+    /// Never shrink past this: below it, content scrolls rather than getting tiny.
+    pub const MIN_ZOOM: f32 = 0.6;
 
     /// The auto UI scale for a monitor's **physical** pixel size (spec §2.1 rule 7).
     /// Thin wrapper over [`crate::ui::auto_scale::scale_for`].
@@ -784,30 +828,35 @@ impl LootsmithApp {
     }
 
     /// Resolve and apply the UI scale for this frame (spec §2.1 rule 7). `Auto`
-    /// latches on the monitor's **physical** size, so it settles once and never
-    /// drives a resize loop. Applied via `set_zoom_factor` (integer
-    /// `pixels_per_point` regardless of the OS scale).
+    /// latches on the monitor's **physical** size so it settles once and never
+    /// drives a resize loop. On top of that the whole UI is shrunk just enough to
+    /// fit the window (a fractional zoom — the one exception to the whole-number
+    /// rule), so no bar overlaps on a small window. The physical window size is
+    /// invariant under zoom, so the fit cannot feed back either.
     fn apply_scale(&mut self, ctx: &egui::Context) {
         let native = ctx.native_pixels_per_point().unwrap_or(1.0);
-        let wanted: Option<u32> = match self.scale_mode {
-            ScaleMode::Fixed(n) => {
-                let n = n.clamp(1, 4);
-                ((ctx.pixels_per_point() - n as f32).abs() > 1e-3).then_some(n)
-            }
+        let (base, allow_fit): (f32, bool) = match self.scale_mode {
+            ScaleMode::Fixed(n) => (n.clamp(1, 4) as f32, false),
             ScaleMode::Auto => {
                 // `update` must be called exactly once per frame.
                 let mon = ctx.input(|i| i.viewport().monitor_size).map(|m| (m.x, m.y));
-                let decision = self.auto.update(mon, ctx.pixels_per_point(), native);
-                if let Some(n) = self.auto.applied() {
-                    self.ui_scale = n as f32;
-                }
-                decision
+                let _ = self.auto.update(mon, ctx.pixels_per_point(), native);
+                (self.auto.applied().unwrap_or(1) as f32, true)
             }
         };
-        if let Some(n) = wanted {
-            self.ui_scale = n as f32;
-            ctx.set_zoom_factor(crate::ui::auto_scale::zoom_for(n, native));
+        let mut target = base;
+        if allow_fit {
+            // Physical window width (invariant under zoom) / design width.
+            let screen = ctx.content_rect().size() * ctx.pixels_per_point();
+            target = (screen.x / Self::DESIGN_W).min(base);
+            // Snap down to 1/64: fine enough to barely over-shrink, coarse enough
+            // to damp resize jitter.
+            target = ((target * 64.0).floor() / 64.0).clamp(Self::MIN_ZOOM, 4.0);
         }
+        if (target - ctx.pixels_per_point()).abs() > 1.0 / 128.0 {
+            ctx.set_pixels_per_point(target);
+        }
+        self.ui_scale = target;
     }
 
     /// The cached background dither texture for the active theme (spec §2.5).
@@ -930,7 +979,6 @@ impl LootsmithApp {
             playthroughs: save_game.playthroughs_completed().unwrap_or(0),
             total_play_time: save_game.total_play_time().unwrap_or(0),
             badass: save_game.get_bool(31).unwrap_or(false),
-            golden_keys: save_game.num_golden_keys_notified().unwrap_or(0),
             bank_slots: save_game.max_bank_slots().unwrap_or(0),
             currency: save_game.currency_on_hand(),
         };
@@ -1014,7 +1062,7 @@ impl LootsmithApp {
                 self.status = format!("asset library error: {e}");
             }
         }
-        self.part_lists = self.load_part_lists();
+        self.defs = self.load_defs();
         self.name_parts = self.load_name_parts();
         self.dlc_titles = self.load_dlc_titles();
         self.refresh_rows();
@@ -1023,36 +1071,44 @@ impl LootsmithApp {
         self.load_missions_data();
     }
 
-    /// The part choices for one slot: constrained by the balance's part list
-    /// when the game data has one for the selected balance ("Complete" =
-    /// only these; "Selective" = these first, then the library), otherwise
-    /// the plain library choices.
-    pub fn balanced_choices(
+    /// The part choices for one slot, from the resolved weapon-type / item
+    /// balance (`GameDefs`), matching Gibbed's `Create`: the balance `base`
+    /// chain merged by mode, seeded by the weapon type / item definition.
+    /// Falls back to the plain library choices only when no definitions are
+    /// loaded (so the dropdown is never empty).
+    pub fn slot_choices(
         &self,
-        _set: &i32,
+        is_weapon: bool,
+        type_path: Option<&str>,
         balance: &str,
-        group: AssetGroup,
         slot: &str,
+        group: AssetGroup,
     ) -> Vec<String> {
-        if let (Some(lists), Some(all)) = (self.part_lists.as_ref(), self.choices.get(&group)) {
-            let mut constrained: Vec<String> = Vec::new();
-            if let Some((complete, names)) = lists.choices_for(balance, slot) {
-                if complete {
-                    constrained = names;
-                } else {
-                    constrained = names.clone();
-                    for choice in all {
-                        if !constrained.contains(choice) {
-                            constrained.push(choice.clone());
-                        }
-                    }
-                }
-            }
-            if !constrained.is_empty() {
-                return constrained;
+        if let Some(defs) = self.defs.as_ref() {
+            let resolved = match type_path {
+                Some(ty) if is_weapon => defs.weapon_slot_choices(ty, balance, slot),
+                Some(ty) => defs.item_slot_choices(ty, balance, slot),
+                // No weapon type / item definition: only "None" is legal.
+                None => Some(Vec::new()),
+            };
+            if let Some(list) = resolved {
+                return list;
             }
         }
         self.choices.get(&group).cloned().unwrap_or_default()
+    }
+
+    /// Load the weapon-type / item / balance definitions (from the game-data
+    /// folder, else the bundled tables).
+    fn load_defs(&self) -> Option<Arc<GameDefs>> {
+        if let Some(dir) = self.dumps_dir() {
+            if let Ok(defs) = GameDefs::from_dir(&dir) {
+                if !defs.is_empty() {
+                    return Some(Arc::new(defs));
+                }
+            }
+        }
+        lootsmith_core::bundled::defs().ok().map(Arc::new)
     }
 
     /// Load DLC chapter titles for the travel-tab grouping.
@@ -1071,8 +1127,12 @@ impl LootsmithApp {
     /// `LOOTSMITH_NAME_PARTS`) for item display names.
     fn load_name_parts(&self) -> Option<Arc<NameParts>> {
         if let Some(dir) = self.dumps_dir() {
+            // A user folder that yields no name parts must not shadow the
+            // bundled tables (the bundled files use different names).
             if let Ok(parts) = NameParts::from_dir(&dir) {
-                return Some(Arc::new(parts));
+                if !parts.is_empty() {
+                    return Some(Arc::new(parts));
+                }
             }
         }
         if let Some(path) = self.env_var("LOOTSMITH_NAME_PARTS") {
@@ -1084,24 +1144,6 @@ impl LootsmithApp {
         }
         // Bundled tables: a fresh run resolves item names with no setup.
         lootsmith_core::bundled::name_parts().ok().map(Arc::new)
-    }
-
-    /// Load the balance part lists (from the game-data folder or
-    /// `LOOTSMITH_PART_LISTS`) for the balance-constrained pickers.
-    fn load_part_lists(&self) -> Option<Arc<PartLists>> {
-        if let Some(path) = self.env_var("LOOTSMITH_PART_LISTS") {
-            if let Ok(lists) = PartLists::from_path(std::path::Path::new(&path)) {
-                return Some(Arc::new(lists));
-            }
-        }
-        if let Some(dir) = self.dumps_dir() {
-            if let Ok(lists) = PartLists::from_dir(&dir) {
-                if !lists.is_empty() {
-                    return Some(Arc::new(lists));
-                }
-            }
-        }
-        lootsmith_core::bundled::part_lists().ok().map(Arc::new)
     }
 
     pub(crate) fn refresh_rows(&mut self) {
@@ -1792,7 +1834,6 @@ impl LootsmithApp {
         save_game.set_i32(7, self.form.playthroughs);
         save_game.set_i32(25, self.form.total_play_time);
         save_game.set_bool(31, self.form.badass);
-        save_game.set_i32(48, self.form.golden_keys);
         save_game.set_i32(56, self.form.bank_slots);
         if !self.form.currency.is_empty() {
             save_game.set_int_list_packed(6, &self.form.currency);
@@ -2077,6 +2118,7 @@ impl LootsmithApp {
             theme: &'a str,
             tab: &'a str,
             scale: String,
+            collapsed: bool,
         }
         let theme = match self.theme {
             Theme::Dark => "dark",
@@ -2091,6 +2133,7 @@ impl LootsmithApp {
                 ScaleMode::Auto => "auto".to_string(),
                 ScaleMode::Fixed(n) => n.to_string(),
             },
+            collapsed: self.sidebar_collapsed,
         })
         .unwrap_or_default()
     }
@@ -2109,10 +2152,14 @@ impl LootsmithApp {
             tab: String,
             #[serde(default)]
             scale: String,
+            #[serde(default)]
+            collapsed: bool,
         }
         let Ok(settings) = serde_json::from_str::<Settings>(text) else {
             return;
         };
+        self.sidebar_collapsed = settings.collapsed;
+        self.sidebar_anim = if settings.collapsed { 1.0 } else { 0.0 };
         if self.path.trim().is_empty() {
             self.path = settings.save;
         }
@@ -2143,6 +2190,13 @@ impl LootsmithApp {
         if !self.dumps.trim().is_empty() {
             self.load_dumps();
         }
+    }
+
+    /// Collapse/expand the sidebar instantly (no animation). Tests and
+    /// snapshots use this so a single `run()` lands on the final layout.
+    pub fn set_sidebar_collapsed(&mut self, collapsed: bool) {
+        self.sidebar_collapsed = collapsed;
+        self.sidebar_anim = if collapsed { 1.0 } else { 0.0 };
     }
 
     fn apply_theme(&mut self, ctx: &egui::Context) {
@@ -2182,6 +2236,150 @@ impl LootsmithApp {
         if reload {
             self.load();
         }
+    }
+
+    /// The top-bar menu bar. Commands that need dispatch are returned; toggles
+    /// (theme, scale, sidebar, skill budget) are applied in place.
+    fn top_menu(&mut self, ui: &mut egui::Ui) -> Option<Action> {
+        let mut action = None;
+        ui.menu_button("File", |ui| {
+            if ui.button("Open…").clicked() {
+                action = Some(Action::Open);
+                ui.close();
+            }
+            if ui.button("Find saves…").clicked() {
+                action = Some(Action::FindSaves);
+                ui.close();
+            }
+            if ui.button("Reload").clicked() {
+                action = Some(Action::Reload);
+                ui.close();
+            }
+            if ui.button("New…").clicked() {
+                action = Some(Action::New);
+                ui.close();
+            }
+            if ui.button("Profile…").clicked() {
+                action = Some(Action::Profile);
+                ui.close();
+            }
+            if ui.button("Import sections…").clicked() {
+                action = Some(Action::Import);
+                ui.close();
+            }
+            if ui.button("Preferences…").clicked() {
+                self.show_settings = true;
+                ui.close();
+            }
+            ui.separator();
+            if ui.button("Save").clicked() {
+                action = Some(Action::Save);
+                ui.close();
+            }
+            if ui.button("Save As…").clicked() {
+                action = Some(Action::SaveAs);
+                ui.close();
+            }
+            ui.separator();
+            ui.menu_button("Platform", |ui| {
+                for platform in [
+                    Platform::PC,
+                    Platform::X360,
+                    Platform::PS3,
+                    Platform::PSVita,
+                    Platform::Shield,
+                    Platform::Switch,
+                ] {
+                    let selected = self.save_platform == platform;
+                    if ui
+                        .selectable_label(selected, platform.id().to_uppercase())
+                        .clicked()
+                    {
+                        self.save_platform = platform;
+                        ui.close();
+                    }
+                }
+            });
+            ui.separator();
+            if ui.button("Quit").clicked() {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                ui.close();
+            }
+        });
+        ui.menu_button("Edit", |ui| {
+            // Placeholders until the undo stack lands; shown disabled so the
+            // menu matches the real command set.
+            ui.add_enabled(false, egui::Button::new("Undo"));
+            ui.add_enabled(false, egui::Button::new("Redo"));
+        });
+        ui.menu_button("View", |ui| {
+            ui.menu_button("Theme", |ui| {
+                if ui
+                    .selectable_label(self.theme == Theme::Dark, "Dark")
+                    .clicked()
+                {
+                    self.set_theme(Theme::Dark);
+                    ui.close();
+                }
+                if ui
+                    .selectable_label(self.theme == Theme::Light, "Light")
+                    .clicked()
+                {
+                    self.set_theme(Theme::Light);
+                    ui.close();
+                }
+            });
+            // Scale by size, not by number: menu text keeps the label font.
+            ui.menu_button("Scale", |ui| {
+                if ui
+                    .selectable_label(matches!(self.scale_mode, ScaleMode::Auto), "Auto")
+                    .clicked()
+                {
+                    self.set_scale_mode(ScaleMode::Auto);
+                    ui.close();
+                }
+                for (value, label) in Self::UI_SCALES
+                    .iter()
+                    .zip(["Small", "Normal", "Large", "Huge"])
+                {
+                    let selected = self.scale_mode == ScaleMode::Fixed(*value as u32);
+                    if ui.selectable_label(selected, label).clicked() {
+                        self.set_scale_mode(ScaleMode::Fixed(*value as u32));
+                        ui.close();
+                    }
+                }
+            });
+            ui.separator();
+            let expanded = !self.sidebar_collapsed;
+            if ui.selectable_label(expanded, "Show sidebar").clicked() {
+                self.sidebar_collapsed = !expanded;
+                ui.close();
+            }
+            if ui
+                .selectable_label(self.enforce_budget, "Enforce skill budget")
+                .clicked()
+            {
+                self.enforce_budget = !self.enforce_budget;
+                ui.close();
+            }
+        });
+        ui.menu_button("Tools", |ui| {
+            if ui.button("Find an action…").clicked() {
+                self.show_palette = true;
+                ui.close();
+            }
+            if ui.button("Game data folder…").clicked() {
+                action = Some(Action::PickData);
+                ui.close();
+            }
+        });
+        ui.menu_button("Help", |ui| {
+            if ui.button("About").clicked() {
+                self.tab = Tab::About;
+                ui.close();
+            }
+        });
+        action
     }
 
     fn dispatch(&mut self, action: Action) {
@@ -2378,42 +2576,30 @@ impl LootsmithApp {
                         let (r, _) =
                             ui.allocate_exact_size(egui::vec2(150.0, 28.0), egui::Sense::hover());
                         crate::ui::widgets::ribbon(ui, r, "Lootsmith");
-                        ui.add_space(4.0);
-                        let chip_w = 190.0;
+                        ui.add_space(6.0);
+                        if let Some(a) = self.top_menu(ui) {
+                            action = Some(a);
+                        }
+                        ui.add_space(6.0);
+                        // File name chip; a dot marks unsaved changes.
                         let name = std::path::Path::new(&self.path)
                             .file_name()
                             .map(|s| s.to_string_lossy().to_string())
                             .filter(|s| !s.is_empty())
                             .unwrap_or_else(|| "no file".to_string());
-                        // Fit by the real galley width, not a char-count estimate.
-                        let name = crate::ui::widgets::fit_text(ui, &name, chip_w - 16.0, 13.0);
+                        let chip_w = 210.0;
+                        let name = crate::ui::widgets::fit_text(ui, &name, chip_w - 26.0, 13.0);
                         let (r, _) =
                             ui.allocate_exact_size(egui::vec2(chip_w, 24.0), egui::Sense::hover());
                         crate::ui::widgets::chip(ui, r, &name, p.fg);
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(76.0, 24.0), egui::Sense::hover());
-                        crate::ui::widgets::chip(
-                            ui,
-                            r,
-                            if self.dirty { "unsaved" } else { "saved" },
-                            if self.dirty { p.dng } else { p.fg },
-                        );
-                        let (r, _) =
-                            ui.allocate_exact_size(egui::vec2(56.0, 24.0), egui::Sense::hover());
-                        crate::ui::widgets::chip(
-                            ui,
-                            r,
-                            &self.save_platform.id().to_uppercase(),
-                            p.fg,
-                        );
+                        if self.dirty {
+                            ui.painter().circle_filled(
+                                r.right_center() - egui::vec2(9.0, 0.0),
+                                3.5,
+                                p.dng,
+                            );
+                        }
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui
-                                .button("Menu")
-                                .on_hover_text("Files, platform, scale and theme")
-                                .clicked()
-                            {
-                                self.show_settings = true;
-                            }
                             let (r, _) = ui
                                 .allocate_exact_size(egui::vec2(66.0, 28.0), egui::Sense::click());
                             if crate::ui::widgets::button(
@@ -2426,46 +2612,25 @@ impl LootsmithApp {
                             {
                                 action = Some(Action::Save);
                             }
-                            let (r, _) = ui
-                                .allocate_exact_size(egui::vec2(84.0, 28.0), egui::Sense::click());
-                            if crate::ui::widgets::button(
-                                ui,
-                                r,
-                                "Save As",
-                                crate::ui::widgets::ButtonKind::Normal,
-                            )
-                            .clicked()
-                            {
-                                action = Some(Action::SaveAs);
-                            }
-                            let (r, _) = ui
-                                .allocate_exact_size(egui::vec2(70.0, 26.0), egui::Sense::click());
-                            let _ = crate::ui::widgets::button(
-                                ui,
-                                r,
-                                "Redo",
-                                crate::ui::widgets::ButtonKind::Normal,
+                            // The action search moved behind a compact icon.
+                            let (sr, sresp) = ui
+                                .allocate_exact_size(egui::vec2(30.0, 26.0), egui::Sense::click());
+                            crate::ui::pixel::nav_icon(
+                                ui.painter(),
+                                sr.center(),
+                                crate::ui::pixel::NavIcon::Search,
+                                p.onw,
+                                1.0,
+                                ppp,
                             );
-                            let (r, _) = ui
-                                .allocate_exact_size(egui::vec2(70.0, 26.0), egui::Sense::click());
-                            let _ = crate::ui::widgets::button(
-                                ui,
-                                r,
-                                "Undo",
-                                crate::ui::widgets::ButtonKind::Normal,
-                            );
-                            let (sr, _) = ui.allocate_exact_size(
-                                egui::vec2((ui.available_width() - 6.0).max(140.0), 24.0),
-                                egui::Sense::hover(),
-                            );
-                            if crate::ui::widgets::button(
-                                ui,
-                                sr,
-                                "Find an action…  Ctrl+K",
-                                crate::ui::widgets::ButtonKind::Normal,
-                            )
-                            .clicked()
-                            {
+                            sresp.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    true,
+                                    "Find an action…  Ctrl+K",
+                                )
+                            });
+                            if sresp.on_hover_text("Find an action…  Ctrl+K").clicked() {
                                 self.show_palette = true;
                             }
                         });
@@ -2551,9 +2716,37 @@ impl LootsmithApp {
                 });
             });
 
-        // --- Sidebar (204 px), inset 16 px; content inset a further 14 px ---
+        // --- Sidebar (204 px, or a 64 px rail when collapsed), inset 16 px ---
+        // Auto-collapse to the rail when the window is too narrow for the expanded
+        // sidebar (hysteresis keeps it stable); the manual toggle is preserved.
+        const COLLAPSE_AT: f32 = 1060.0;
+        let logical_w = ctx.content_rect().width();
+        let threshold = if self.sidebar_narrow {
+            COLLAPSE_AT + 40.0
+        } else {
+            COLLAPSE_AT
+        };
+        self.sidebar_narrow = logical_w < threshold;
+        // Animate the collapse (180 ms ease-out) instead of snapping.
+        let target = if self.sidebar_collapsed || self.sidebar_narrow {
+            1.0
+        } else {
+            0.0
+        };
+        let dt = ui.input(|i| i.stable_dt).min(0.05);
+        let step = dt / 0.18;
+        self.sidebar_anim =
+            (self.sidebar_anim + (target - self.sidebar_anim).clamp(-step, step)).clamp(0.0, 1.0);
+        if (target - self.sidebar_anim).abs() > 0.001 {
+            ui.ctx().request_repaint();
+        }
+        // Symmetric smoothstep on the expansion progress: 1 = expanded, 0 = rail.
+        let progress = 1.0 - self.sidebar_anim;
+        let reveal = (progress * progress * (3.0 - 2.0 * progress)).clamp(0.0, 1.0);
+        let side_w = 64.0 + (204.0 - 64.0) * reveal;
         egui::Panel::left("sidebar")
-            .exact_size(204.0 + 2.0 * gap)
+            .show_separator_line(false)
+            .exact_size(side_w + 2.0 * gap)
             .frame(egui::Frame::default().inner_margin(egui::Margin {
                 left: gap as i8,
                 right: gap as i8,
@@ -2564,7 +2757,7 @@ impl LootsmithApp {
                 let bar = ui.max_rect();
                 self.shell.sidebar = bar;
                 crate::ui::pixel::panel(ui.painter(), bar, ppp, p);
-                let inner = bar.shrink(14.0);
+                let inner = bar.shrink(8.0 + 6.0 * reveal);
                 ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
                     ui.set_clip_rect(inner);
                     ui.spacing_mut().item_spacing.y = 0.0;
@@ -2572,57 +2765,91 @@ impl LootsmithApp {
                         .id_salt("nav_scroll")
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
-                            ui.add_space(6.0);
+                            ui.add_space(4.0);
+                            // The logo IS the collapse toggle.
                             if let Some(tex) = self.logo(ui.ctx()) {
-                                let (lr, _) = ui.allocate_exact_size(
-                                    egui::vec2(96.0, 96.0),
-                                    egui::Sense::hover(),
+                                let size = 40.0 + 48.0 * reveal;
+                                let (lr, lresp) = ui.allocate_exact_size(
+                                    egui::vec2(ui.available_width(), 40.0 + 48.0),
+                                    egui::Sense::click(),
+                                );
+                                let rect = egui::Rect::from_center_size(
+                                    lr.center_top() + egui::vec2(0.0, size / 2.0),
+                                    egui::vec2(size, size),
                                 );
                                 ui.painter().image(
                                     tex.id(),
-                                    lr,
+                                    rect,
                                     egui::Rect::from_min_max(
                                         egui::pos2(0.0, 0.0),
                                         egui::pos2(1.0, 1.0),
                                     ),
                                     egui::Color32::WHITE,
                                 );
+                                if lresp.hovered() {
+                                    ui.painter().rect_stroke(
+                                        rect.expand(2.0),
+                                        0.0,
+                                        egui::Stroke::new(2.0, p.gold),
+                                        egui::StrokeKind::Outside,
+                                    );
+                                }
+                                if lresp.clicked() {
+                                    self.sidebar_collapsed = !self.sidebar_collapsed;
+                                }
+                                lresp.widget_info(|| {
+                                    egui::WidgetInfo::labeled(
+                                        egui::WidgetType::Button,
+                                        true,
+                                        "sidebar toggle",
+                                    )
+                                });
+                                lresp.on_hover_text(if self.sidebar_collapsed {
+                                    "Expand sidebar"
+                                } else {
+                                    "Collapse sidebar"
+                                });
                             }
-                            ui.add_space(10.0);
+                            ui.add_space(8.0);
                             for (gi, (group, tabs)) in NAV_GROUPS.iter().enumerate() {
                                 if gi > 0 {
                                     let (r, _) = ui.allocate_exact_size(
                                         egui::vec2(ui.available_width(), 10.0),
                                         egui::Sense::hover(),
                                     );
-                                    crate::ui::widgets::trail_divider(
-                                        ui,
-                                        r.left_center(),
-                                        r.right_center(),
-                                    );
+                                    if reveal > 0.5 {
+                                        crate::ui::widgets::trail_divider(
+                                            ui,
+                                            r.left_center(),
+                                            r.right_center(),
+                                        );
+                                    }
                                 }
-                                // Painted (not a Label) so the group name does not collide
-                                // with a tab of the same name in the accessibility tree.
+                                // Group label fades out as the rail closes. Painted (not a
+                                // Label) so it does not collide with a tab of the same name.
                                 let (gr, _) = ui.allocate_exact_size(
                                     egui::vec2(ui.available_width(), 16.0),
                                     egui::Sense::hover(),
                                 );
-                                let font = egui::FontId::proportional(11.0);
-                                ui.painter().text(
-                                    gr.left_center(),
-                                    egui::Align2::LEFT_CENTER,
-                                    *group,
-                                    font.clone(),
-                                    p.gold,
-                                );
-                                // Faux-bold: a second pass half a pixel over.
-                                ui.painter().text(
-                                    gr.left_center() + egui::vec2(0.6, 0.0),
-                                    egui::Align2::LEFT_CENTER,
-                                    *group,
-                                    font,
-                                    p.gold,
-                                );
+                                if reveal > 0.02 {
+                                    let font = egui::FontId::proportional(11.0);
+                                    let gcol = p.gold.gamma_multiply(reveal);
+                                    ui.painter().text(
+                                        gr.left_center(),
+                                        egui::Align2::LEFT_CENTER,
+                                        *group,
+                                        font.clone(),
+                                        gcol,
+                                    );
+                                    // Faux-bold: a second pass half a pixel over.
+                                    ui.painter().text(
+                                        gr.left_center() + egui::vec2(0.6, 0.0),
+                                        egui::Align2::LEFT_CENTER,
+                                        *group,
+                                        font,
+                                        gcol,
+                                    );
+                                }
                                 ui.add_space(2.0);
                                 for tab in tabs.iter() {
                                     let (base, count) = self.nav_base_count(*tab);
@@ -2633,9 +2860,11 @@ impl LootsmithApp {
                                     if crate::ui::widgets::nav_row(
                                         ui,
                                         rect,
+                                        nav_icon_for(*tab),
                                         base,
                                         self.tab == *tab,
                                         count,
+                                        reveal,
                                     )
                                     .clicked()
                                     {
@@ -2647,8 +2876,16 @@ impl LootsmithApp {
                                         egui::vec2(ui.available_width(), 26.0),
                                         egui::Sense::click(),
                                     );
-                                    if crate::ui::widgets::nav_row(ui, rect, "Profile", false, None)
-                                        .clicked()
+                                    if crate::ui::widgets::nav_row(
+                                        ui,
+                                        rect,
+                                        crate::ui::pixel::NavIcon::Badge,
+                                        "Profile",
+                                        false,
+                                        None,
+                                        reveal,
+                                    )
+                                    .clicked()
                                     {
                                         action = Some(Action::Profile);
                                     }
@@ -2658,13 +2895,21 @@ impl LootsmithApp {
                                         egui::vec2(ui.available_width(), 26.0),
                                         egui::Sense::click(),
                                     );
-                                    if crate::ui::widgets::nav_row(ui, rect, "Import", false, None)
-                                        .clicked()
+                                    if crate::ui::widgets::nav_row(
+                                        ui,
+                                        rect,
+                                        crate::ui::pixel::NavIcon::Import,
+                                        "Import",
+                                        false,
+                                        None,
+                                        reveal,
+                                    )
+                                    .clicked()
                                     {
                                         action = Some(Action::Import);
                                     }
                                 }
-                                ui.add_space(6.0);
+                                ui.add_space(6.0 * reveal);
                             }
                         });
                 });
