@@ -62,7 +62,7 @@ fn main() {
         harness
     };
 
-    let shots: [Shot; 11] = [
+    let shots: [Shot; 14] = [
         ("character", Tab::Character, None),
         ("currency", Tab::Currency, None),
         ("ammo", Tab::Ammo, None),
@@ -78,6 +78,9 @@ fn main() {
             Some((Container::BackpackWeapon, 0)),
         ),
         ("raw", Tab::Raw, None),
+        ("profile", Tab::Profile, None),
+        ("import", Tab::Import, None),
+        ("about", Tab::About, None),
     ];
 
     for (name, tab, select) in shots {
@@ -100,12 +103,16 @@ fn main() {
     harness.run();
     render(&mut harness, &out_dir, "bank");
 
-    // The "Find saves" picker (scans the real machine).
-    let mut harness = app(&save, &dumps);
-    harness.state_mut().scan_saves();
-    harness.state_mut().show_saves = true;
-    harness.run();
-    render(&mut harness, &out_dir, "find-saves");
+    // The "Find saves" picker (scans the real machine). Skipped when
+    // `LOOTSMITH_SNAPSHOT_NO_SCAN` is set so a release shoot never leaks the
+    // publisher's personal save paths.
+    if std::env::var_os("LOOTSMITH_SNAPSHOT_NO_SCAN").is_none() {
+        let mut harness = app(&save, &dumps);
+        harness.state_mut().scan_saves();
+        harness.state_mut().show_saves = true;
+        harness.run();
+        render(&mut harness, &out_dir, "find-saves");
+    }
 
     // The collapsed sidebar rail (per-tab icons + centred toggle).
     let mut harness = app(&save, &dumps);

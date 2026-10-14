@@ -1961,21 +1961,21 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "lootsmith"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "lootsmith-core",
 ]
 
 [[package]]
 name = "lootsmith-cli"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "lootsmith-core",
 ]
 
 [[package]]
 name = "lootsmith-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "base64",
  "flate2",
@@ -1988,7 +1988,7 @@ dependencies = [
 
 [[package]]
 name = "lootsmith-gui"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "eframe",
  "egui",

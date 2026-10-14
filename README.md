@@ -7,7 +7,7 @@ A Linux-native, Rust ([egui](https://github.com/emilk/egui)) save editor for
 [![License: Zlib](https://img.shields.io/badge/license-Zlib-blue.svg)](LICENSE)
 ![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)
 
-**Current state — `0.4.0`.** The core library and CLI are complete and validated
+**Current state — `0.4.1`.** The core library and CLI are complete and validated
 against real PC saves; the GUI is a full editor with a themed, responsive shell.
 Status and the roadmap to 1.0 live in [`docs/PLAN.md`](docs/PLAN.md).
 
@@ -54,9 +54,29 @@ Light theme (the default) on top, dark below — the same Backpack workbench:
 
 [![Light and dark themes](docs/screenshots/theme-compare.png)](docs/screenshots/theme-compare.png)
 
-More (click for full size): [Skills, light](docs/screenshots/skills-light.png) ·
-[Skills, dark](docs/screenshots/skills-dark.png) ·
-[collapsed rail, light](docs/screenshots/sidebar-collapsed-light.png).
+Every page, in the default **Light** theme — click for full size:
+
+[![All Lootsmith pages, light theme](docs/screenshots/contact-light.png)](docs/screenshots/contact-light.png)
+
+…and the same set in **Dark**:
+
+[![All Lootsmith pages, dark theme](docs/screenshots/contact-dark.png)](docs/screenshots/contact-dark.png)
+
+**Full-size pages:** [Character](docs/screenshots/character-light.png) ·
+[Skills](docs/screenshots/skills-light.png) ·
+[Currency](docs/screenshots/currency-light.png) ·
+[Ammo & SDUs](docs/screenshots/ammo-light.png) ·
+[World](docs/screenshots/world-light.png) ·
+[Fast Travel](docs/screenshots/travel-light.png) ·
+[Vehicles](docs/screenshots/vehicles-light.png) ·
+[Missions](docs/screenshots/missions-light.png) ·
+[Backpack](docs/screenshots/backpack-selected-light.png) ·
+[Bank](docs/screenshots/bank-light.png) ·
+[Raw](docs/screenshots/raw-light.png) ·
+[Profile](docs/screenshots/profile-light.png) ·
+[Import](docs/screenshots/import-light.png) ·
+[About](docs/screenshots/about-light.png) ·
+[collapsed sidebar rail](docs/screenshots/sidebar-collapsed-light.png).
 
 ## Install / build
 
