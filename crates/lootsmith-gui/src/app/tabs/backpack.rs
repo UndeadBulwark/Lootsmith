@@ -501,31 +501,6 @@ impl LootsmithApp {
                             }
                         });
                 });
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    let (tr, _) =
-                        ui.allocate_exact_size(egui::vec2(88.0, 24.0), egui::Sense::click());
-                    let trash_kind = if edit.mark == 0 {
-                        crate::ui::widgets::ButtonKind::Primary
-                    } else {
-                        crate::ui::widgets::ButtonKind::Normal
-                    };
-                    if crate::ui::widgets::button(ui, tr, "Trash", trash_kind).clicked() {
-                        edit.mark = if edit.mark == 0 { 1 } else { 0 };
-                        edit.dirty = true;
-                    }
-                    let (fr, _) =
-                        ui.allocate_exact_size(egui::vec2(100.0, 24.0), egui::Sense::click());
-                    let fav_kind = if edit.mark == 2 {
-                        crate::ui::widgets::ButtonKind::Primary
-                    } else {
-                        crate::ui::widgets::ButtonKind::Normal
-                    };
-                    if crate::ui::widgets::button(ui, fr, "Favourite", fav_kind).clicked() {
-                        edit.mark = if edit.mark == 2 { 1 } else { 2 };
-                        edit.dirty = true;
-                    }
-                });
                 ui.add_space(12.0);
 
                 theme::section(ui, "Parts");

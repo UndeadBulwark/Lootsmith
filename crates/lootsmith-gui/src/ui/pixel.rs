@@ -80,13 +80,36 @@ pub fn nav_icon(
             );
         }
         NavIcon::Star => {
-            let mut pts = Vec::with_capacity(10);
-            for i in 0..10 {
-                let rad = if i % 2 == 0 { r } else { r * 0.44 };
-                let a = -std::f32::consts::FRAC_PI_2 + i as f32 * std::f32::consts::PI / 5.0;
-                pts.push(center + vec2(a.cos(), a.sin()) * rad);
+            // A star is concave, and `convex_polygon` fills by fanning from the
+            // first vertex — which smears across the notches and renders a blob.
+            // Fill it as six convex pieces instead: the central pentagon plus the
+            // five spikes.
+            use std::f32::consts::{FRAC_PI_2, TAU};
+            let inner = r * 0.5;
+            let outer_at = |i: f32| {
+                let a = -FRAC_PI_2 + i * TAU / 5.0;
+                center + vec2(a.cos(), a.sin()) * r
+            };
+            let inner_at = |i: f32| {
+                let a = -FRAC_PI_2 + (i + 0.5) * TAU / 5.0;
+                center + vec2(a.cos(), a.sin()) * inner
+            };
+            painter.add(egui::Shape::convex_polygon(
+                (0..5).map(|i| inner_at(i as f32)).collect(),
+                color,
+                Stroke::NONE,
+            ));
+            for i in 0..5 {
+                painter.add(egui::Shape::convex_polygon(
+                    vec![
+                        inner_at(i as f32 - 1.0),
+                        outer_at(i as f32),
+                        inner_at(i as f32),
+                    ],
+                    color,
+                    Stroke::NONE,
+                ));
             }
-            painter.add(egui::Shape::convex_polygon(pts, color, Stroke::NONE));
         }
         NavIcon::Coin => {
             painter.circle_stroke(center, r * 0.85, stroke);

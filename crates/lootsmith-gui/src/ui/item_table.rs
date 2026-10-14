@@ -49,6 +49,16 @@ pub enum RowHit {
     Mark(usize, i32),
 }
 
+/// The next `PLAYER_MARKS` value when the mark control is clicked:
+/// Standard (1) → Favorite (2) → Trash (0) → Standard (1).
+pub fn next_mark(current: i32) -> i32 {
+    match current {
+        1 => 2,
+        2 => 0,
+        _ => 1,
+    }
+}
+
 /// Draws the list; returns what was clicked this frame.
 pub fn item_table(
     ui: &mut Ui,
@@ -127,49 +137,49 @@ pub fn item_table(
                     crate::ui::widgets::num_font(15.0),
                     text,
                 );
-                // Mark: a trash can and a star, each its own click target. Trash is
-                // `PLAYER_MARKS` 0, Standard 1 (both dim), Favourite 2 (gold star).
-                let trash_c = pos2(rect.left() + x_mark + 8.0, cy);
-                let star_c = pos2(rect.left() + x_mark + 34.0, cy);
-                let trash_col = if r.mark == 0 { p.dng } else { p.dim };
-                let star_col = if r.mark == 2 { p.gold } else { p.dim };
-                crate::ui::pixel::nav_icon(
-                    ui.painter(),
-                    trash_c,
-                    crate::ui::pixel::NavIcon::Trash,
-                    trash_col,
-                    1.0,
-                    ppp,
-                );
-                crate::ui::pixel::nav_icon(
-                    ui.painter(),
-                    star_c,
-                    crate::ui::pixel::NavIcon::Star,
-                    star_col,
-                    1.0,
-                    ppp,
-                );
-                let trash_resp = ui.interact(
-                    egui::Rect::from_center_size(trash_c, vec2(22.0, 24.0)),
-                    egui::Id::new(("item-trash", i)),
+                // Mark: one cycling control. Standard shows a dim dot, Favourite a
+                // gold star, Trash a `dng` can; each click advances the mark.
+                let mark_c = pos2(rect.left() + x_mark + 22.0, cy);
+                match r.mark {
+                    2 => crate::ui::pixel::nav_icon(
+                        ui.painter(),
+                        mark_c,
+                        crate::ui::pixel::NavIcon::Star,
+                        p.gold,
+                        1.0,
+                        ppp,
+                    ),
+                    0 => crate::ui::pixel::nav_icon(
+                        ui.painter(),
+                        mark_c,
+                        crate::ui::pixel::NavIcon::Trash,
+                        p.dng,
+                        1.0,
+                        ppp,
+                    ),
+                    _ => {
+                        ui.painter().circle_filled(
+                            crate::ui::pixel::snap_pos(mark_c, ppp),
+                            3.0,
+                            p.dim,
+                        );
+                    }
+                }
+                let mark_resp = ui.interact(
+                    egui::Rect::from_center_size(mark_c, vec2(30.0, 24.0)),
+                    egui::Id::new(("item-mark", i)),
                     Sense::click(),
                 );
-                let star_resp = ui.interact(
-                    egui::Rect::from_center_size(star_c, vec2(22.0, 24.0)),
-                    egui::Id::new(("item-favourite", i)),
-                    Sense::click(),
-                );
-                trash_resp.widget_info(|| {
-                    WidgetInfo::labeled(WidgetType::Button, true, format!("trash {}", r.name))
-                });
-                star_resp.widget_info(|| {
-                    WidgetInfo::labeled(WidgetType::Button, true, format!("favourite {}", r.name))
+                mark_resp.widget_info(|| {
+                    WidgetInfo::labeled(
+                        WidgetType::Button,
+                        true,
+                        format!("mark {} ({})", r.name, player_mark_name(r.mark)),
+                    )
                 });
                 let mut row_hit = None;
-                if trash_resp.clicked() {
-                    row_hit = Some(RowHit::Mark(i, if r.mark == 0 { 1 } else { 0 }));
-                } else if star_resp.clicked() {
-                    row_hit = Some(RowHit::Mark(i, if r.mark == 2 { 1 } else { 2 }));
+                if mark_resp.clicked() {
+                    row_hit = Some(RowHit::Mark(i, next_mark(r.mark)));
                 }
                 if !sel {
                     crate::ui::pixel::trail_divider(
