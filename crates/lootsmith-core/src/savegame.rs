@@ -481,6 +481,65 @@ impl SaveGame {
     pub fn playthroughs_completed(&self) -> Option<i32> {
         self.get_i32(7)
     }
+
+    /// Number of completed one-off level challenges — the Digistruct Peak OP
+    /// level (field 40, `OneOffLevelChallengeCompletion`).
+    pub fn overpower_level(&self) -> i32 {
+        self.message.count(40) as i32
+    }
+
+    /// Set the OP level to `n` (0-10). Lowering drops trailing completions
+    /// exactly; raising duplicates the last entry's bytes so the shape stays a
+    /// valid `OneOffLevelChallengeData` (a `{PackageId: 0, ContentId: 0}`
+    /// skeleton is used when the save has no completions yet). Returns false if
+    /// `n` is out of range. Fields other than 40 keep their exact bytes.
+    pub fn set_overpower_level(&mut self, n: i32) -> bool {
+        if !(0..=10).contains(&n) {
+            return false;
+        }
+        let target = n as usize;
+        let indices: Vec<usize> = self
+            .message
+            .fields
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| f.number == 40)
+            .map(|(i, _)| i)
+            .collect();
+        let current = indices.len();
+        if current == target {
+            return true;
+        }
+        if current > target {
+            let drop: std::collections::HashSet<usize> =
+                indices[target..].iter().copied().collect();
+            let mut i = 0usize;
+            self.message.fields.retain(|_| {
+                let keep = !drop.contains(&i);
+                i += 1;
+                keep
+            });
+            return true;
+        }
+        let template = indices
+            .last()
+            .and_then(|&i| self.message.fields[i].as_bytes().map(<[u8]>::to_vec))
+            .unwrap_or_else(|| {
+                let mut inner = Message::default();
+                inner.push(Field::varint(1, 0));
+                inner.push(Field::varint(2, 0));
+                inner.to_bytes()
+            });
+        let insert_at = indices
+            .last()
+            .map(|&i| i + 1)
+            .unwrap_or(self.message.fields.len());
+        let extra: Vec<Field> = (current..target)
+            .map(|_| Field::bytes(40, &template))
+            .collect();
+        self.message.fields.splice(insert_at..insert_at, extra);
+        true
+    }
     pub fn save_game_id(&self) -> Option<i32> {
         self.get_i32(20)
     }

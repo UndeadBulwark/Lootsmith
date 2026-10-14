@@ -310,9 +310,20 @@ impl LootsmithApp {
                 egui::pos2(body.right() - details_w, body.top()),
                 body.max,
             );
-            let detail = focus.map(|(vi, ti, ni)| {
+            let mut detail = focus.map(|(vi, ti, ni)| {
                 board::detail_for(&views[vi], ti, ni, available, enforce, action_ready)
             });
+            // Nothing hovered: summarise the build rather than showing a bare hint.
+            if detail.is_none() {
+                detail = Some(board::build_summary(
+                    &class.name,
+                    &class.class_name,
+                    self.form.level,
+                    &views,
+                    spent,
+                    available,
+                ));
+            }
             ui.scope_builder(egui::UiBuilder::new().max_rect(details_rect), |ui| {
                 ui.set_clip_rect(details_rect);
                 board::draw_detail(

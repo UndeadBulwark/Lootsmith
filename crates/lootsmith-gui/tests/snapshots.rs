@@ -150,3 +150,35 @@ fn smoke_backpack_light_3x() {
     h.run();
     h.snapshot("smoke_backpack_light_3x");
 }
+
+/// The collapsed sidebar rail (100%, dark): crest, icon column and the centred
+/// between-group dividers at narrow width.
+#[test]
+fn smoke_sidebar_rail() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
+    let save = synthetic_at("rail");
+    let mut h = harness_with(&save, Some(FAKE_DUMPS));
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
+    h.state_mut().set_sidebar_collapsed(true);
+    h.run();
+    h.snapshot("smoke_sidebar_rail");
+}
+
+/// A wide Skills render: the right column is visible and shows the build summary
+/// while nothing is hovered.
+#[test]
+fn smoke_skills_wide() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
+    let save = synthetic_at("skills-wide");
+    let mut h = common::harness_sized(&save, Some(FAKE_DUMPS), Vec2::new(1720.0, 940.0));
+    h.state_mut().set_theme(lootsmith_gui::app::Theme::Dark);
+    h.state_mut().set_tab(lootsmith_gui::app::Tab::Skills);
+    h.run();
+    h.snapshot("smoke_skills_wide");
+}

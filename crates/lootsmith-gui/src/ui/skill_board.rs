@@ -391,6 +391,38 @@ pub struct Detail {
     pub why: Option<Deny>,
 }
 
+/// A build overview for the details pane: shown when no skill is hovered, so the
+/// column carries the class, the points spent per tree, and the totals instead
+/// of sitting blank.
+pub fn build_summary(
+    name: &str,
+    class_name: &str,
+    level: i32,
+    trees: &[TreeView<'_>],
+    spent: i32,
+    available: i32,
+) -> Detail {
+    let mut lines = Vec::with_capacity(trees.len() + 2);
+    for view in trees {
+        let pts: i32 = view
+            .model
+            .tiers
+            .iter()
+            .flat_map(|t| &t.nodes)
+            .map(|n| n.grade.max(0))
+            .sum();
+        lines.push(format!("{}   {pts}", view.name));
+    }
+    lines.push(String::new());
+    lines.push(format!("Spent {spent}   Available {available}"));
+    Detail {
+        title: name.to_string(),
+        rank: format!("Level {level}   {}", class_name.to_uppercase()),
+        lines,
+        why: None,
+    }
+}
+
 /// Paint the details pane (right column). `detail` is the hovered/focused
 /// skill, or `None` for a hint. All text goes through the num-font job, so
 /// digits ("Rank 3/5", "+6%", "5 Shots or 6") obey the digit gate.

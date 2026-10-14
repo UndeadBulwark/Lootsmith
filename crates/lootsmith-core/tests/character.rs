@@ -39,3 +39,33 @@ fn character_name_and_customizations_round_trip() {
         "GD_DefaultCustoms_MainGame.Soldier.Skin_Default"
     );
 }
+
+#[test]
+fn overpower_level_round_trips_and_only_touches_field_40() {
+    let mut sg = synthetic();
+    assert_eq!(sg.overpower_level(), 0, "synthetic save starts with no OP");
+
+    // Grow past the empty list: the zeroed `OneOffLevelChallengeData` skeleton.
+    assert!(sg.set_overpower_level(4));
+    assert_eq!(sg.overpower_level(), 4);
+
+    let bytes = container::serialize(&sg.to_bytes(), Platform::PC).expect("serialize");
+    let reopened = container::unpack(&bytes, Platform::PC).expect("reopen");
+    assert!(reopened.crc32_valid() && reopened.proto_stable() && reopened.huffman_stable());
+    let sg2 = reopened.save_game().expect("reparse");
+    assert_eq!(sg2.overpower_level(), 4);
+    assert_eq!(sg2.playthroughs_completed(), sg.playthroughs_completed());
+    assert_eq!(sg2.character_name(), sg.character_name());
+    assert_eq!(sg2.general_skill_points(), sg.general_skill_points());
+
+    // Shrink is exact, and 0 clears every completion.
+    assert!(sg.set_overpower_level(2));
+    assert_eq!(sg.overpower_level(), 2);
+    assert!(sg.set_overpower_level(0));
+    assert_eq!(sg.overpower_level(), 0);
+
+    // Out of range is refused and leaves the list untouched.
+    assert!(!sg.set_overpower_level(11));
+    assert!(!sg.set_overpower_level(-1));
+    assert_eq!(sg.overpower_level(), 0);
+}

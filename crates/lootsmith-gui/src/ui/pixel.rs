@@ -398,6 +398,27 @@ pub fn plank_bar(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette, hor
     }
 }
 
+/// A clean plank: solid wood with only the gold rule along the far edge, no
+/// mid-span grooves. Used by the top bar, where `plank_bar`'s 26 px spacing put
+/// a line dead-centre through the menu text (a "strikethrough").
+pub fn plank_rule(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette, horizontal: bool) {
+    let r = snap_rect(rect, ppp);
+    painter.rect_filled(r, 0.0, p.wd);
+    if horizontal {
+        painter.rect_filled(
+            Rect::from_min_max(pos2(r.left(), r.bottom() - 4.0), r.right_bottom()),
+            0.0,
+            p.gold,
+        );
+    } else {
+        painter.rect_filled(
+            Rect::from_min_max(pos2(r.right() - 4.0, r.top()), r.right_bottom()),
+            0.0,
+            p.gold,
+        );
+    }
+}
+
 /// A 45° hatch: `tex` lines 2 px wide on a 7 px period (the mockup's
 /// `repeating-linear-gradient(45deg, tex 0 2px, transparent 2px 7px)`).
 pub fn hatch(painter: &egui::Painter, rect: Rect, ppp: f32, p: &Palette) {

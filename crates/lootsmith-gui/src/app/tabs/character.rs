@@ -4,6 +4,19 @@ use crate::app::*;
 use crate::theme;
 use eframe::egui;
 
+/// A segmented pill: `Primary` when selected, `Normal` otherwise. Card-safe in
+/// both themes — `toggle_chip`'s unselected text is the toolbar's light `onw`,
+/// which all but vanishes on the light card.
+fn seg_pill(ui: &mut egui::Ui, label: &str, selected: bool, width: f32) -> bool {
+    let (r, _) = ui.allocate_exact_size(egui::vec2(width, 20.0), egui::Sense::click());
+    let kind = if selected {
+        crate::ui::widgets::ButtonKind::Primary
+    } else {
+        crate::ui::widgets::ButtonKind::Normal
+    };
+    crate::ui::widgets::button(ui, r, label, kind).clicked()
+}
+
 impl LootsmithApp {
     pub fn change_class(&mut self, player_class: &str) {
         if self.save_game.is_none() {
@@ -73,18 +86,21 @@ impl LootsmithApp {
     pub fn overpower_level(&self) -> i32 {
         self.save_game
             .as_ref()
-            .map(|s| s.message.count(40) as i32)
+            .map(|s| s.overpower_level())
             .unwrap_or(0)
     }
 
-    /// Clear all completed one-off level challenges (resets OP level to 0).
-    pub fn reset_overpower(&mut self) {
+    /// Set the OP level (0-10).
+    pub fn set_overpower(&mut self, level: i32) -> bool {
         let Some(save_game) = self.save_game.as_mut() else {
-            return;
+            return false;
         };
-        save_game.message.remove_all(40);
+        if !save_game.set_overpower_level(level) {
+            return false;
+        }
         self.dirty = true;
-        self.status = "overpower levels reset".into();
+        self.status = format!("overpower level set to {level}");
+        true
     }
 
     pub(crate) fn ui_character(&mut self, ui: &mut egui::Ui) {
@@ -94,7 +110,7 @@ impl LootsmithApp {
         let usage = lootsmith_core::usage_for_player_class(&self.read_info.player_class);
         let mut changed = false;
         let mut change_class: Option<String> = None;
-        let mut reset_op = false;
+        let mut set_op: Option<i32> = None;
         card(ui, 620.0, |ui| {
             theme::section(ui, "Character");
             egui::Grid::new("character")
@@ -127,23 +143,7 @@ impl LootsmithApp {
                                     }
                                 }
                             });
-                        if self.overpower_level() > 0
-                            && ui
-                                .button("Reset OP")
-                                .on_hover_text("Clear all Digistruct Peak overpower completions")
-                                .clicked()
-                        {
-                            reset_op = true;
-                        }
                     });
-                    ui.end_row();
-                    ui.label("Overpower level");
-                    let op = self.overpower_level();
-                    if op > 0 {
-                        crate::ui::widgets::label_num(ui, op.to_string(), p.fg, 15.0);
-                    } else {
-                        ui.label("—");
-                    }
                     ui.end_row();
                     ui.label("Level");
                     changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
@@ -212,11 +212,16 @@ impl LootsmithApp {
                 .num_columns(2)
                 .spacing([16.0, 6.0])
                 .show(ui, |ui| {
-                    ui.label("Playthroughs");
-                    changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
-                        ui.add(egui::DragValue::new(&mut self.form.playthroughs))
-                    })
-                    .changed();
+                    ui.label("Playthrough");
+                    ui.horizontal(|ui| {
+                        for (value, label) in [(0, "None"), (1, "NVHM"), (2, "TVHM"), (3, "UVHM")] {
+                            let selected = self.form.playthroughs == value;
+                            if seg_pill(ui, label, selected, 52.0) && !selected {
+                                self.form.playthroughs = value;
+                                changed = true;
+                            }
+                        }
+                    });
                     ui.end_row();
                     ui.label("Total play time (s)");
                     changed |= crate::ui::widgets::num_scope(ui, 15.0, |ui| {
@@ -235,6 +240,21 @@ impl LootsmithApp {
                     .changed();
                     ui.end_row();
                 });
+            ui.add_space(8.0);
+            ui.label("Overpower level");
+            let op = self.overpower_level();
+            ui.horizontal(|ui| {
+                for level in 0..=10 {
+                    let selected = level == op;
+                    if seg_pill(ui, &level.to_string(), selected, 26.0) && !selected {
+                        set_op = Some(level);
+                    }
+                }
+            });
+            theme::faint(
+                ui,
+                "OP levels are earned in-game (Digistruct Peak); picking a higher one adds a completion.",
+            );
         });
         if changed {
             self.dirty = true;
@@ -249,8 +269,8 @@ impl LootsmithApp {
         if let Some(class) = change_class {
             self.change_class(&class);
         }
-        if reset_op {
-            self.reset_overpower();
+        if let Some(level) = set_op {
+            self.set_overpower(level);
         }
     }
 }

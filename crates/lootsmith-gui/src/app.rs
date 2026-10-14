@@ -2560,7 +2560,7 @@ impl LootsmithApp {
             .show(ui, |ui| {
                 let bar = ui.max_rect();
                 self.shell.top = bar;
-                crate::ui::pixel::plank_bar(ui.painter(), bar, ppp, p, true);
+                crate::ui::pixel::plank_rule(ui.painter(), bar, ppp, p, true);
                 let row = bar.shrink2(egui::vec2(14.0, 0.0));
                 ui.scope_builder(egui::UiBuilder::new().max_rect(row), |ui| {
                     crate::ui::widgets::wood_style(ui, p);
@@ -2808,13 +2808,16 @@ impl LootsmithApp {
                                             r.right_center(),
                                         );
                                     } else {
-                                        // Collapsed rail: a short centred divider still
-                                        // marks each section boundary.
+                                        // Collapsed rail: a short divider centred on the
+                                        // icon column. A 19 px span is exactly three 3 px
+                                        // dashes ending on a dash, so the dash/gap pattern
+                                        // is symmetric about `cx`; a 24 px span would end
+                                        // on a gap and read ~2 px to the left.
                                         let cx = r.center().x;
                                         crate::ui::widgets::trail_divider(
                                             ui,
-                                            egui::pos2(cx - 12.0, r.center().y),
-                                            egui::pos2(cx + 12.0, r.center().y),
+                                            egui::pos2(cx - 9.5, r.center().y),
+                                            egui::pos2(cx + 9.5, r.center().y),
                                         );
                                     }
                                 }
