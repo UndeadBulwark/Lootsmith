@@ -64,7 +64,7 @@ anything not verified · `Bundle: <path>`.
 - [x] Homestead shell: plank top bar, grouped sidebar (counts, logo), status plank; Auto/1x–4x scale
 - [x] `theme::Palette` + WCAG contrast gate; drawn pixel-art widget set (`ui/pixel.rs`, `ui/widgets.rs`)
 - [x] Tabs: Character, Currency, Ammo & SDUs, World, Skills, Fast Travel, Vehicles,
-      Missions, Backpack (n), Bank (n), Raw, About
+      Missions, Backpack (n), Bank (n), Raw, Profile, Import, About
 - [x] `ui/item_table.rs` list + item workbench (parts union, editable stat blocks)
 - [x] Save discovery, `BL2(…)` item codes, `profile.bin` editing, new/import, platform Save As
 - [x] **M3 complete** — Backpack/Bank match the mockup; side-by-side review sheets done

@@ -6,7 +6,7 @@ mod common;
 use egui_kittest::kittest::Queryable;
 use lootsmith_gui::app::{LootsmithApp, Tab};
 
-const SCREENS: [Tab; 12] = [
+const SCREENS: [Tab; 14] = [
     Tab::Character,
     Tab::Currency,
     Tab::Ammo,
@@ -19,6 +19,8 @@ const SCREENS: [Tab; 12] = [
     Tab::Bank,
     Tab::Raw,
     Tab::About,
+    Tab::Profile,
+    Tab::Import,
 ];
 
 fn save_path() -> String {
@@ -46,6 +48,8 @@ fn sidebar_label(state: &LootsmithApp, tab: Tab) -> String {
             (Tab::Missions, "Missions"),
             (Tab::Raw, "Raw"),
             (Tab::About, "About"),
+            (Tab::Profile, "Profile"),
+            (Tab::Import, "Import"),
         ]
         .iter()
         .find(|(t, _)| *t == other)

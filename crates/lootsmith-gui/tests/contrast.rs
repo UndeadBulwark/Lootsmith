@@ -31,6 +31,8 @@ const ACCEPTED_FAILURES: [[usize; 2]; SCREENS.len()] = [
     [0, 0],   // Bank
     [0, 0],   // Raw
     [0, 0],   // About
+    [0, 0],   // Profile
+    [0, 0],   // Import
 ];
 
 struct Failure {

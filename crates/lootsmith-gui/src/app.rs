@@ -131,6 +131,8 @@ pub enum Tab {
     Bank,
     Raw,
     About,
+    Profile,
+    Import,
 }
 
 #[derive(Clone)]
@@ -294,6 +296,8 @@ fn tab_key(tab: Tab) -> &'static str {
         Tab::Bank => "bank",
         Tab::Raw => "raw",
         Tab::About => "about",
+        Tab::Profile => "profile",
+        Tab::Import => "import",
     }
 }
 
@@ -311,6 +315,8 @@ fn tab_from_key(key: &str) -> Option<Tab> {
         "bank" => Some(Tab::Bank),
         "raw" => Some(Tab::Raw),
         "about" => Some(Tab::About),
+        "profile" => Some(Tab::Profile),
+        "import" => Some(Tab::Import),
         _ => None,
     }
 }
@@ -336,8 +342,6 @@ enum Modal {
     #[default]
     None,
     NewSave,
-    Import,
-    Profile,
 }
 
 /// Editable values for the `profile.bin` window.
@@ -372,7 +376,7 @@ enum ItemAction {
 }
 
 /// The tab list, in order.
-const TABS: [(Tab, &str); 12] = [
+const TABS: [(Tab, &str); 14] = [
     (Tab::Character, "Character"),
     (Tab::Currency, "Currency"),
     (Tab::Ammo, "Ammo & SDUs"),
@@ -385,6 +389,8 @@ const TABS: [(Tab, &str); 12] = [
     (Tab::Bank, "Bank"),
     (Tab::Raw, "Raw"),
     (Tab::About, "About"),
+    (Tab::Profile, "Profile"),
+    (Tab::Import, "Import"),
 ];
 
 /// Sidebar groups: label -> tabs (spec §2.2 grouped sidebar).
@@ -392,8 +398,8 @@ const NAV_GROUPS: [(&str, &[Tab]); 5] = [
     ("Character", &[Tab::Character, Tab::Skills, Tab::Currency]),
     ("Inventory", &[Tab::Backpack, Tab::Bank, Tab::Ammo]),
     ("Progress", &[Tab::Missions, Tab::Travel, Tab::World]),
-    ("Account", &[Tab::Vehicles]),
-    ("Tools", &[Tab::Raw, Tab::About]),
+    ("Account", &[Tab::Vehicles, Tab::Profile]),
+    ("Tools", &[Tab::Raw, Tab::Import, Tab::About]),
 ];
 
 /// The drawn sidebar glyph for a tab.
@@ -412,6 +418,8 @@ fn nav_icon_for(tab: Tab) -> crate::ui::pixel::NavIcon {
         Tab::Vehicles => I::Wheel,
         Tab::Raw => I::Braces,
         Tab::About => I::Info,
+        Tab::Profile => I::Badge,
+        Tab::Import => I::Import,
     }
 }
 
@@ -2010,15 +2018,6 @@ impl LootsmithApp {
 
     // ---- profile.bin (golden keys, badass, customizations) ----
 
-    /// Open the profile window, suggesting a profile.bin next to the save.
-    pub fn open_profile_modal(&mut self) {
-        self.modal = Modal::Profile;
-        if self.profile_path.trim().is_empty() {
-            self.profile_path = self.suggested_profile().unwrap_or_default();
-        }
-        self.load_profile();
-    }
-
     /// The `profile.bin` next to the open save, else any we can find.
     pub(crate) fn suggested_profile(&self) -> Option<String> {
         if !self.path.trim().is_empty() {
@@ -2391,13 +2390,8 @@ impl LootsmithApp {
             Action::SaveAs => self.browse_save_as(),
             Action::Reload => self.load(),
             Action::New => self.modal = Modal::NewSave,
-            Action::Import => {
-                self.modal = Modal::Import;
-                if self.import_path.trim().is_empty() {
-                    self.import_path = self.path.clone();
-                }
-            }
-            Action::Profile => self.open_profile_modal(),
+            Action::Import => self.open_import_page(),
+            Action::Profile => self.open_profile_page(),
             Action::PickData => self.browse_dumps_dir(),
             Action::ToggleTheme => {
                 self.theme = match self.theme {
@@ -2870,44 +2864,6 @@ impl LootsmithApp {
                                         self.tab = *tab;
                                     }
                                 }
-                                if *group == "Account" {
-                                    let (rect, _) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), 24.0),
-                                        egui::Sense::click(),
-                                    );
-                                    if crate::ui::widgets::nav_row(
-                                        ui,
-                                        rect,
-                                        crate::ui::pixel::NavIcon::Badge,
-                                        "Profile",
-                                        false,
-                                        None,
-                                        reveal,
-                                    )
-                                    .clicked()
-                                    {
-                                        action = Some(Action::Profile);
-                                    }
-                                }
-                                if *group == "Tools" {
-                                    let (rect, _) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), 24.0),
-                                        egui::Sense::click(),
-                                    );
-                                    if crate::ui::widgets::nav_row(
-                                        ui,
-                                        rect,
-                                        crate::ui::pixel::NavIcon::Import,
-                                        "Import",
-                                        false,
-                                        None,
-                                        reveal,
-                                    )
-                                    .clicked()
-                                    {
-                                        action = Some(Action::Import);
-                                    }
-                                }
                                 ui.add_space(2.0 * reveal);
                             }
                         });
@@ -2963,6 +2919,8 @@ impl LootsmithApp {
                         Tab::Bank => self.ui_container(ui, true),
                         Tab::Raw => self.ui_raw(ui),
                         Tab::About => tabs::about::ui_about(ui),
+                        Tab::Profile => self.ui_profile(ui),
+                        Tab::Import => self.ui_import(ui),
                     }
                 });
             });
@@ -3253,167 +3211,6 @@ impl LootsmithApp {
                 } else {
                     self.new_clone_save();
                 }
-            }
-        }
-
-        if self.modal == Modal::Profile {
-            let mut path = self.profile_path.clone();
-            let mut form = self.profile_form.clone();
-            let mut open = true;
-            // 1 = load from disk, 2 = save to disk
-            let mut act: Option<u8> = None;
-            egui::Window::new("Profile")
-                .collapsible(false)
-                .resizable(true)
-                .open(&mut open)
-                .default_width(470.0)
-                .show(ui.ctx(), |ui| {
-                    ui.label(
-                        "Edits profile.bin (shared account data): golden keys, badass rank & \
-                         tokens, stat bonuses, customization unlocks.",
-                    );
-                    ui.add_space(6.0);
-                    ui.horizontal(|ui| {
-                        ui.label("File");
-                        ui.add_sized([360.0, 24.0], egui::TextEdit::singleline(&mut path));
-                    });
-                    ui.add_space(6.0);
-                    if !form.loaded {
-                        theme::muted(ui, "Profile not loaded yet — set the path and click Load.");
-                    }
-                    egui::Grid::new("profile_grid")
-                        .num_columns(2)
-                        .spacing([16.0, 6.0])
-                        .show(ui, |ui| {
-                            ui.label("Golden keys");
-                            ui.add(egui::DragValue::new(&mut form.golden_keys).range(0..=100_000));
-                            ui.end_row();
-                            ui.label("Badass rank");
-                            ui.add(
-                                egui::DragValue::new(&mut form.badass_rank)
-                                    .range(0..=2_000_000_000),
-                            );
-                            ui.end_row();
-                            ui.label("Badass tokens");
-                            ui.add(egui::DragValue::new(&mut form.badass_tokens).range(0..=500));
-                            ui.end_row();
-                            ui.label("Unlock all customizations");
-                            ui.checkbox(&mut form.unlocked, "");
-                            ui.end_row();
-                        });
-                    ui.add_space(6.0);
-                    theme::section(ui, "Badass bonus stats");
-                    egui::Grid::new("profile_stats")
-                        .num_columns(2)
-                        .striped(true)
-                        .spacing([12.0, 4.0])
-                        .show(ui, |ui| {
-                            for (i, (name, value)) in
-                                STAT_NAMES.iter().zip(form.stats.iter_mut()).enumerate()
-                            {
-                                ui.label(format!("{i}: {name}"));
-                                ui.add(
-                                    egui::DragValue::new(value)
-                                        .range(0.0..=9_975_792.3)
-                                        .speed(1.0),
-                                );
-                                ui.end_row();
-                            }
-                        });
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| {
-                        if ui
-                            .button("Load")
-                            .on_hover_text("Re-read profile.bin from disk")
-                            .clicked()
-                        {
-                            act = Some(1);
-                        }
-                        if ui
-                            .button("Save profile")
-                            .on_hover_text("Write profile.bin (with a .bak backup)")
-                            .clicked()
-                        {
-                            act = Some(2);
-                        }
-                    });
-                });
-            if !open {
-                self.modal = Modal::None;
-            }
-            self.profile_path = path;
-            if let Some(one) = act {
-                if one == 1 {
-                    self.profile_form = form;
-                    self.load_profile();
-                } else {
-                    self.profile_form = form;
-                    self.save_profile();
-                }
-            }
-        }
-
-        if self.modal == Modal::Import {
-            let mut path = self.import_path.clone();
-            let mut sel = self.import_sel;
-            let mut open = true;
-            let mut do_import = false;
-            let mut cancel = false;
-            egui::Window::new("Import sections")
-                .collapsible(false)
-                .resizable(false)
-                .open(&mut open)
-                .default_width(460.0)
-                .show(ui.ctx(), |ui| {
-                    ui.label("Copy sections from another save into the open save.");
-                    ui.add_space(6.0);
-                    ui.horizontal(|ui| {
-                        ui.label("Save");
-                        ui.add_sized([360.0, 24.0], egui::TextEdit::singleline(&mut path));
-                    });
-                    ui.add_space(8.0);
-                    egui::Grid::new("import_sel")
-                        .num_columns(2)
-                        .spacing([16.0, 4.0])
-                        .show(ui, |ui| {
-                            for (flag, label) in [
-                                (&mut sel.skills, "Skills (SkillData)"),
-                                (&mut sel.missions, "Missions (playthroughs, statuses)"),
-                                (&mut sel.challenges, "Challenges"),
-                                (&mut sel.travel, "Fast travel stations"),
-                                (&mut sel.vehicles, "Vehicle customizations"),
-                                (&mut sel.dlc, "DLC expansion data"),
-                                (&mut sel.bank_slots, "Bank slots (contents)"),
-                            ] {
-                                ui.checkbox(flag, "");
-                                ui.label(label);
-                                ui.end_row();
-                            }
-                        });
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| {
-                        if ui
-                            .button("Import")
-                            .on_hover_text("Replace the selected sections in the open save")
-                            .clicked()
-                        {
-                            do_import = true;
-                        }
-                        if ui.button("Cancel").clicked() {
-                            cancel = true;
-                        }
-                    });
-                });
-            if !open {
-                self.modal = Modal::None;
-            }
-            if cancel {
-                self.modal = Modal::None;
-            }
-            if do_import {
-                self.import_path = path;
-                self.import_sel = sel;
-                self.do_import();
             }
         }
     }

@@ -146,7 +146,7 @@ pub fn render_tab_at(
 }
 
 /// Every tab, in the order the shell will show them.
-pub const SCREENS: [Tab; 12] = [
+pub const SCREENS: [Tab; 14] = [
     Tab::Character,
     Tab::Currency,
     Tab::Ammo,
@@ -159,6 +159,8 @@ pub const SCREENS: [Tab; 12] = [
     Tab::Bank,
     Tab::Raw,
     Tab::About,
+    Tab::Profile,
+    Tab::Import,
 ];
 
 /// The design's hard rules (spec §2.1), scanned from a frame's shapes: no

@@ -45,6 +45,8 @@ fn loads_the_synthetic_save_and_switches_tabs() {
         ("Bank (1)", Tab::Bank),
         ("Raw", Tab::Raw),
         ("About", Tab::About),
+        ("Profile", Tab::Profile),
+        ("Import", Tab::Import),
     ] {
         h.get_by_label(label).click();
         h.run();

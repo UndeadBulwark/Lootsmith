@@ -35,8 +35,9 @@ a facade crate.
 - **Skills:** every vault hunter's tree matches the in-game layout, with the real
   per-skill columns, the action-skill banner, and tier gating.
 - **Everything else:** Character, Currency, Ammo & SDUs, World, Fast
-  Travel, Vehicles, Missions, Backpack, Bank, Raw, About, plus `profile.bin`
-  (golden keys, badass rank/tokens, bonuses).
+  Travel, Vehicles, Missions, Backpack, Bank, Raw, Profile, Import, About.
+- **Profile & Import** are full pages: edit `profile.bin` (golden keys, badass
+  rank/tokens, bonuses) or copy sections from another save.
 - **Save discovery:** native, Steam/Proton, and Wine prefixes.
 - **Platform conversion:** PC, Xbox 360, PS3, PS Vita, Shield, Switch.
 - **Game data:** bundled community tables (with a user-folder override) so names

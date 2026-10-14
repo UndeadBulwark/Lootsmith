@@ -7,7 +7,14 @@ use egui_kittest::kittest::Queryable;
 use lootsmith_gui::app::{LootsmithApp, ScaleMode};
 
 fn open_palette() -> egui_kittest::Harness<'static, LootsmithApp> {
-    let save = std::env::temp_dir().join("lootsmith-palette.sav");
+    // Unique path per call: the three tests in this file run in parallel and
+    // would otherwise race on a shared fixture file (partial writes -> parse
+    // failures).
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static N: AtomicU32 = AtomicU32::new(0);
+    let n = N.fetch_add(1, Ordering::Relaxed);
+    let save =
+        std::env::temp_dir().join(format!("lootsmith-palette-{}-{n}.sav", std::process::id()));
     lootsmith_core::fixture::write_synthetic_save(&save).expect("write synthetic save");
     let mut h = common::harness_isolated(&save.display().to_string());
     h.run();
