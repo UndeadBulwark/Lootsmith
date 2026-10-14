@@ -22,22 +22,33 @@ fn main() {
         .and_then(|s| s.split_once(['x', 'X']))
         .and_then(|(w, h)| Some(Vec2::new(w.parse().ok()?, h.parse().ok()?)))
         .unwrap_or(Vec2::new(1280.0, 880.0));
-    let save = args.get(2).cloned().unwrap_or_else(|| {
-        let personal = format!(
-            "{}/../../tests/fixtures/pc_Save0001.sav",
-            env!("CARGO_MANIFEST_DIR")
-        );
-        if std::path::Path::new(&personal).exists() {
-            personal
-        } else {
-            // No user save available: render the synthetic fixture instead.
-            let path = std::path::Path::new(&out_dir).join("synthetic-save.sav");
-            match lootsmith_core::fixture::write_synthetic_save(&path) {
-                Ok(_) => path.display().to_string(),
-                Err(_) => personal,
+    let save = match args.get(2) {
+        Some(p) => {
+            // Fail loudly rather than rendering the "open a save" empty state
+            // (which looks like a real screenshot).
+            if !std::path::Path::new(p).exists() {
+                eprintln!("error: save not found: {p}");
+                std::process::exit(2);
+            }
+            p.clone()
+        }
+        None => {
+            let personal = format!(
+                "{}/../../tests/fixtures/pc_Save0001.sav",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            if std::path::Path::new(&personal).exists() {
+                personal
+            } else {
+                // No user save available: render the synthetic fixture instead.
+                let path = std::path::Path::new(&out_dir).join("synthetic-save.sav");
+                match lootsmith_core::fixture::write_synthetic_save(&path) {
+                    Ok(_) => path.display().to_string(),
+                    Err(_) => personal,
+                }
             }
         }
-    });
+    };
     let dumps = args.get(3).cloned().or_else(|| {
         std::env::var("LOOTSMITH_ASSET_LIBRARY").ok().or_else(|| {
             Some(format!(

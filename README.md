@@ -55,12 +55,12 @@ Two screens in both themes — every page is in the
 
 <table>
   <tr>
-    <td align="center"><a href="docs/screenshots/backpack-selected-light.png"><img src="docs/screenshots/backpack-selected-light.png" width="420" alt="Backpack &amp; workbench, light"></a><br><sub><b>Backpack &amp; workbench</b> — light</sub></td>
-    <td align="center"><a href="docs/screenshots/backpack-selected-dark.png"><img src="docs/screenshots/backpack-selected-dark.png" width="420" alt="Backpack &amp; workbench, dark"></a><br><sub><b>Backpack &amp; workbench</b> — dark</sub></td>
+    <td align="center"><a href="gallery/light/backpack-selected.png"><img src="gallery/light/backpack-selected.png" width="420" alt="Backpack &amp; workbench, light"></a><br><sub><b>Backpack &amp; workbench</b> — light</sub></td>
+    <td align="center"><a href="gallery/dark/backpack-selected.png"><img src="gallery/dark/backpack-selected.png" width="420" alt="Backpack &amp; workbench, dark"></a><br><sub><b>Backpack &amp; workbench</b> — dark</sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="docs/screenshots/skills-light.png"><img src="docs/screenshots/skills-light.png" width="420" alt="Skills, light"></a><br><sub><b>Skills</b> — light</sub></td>
-    <td align="center"><a href="docs/screenshots/skills-dark.png"><img src="docs/screenshots/skills-dark.png" width="420" alt="Skills, dark"></a><br><sub><b>Skills</b> — dark</sub></td>
+    <td align="center"><a href="gallery/light/skills.png"><img src="gallery/light/skills.png" width="420" alt="Skills, light"></a><br><sub><b>Skills</b> — light</sub></td>
+    <td align="center"><a href="gallery/dark/skills.png"><img src="gallery/dark/skills.png" width="420" alt="Skills, dark"></a><br><sub><b>Skills</b> — dark</sub></td>
   </tr>
 </table>
 

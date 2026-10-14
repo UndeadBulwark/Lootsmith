@@ -1,103 +1,322 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lootsmith — screenshot gallery</title>
+<title>Lootsmith gallery</title>
+<meta name="description" content="Screenshots of Lootsmith, a Linux native Borderlands 2 save editor written in Rust.">
+<link rel="icon" href="brand/lootsmith.png">
+<script>try{var t=localStorage.getItem("ls-theme");if(t==="dark")document.documentElement.dataset.theme="dark"}catch(e){}</script>
 <style>
-  @font-face {
-    font-family: "Pixelify Sans";
-    src: url("fonts/PixelifySans.ttf") format("truetype");
-    font-display: swap;
-  }
-  @font-face {
-    font-family: "VT323";
-    src: url("fonts/VT323.ttf") format("truetype");
-    font-display: swap;
-  }
-  :root {
-    --bg: #cdbb92;
-    --pan: #e8ddbf;
-    --fg: #3a2616;
-    --dim: #523d25;
-    --gold: #5e3e06;
-    --wd: #8a5a32;
-    --brd: #8a6a44;
-    --acc: #a8470f;
-    --on: #f6ebcf;
-    --tex: #c4b186;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    background-color: var(--bg);
-    background-image:
-      repeating-conic-gradient(var(--tex) 0% 25%, transparent 0% 50%);
-    background-size: 4px 4px;
-    color: var(--fg);
-    font-family: "Pixelify Sans", system-ui, sans-serif;
-    display: grid;
-    place-items: center;
-    padding: 6vmin;
-    image-rendering: pixelated;
-  }
-  .card {
-    background: var(--pan);
-    border: 4px solid var(--wd);
-    outline: 2px dashed var(--brd);
-    outline-offset: -10px;
-    border-radius: 2px;
-    padding: 2.4rem 2.6rem 2.2rem;
-    max-width: 30rem;
-    width: 100%;
-    text-align: center;
-    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
-                       calc(100% - 14px) 100%, 0 100%, 0 14px);
-  }
-  .crest { width: min(240px, 62%); height: auto; image-rendering: pixelated; }
-  .ribbon {
-    display: inline-block;
-    margin: 1.4rem 0 0.2rem;
-    background: var(--acc);
-    color: var(--on);
-    font-size: 1.5rem;
-    letter-spacing: 0.04em;
-    padding: 0.35rem 1.4rem;
-    clip-path: polygon(0.6rem 0, 100% 0, calc(100% - 0.6rem) 50%,
-                       100% 100%, 0.6rem 100%, 0 50%);
-  }
-  p { line-height: 1.5; margin: 0.9rem 0 0; }
-  .lead { color: var(--dim); }
-  .rule {
-    border: 0;
-    border-top: 2px dashed var(--brd);
-    margin: 1.4rem 0 1.1rem;
-  }
-  a {
-    color: var(--gold);
-    text-decoration: none;
-    border-bottom: 2px solid var(--gold);
-    font-family: "VT323", monospace;
-    font-size: 1.15rem;
-  }
-  a:hover { color: var(--acc); border-color: var(--acc); }
-  footer { margin-top: 1.1rem; color: var(--dim); font-size: 0.78rem; }
+@font-face{font-family:"Pixelify Sans";src:url("brand/fonts/PixelifySans.ttf") format("truetype");font-weight:400 700;font-display:swap}
+@font-face{font-family:"VT323";src:url("brand/fonts/VT323.ttf") format("truetype");font-display:swap}
+
+:root{
+  --bg:#CDBB92;--pan:#E8DDBF;--fg:#3A2616;--dim:#523D25;--acc:#A8470F;--on:#F6EBCF;
+  --gold:#5E3E06;--wd:#8A5A32;--wd2:#7A4E2B;--onw:#F6EBCF;--rib:#A8470F;--onr:#F6EBCF;
+  --brd:#8A6A44;--wdb:#8A5A32;--dng:#9E2B14;
+  --dither:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='4' height='4' fill='%23C4B186'/><rect x='4' y='4' width='4' height='4' fill='%23C4B186'/></svg>");
+}
+:root[data-theme="dark"]{
+  --bg:#14100C;--pan:#1E1812;--fg:#FFC98A;--dim:#C29862;--acc:#FFB866;--on:#14100C;
+  --gold:#E3B04B;--wd:#5A3A20;--wd2:#4A2F1A;--onw:#FFD9A8;--rib:#D9A25A;--onr:#14100C;
+  --brd:#8C6A40;--wdb:#96714A;--dng:#FF8A70;
+  --dither:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='4' height='4' fill='%231A150F'/><rect x='4' y='4' width='4' height='4' fill='%231A150F'/></svg>");
+}
+
+*{box-sizing:border-box;margin:0}
+html{scroll-padding-top:76px;color-scheme:light}
+html[data-theme="dark"]{color-scheme:dark}
+body{background:var(--bg) var(--dither);image-rendering:pixelated;color:var(--fg);
+  font:17px/1.5 "Pixelify Sans",ui-monospace,monospace;min-height:100vh}
+img,button,a,p,h1,h2,h3,span{image-rendering:auto}
+.num{font-family:"VT323",ui-monospace,monospace;font-size:1.25em;line-height:1}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1480px;margin:0 auto;padding:0 20px}
+section{margin-top:40px}
+
+/* Stepped corner panel: outer layer is the border, inner layer is the fill */
+.panel,.panel>.in{--n:4px;clip-path:polygon(var(--n) 0,calc(100% - var(--n)) 0,calc(100% - var(--n)) var(--n),100% var(--n),100% calc(100% - var(--n)),calc(100% - var(--n)) calc(100% - var(--n)),calc(100% - var(--n)) 100%,var(--n) 100%,var(--n) calc(100% - var(--n)),0 calc(100% - var(--n)),0 var(--n),var(--n) var(--n))}
+.panel{background:var(--wdb);padding:4px}
+.panel>.in{background:var(--pan);position:relative;padding:20px}
+.panel>.in::before{content:"";position:absolute;inset:7px;border:2px dashed var(--brd);pointer-events:none}
+.panel>.in>*{position:relative}
+
+/* Ribbon with swallow tail ends */
+.rib{display:inline-block;background:var(--rib);color:var(--onr);padding:5px 30px;font-weight:700;
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 50%,100% 100%,0 100%,10px 50%)}
+h1.rib{font-size:34px;line-height:1.2}
+h2.rib{font-size:21px}
+.label{color:var(--gold);font-size:14px;font-weight:700}
+.trail{border-top:3px dotted var(--brd);margin:16px 0}
+
+/* Plank bar */
+.plank{position:sticky;top:0;z-index:5;border-bottom:4px solid var(--gold);color:var(--onw);
+  background:repeating-linear-gradient(180deg,var(--wd) 0 24px,var(--wd2) 24px 26px)}
+.plank .wrap{display:flex;align-items:center;gap:14px;min-height:56px}
+.rivet{width:8px;height:8px;background:var(--gold);flex:none}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;text-decoration:none}
+.brand img{width:32px;height:32px;image-rendering:pixelated}
+.plank nav{display:flex;gap:18px;margin-left:12px}
+.plank nav a{text-decoration:none;padding:4px 2px;border-bottom:2px solid transparent}
+.plank nav a:hover{border-color:var(--gold)}
+.sp{flex:1}
+.plank :focus-visible{outline-color:var(--onw)}
+
+/* Controls: square 2px borders, hover changes the border, focus adds an outline */
+.btn,.seg button,.chip{background:var(--pan);color:var(--fg);border:2px solid var(--wdb);border-radius:0;
+  padding:5px 14px;min-height:36px;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn:hover,.seg button:hover,.chip:hover{border-color:var(--gold)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn.pri,.seg button[aria-pressed="true"],.chip[aria-pressed="true"]{background:var(--acc);color:var(--on);border-color:var(--acc)}
+.btn.pri:hover,.seg button[aria-pressed="true"]:hover,.chip[aria-pressed="true"]:hover{border-color:var(--gold)}
+.seg{display:inline-flex}
+.seg button+button{margin-left:-2px}
+.seg button{padding:4px 12px;min-height:32px}
+.plank .seg button{background:transparent;color:var(--onw);border-color:var(--gold)}
+.plank .seg button[aria-pressed="true"]{background:var(--acc);color:var(--on);border-color:var(--acc)}
+
+/* Hero */
+.hero{margin-top:28px}
+.hero>.in{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:center;padding:32px}
+.hero img{width:128px;height:128px;image-rendering:pixelated;display:block}
+.hero p.lead{margin:18px 0 20px;max-width:62ch;font-size:19px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{border:2px solid var(--brd);padding:2px 12px;color:var(--dim);font-size:15px}
+
+/* Gallery */
+.head{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between;margin-bottom:20px}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr;list-style:none;padding:0}
+.card{display:block;width:100%;height:100%;padding:0;border:0;background:none;text-align:left}
+.card .panel{height:100%;display:block}
+.card .in{height:100%;display:flex;flex-direction:column;gap:6px;padding:18px}
+.card:hover .panel,.fig:hover .panel{background:var(--gold)}
+.card:focus-visible{outline-offset:4px}
+.shot{display:block;width:100%;height:auto;border:2px solid var(--wdb);background:var(--bg);margin-bottom:8px}
+.card h3{font-size:20px;line-height:1.25}
+.card p{color:var(--dim);font-size:16px}
+.empty{color:var(--dim);padding:20px 0}
+
+/* Light and dark */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.cmp[data-mode="light"] .fig:nth-child(2),.cmp[data-mode="dark"] .fig:nth-child(1){display:none}
+.cmp[data-mode="light"],.cmp[data-mode="dark"]{grid-template-columns:1fr}
+.fig{display:block;width:100%;padding:0;border:0;background:none;text-align:left}
+.fig .in{padding:16px}
+.fig .shot{margin:0 0 10px}
+.note{color:var(--dim);max-width:70ch;margin-top:12px}
+
+/* Viewer */
+.lb{position:fixed;inset:0;z-index:20;overflow:auto;background:var(--bg) var(--dither);padding:16px}
+.lb[hidden]{display:none}
+.lb .panel{max-width:1360px;margin:0 auto}
+.lb .bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.lb h2{font-size:22px}
+.lb .desc{color:var(--dim);margin:8px 0 14px;max-width:80ch}
+.lb .shot{margin:0;width:auto;max-width:100%;margin-inline:auto}
+
+footer{margin:48px 0 40px}
+footer p{color:var(--dim);font-size:15px;max-width:90ch}
+footer p+p{margin-top:8px}
+
+@media(min-width:620px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:980px){.grid{grid-template-columns:repeat(3,1fr)}.hero img{width:256px;height:256px}}
+@media(min-width:1360px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:760px){
+  .plank nav{display:none}
+  .hero>.in{grid-template-columns:1fr;justify-items:start;padding:24px 20px}
+  .cmp{grid-template-columns:1fr}
+  h1.rib{font-size:28px}
+}
+@media(max-width:520px){.brand span{display:none}.plank .btn{padding:4px 10px}}
 </style>
 </head>
 <body>
-  <main class="card">
-    <img class="crest" src="lootsmith.png" alt="Lootsmith crest">
-    <h1 class="ribbon">Screenshot gallery</h1>
-    <p class="lead">
-      Every page of <strong>Lootsmith</strong> — a Linux-native, Rust
-      save editor for Borderlands&nbsp;2 — in both the light and dark themes.
-    </p>
-    <hr class="rule">
-    <p>A full, styled gallery is on the way.</p>
-    <p><a href="https://github.com/UndeadBulwark/Lootsmith">github.com/UndeadBulwark/Lootsmith</a></p>
-    <footer>
-      Unofficial fan project · not affiliated with Gearbox Software or 2K.
-    </footer>
-  </main>
+
+<header class="plank">
+  <div class="wrap">
+    <span class="rivet"></span>
+    <a class="brand" href="#top"><img src="brand/lootsmith.png" alt=""><span>Lootsmith</span></a>
+    <nav aria-label="Page sections"><a href="#gallery">Gallery</a><a href="#compare">Light and dark</a></nav>
+    <span class="sp"></span>
+    <div class="seg" role="group" aria-label="Page theme">
+      <button type="button" data-theme-set="light" aria-pressed="true">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+    <a class="btn pri" href="https://github.com/UndeadBulwark/Lootsmith">GitHub</a>
+  </div>
+  <span class="rivet" style="display:none"></span>
+</header>
+
+<main class="wrap" id="top">
+
+  <section class="hero" style="margin-top:28px">
+    <div class="panel"><div class="in">
+      <img src="brand/lootsmith.png" alt="Lootsmith crest: a treasure map, hammer and chest">
+      <div>
+        <h1 class="rib">Lootsmith</h1>
+        <p class="lead">A Linux native save editor for Borderlands 2, written in Rust with egui. Edit items, skills, currency and progression. Browse every page of the app below.</p>
+        <div class="row">
+          <a class="btn pri" href="https://github.com/UndeadBulwark/Lootsmith">View on GitHub</a>
+          <a class="btn" href="https://github.com/UndeadBulwark/Lootsmith/releases">Releases</a>
+          <span class="tag">Version <span class="num">0.4.1</span></span>
+          <span class="tag">Zlib licence</span>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section id="gallery">
+    <div class="head">
+      <h2 class="rib">Every page</h2>
+      <div class="filters" id="filters" role="group" aria-label="Filter by section"></div>
+    </div>
+    <ul class="grid" id="grid"></ul>
+    <noscript><p class="empty">The gallery needs JavaScript. Screenshots are also in the project README on GitHub.</p></noscript>
+    <p class="note" id="count" aria-live="polite"></p>
+  </section>
+
+  <section id="compare">
+    <div class="head">
+      <h2 class="rib">Light and dark</h2>
+      <div class="seg" role="group" aria-label="Comparison view" id="cmpmode">
+        <button type="button" data-mode="both" aria-pressed="true">Side by side</button>
+        <button type="button" data-mode="light" aria-pressed="false">Light</button>
+        <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <div class="panel"><div class="in">
+      <p>Light is the default theme. Dark is its own palette with warm black and amber, not an inverted copy. Shown on the Backpack design mockups.</p>
+      <div class="cmp" id="cmp" data-mode="both"></div>
+    </div></div>
+  </section>
+
+  <footer>
+    <div class="trail"></div>
+    <p>Lootsmith is an unofficial fan project. It is licensed under Zlib and ships no Gearbox art. It is a Rust port based on Gibbed's Borderlands 2 Save Editor by Rick Gibbed (zlib).</p>
+    <p>Fonts are Pixelify Sans and VT323, used under the SIL Open Font License 1.1. Made with the assistance of AI and primarily for personal use. Use at your own risk.</p>
+  </footer>
+</main>
+
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-labelledby="lbt">
+  <div class="panel"><div class="in">
+    <div class="bar">
+      <h2 class="rib" id="lbt"></h2>
+      <div class="row">
+        <div class="seg" id="lbtheme" role="group" aria-label="Screenshot theme" hidden>
+          <button type="button" data-v="light" aria-pressed="true">Light</button>
+          <button type="button" data-v="dark" aria-pressed="false">Dark</button>
+        </div>
+        <button class="btn" id="prev" type="button">Previous</button>
+        <button class="btn" id="next" type="button">Next</button>
+        <a class="btn" id="full" href="#" target="_blank" rel="noopener">Open PNG</a>
+        <button class="btn pri" id="close" type="button">Close</button>
+      </div>
+    </div>
+    <p class="desc" id="lbd"></p>
+    <img class="shot" id="lbimg" alt="" width="1280" height="880">
+  </div></div>
+</div>
+
+<script>
+/* [file, title, group, description]. Add a line here to add a screenshot. */
+const SHOTS=[
+ ["character","Character","Character","Name, class, level and XP, head and skin, playthrough, OP levels 0 to 10, playtime and bank slots."],
+ ["skills","Skills","Character","Three skill trees in the real in game layout, with tier gating, the action skill banner, Copy build and Respec."],
+ ["currency","Currency","Character","All eight currency pools with their current values: money, eridium, seraph, torgue and more."],
+ ["backpack","Backpack","Inventory","The item list with rarity diamond, name, type, level and the mark column."],
+ ["backpack-selected","Item workbench","Inventory","Balance constrained part pickers, editable stats and the BL2(…) code box with Copy and Apply code."],
+ ["bank","Bank","Inventory","The bank container with an item moved in, and To backpack moves."],
+ ["ammo","Ammo & SDUs","Inventory","Per weapon type ammo pools, current and max, plus the storage deck upgrades."],
+ ["missions","Missions","Progress","Every mission per playthrough with its status, plus complete and reset actions."],
+ ["travel","Fast Travel","Progress","Every fast travel station grouped by DLC, with visited state and unlock all per group."],
+ ["world","World","Progress","Region progress: game stages, world discovery, lockouts and fully explored areas."],
+ ["vehicles","Vehicles","Account","Vehicle customization unlocks for each vehicle family."],
+ ["profile","Profile","Account","Edits profile.bin: golden keys, badass rank and tokens, 14 bonus stats and customization unlocks."],
+ ["import","Import","Tools","Copy skills, missions, challenges, travel, vehicles, DLC or bank from another save."],
+ ["raw","Raw","Tools","The raw protobuf field editor with every top level field and a search box."],
+ ["about","About","Tools","Credits, licensing and provenance."],
+ ["sidebar-collapsed","Collapsed sidebar","Interface","The 64 px icon rail, shown here on the Skills page."]
+];
+/* Ids listed here get a Light/Dark switch in the viewer. The current dark/ captures are empty
+   "open a save" screens, so add an id once its dark shot shows real content. */
+const DARK_READY=new Set(SHOTS.map(s=>s[0]));
+const MOCKS=[
+ ["reference/mockup-backpack-light.png","Light","Backpack design mockup, light theme."],
+ ["reference/mockup-backpack-dark.png","Dark","Backpack design mockup, dark theme."]
+];
+
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const nums=s=>esc(s).replace(/\d+/g,m=>'<span class="num">'+m+'</span>');
+
+/* Page theme */
+function setTheme(t){
+  document.documentElement.dataset.theme=t;
+  document.querySelectorAll("[data-theme-set]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.themeSet===t));
+  try{localStorage.setItem("ls-theme",t)}catch(e){}
+}
+document.querySelectorAll("[data-theme-set]").forEach(b=>b.onclick=()=>setTheme(b.dataset.themeSet));
+setTheme(document.documentElement.dataset.theme);
+
+/* Gallery */
+const groups=["All",...new Set(SHOTS.map(s=>s[2]))];
+let active="All";
+function render(){
+  $("#filters").innerHTML=groups.map(g=>{
+    const n=g==="All"?SHOTS.length:SHOTS.filter(s=>s[2]===g).length;
+    return `<button class="chip" type="button" data-g="${g}" aria-pressed="${g===active}">${g} <span class="num">${n}</span></button>`;
+  }).join("");
+  const list=SHOTS.map((s,i)=>[s,i]).filter(([s])=>active==="All"||s[2]===active);
+  $("#grid").innerHTML=list.map(([s,i])=>`<li><button class="card" type="button" data-i="${i}"><span class="panel"><span class="in">
+    <img class="shot" src="light/${s[0]}.png" width="1280" height="880" loading="lazy" alt="${esc(s[1])} page of Lootsmith">
+    <span class="label">${s[2]}</span><h3>${nums(s[1])}</h3><p>${nums(s[3])}</p></span></span></button></li>`).join("");
+  $("#count").innerHTML=`Showing <span class="num">${list.length}</span> of <span class="num">${SHOTS.length}</span> screenshots.`;
+}
+$("#filters").onclick=e=>{const b=e.target.closest("[data-g]");if(b){active=b.dataset.g;render();$(`[data-g="${active}"]`).focus()}};
+$("#grid").onclick=e=>{const b=e.target.closest("[data-i]");if(b)openShot(+b.dataset.i,b)};
+render();
+
+/* Light and dark section */
+$("#cmp").innerHTML=MOCKS.map((m,i)=>`<button class="fig" type="button" data-m="${i}"><span class="panel"><span class="in">
+  <img class="shot" src="${m[0]}" width="2560" height="1600" loading="lazy" alt="${esc(m[2])}"><span class="label">${m[1]}</span></span></span></button>`).join("");
+$("#cmp").onclick=e=>{const b=e.target.closest("[data-m]");if(b){const m=MOCKS[+b.dataset.m];openView({src:m[0],title:"Backpack mockup, "+m[1].toLowerCase(),desc:m[2],i:-1},b)}};
+$("#cmpmode").onclick=e=>{const b=e.target.closest("[data-mode]");if(!b)return;
+  $("#cmp").dataset.mode=b.dataset.mode;
+  document.querySelectorAll("#cmpmode button").forEach(x=>x.setAttribute("aria-pressed",x===b))};
+
+/* Viewer */
+let cur=null,opener=null,variant="light";
+function openShot(i,from){const s=SHOTS[i];openView({id:s[0],title:s[1],desc:s[3],i},from)}
+function openView(v,from){cur=v;opener=from||opener;variant="light";paint();$("#lb").hidden=false;document.body.style.overflow="hidden";$("#close").focus()}
+function paint(){
+  const v=cur,hasDark=v.id&&DARK_READY.has(v.id);
+  v.src=v.src&&v.i<0?v.src:`${variant}/${v.id}.png`;
+  $("#lbt").innerHTML=nums(v.title);$("#lbd").innerHTML=nums(v.desc);
+  $("#lbimg").src=v.src;$("#lbimg").alt=v.title+" screenshot";$("#full").href=v.src;
+  $("#lbimg").removeAttribute("width");$("#lbimg").removeAttribute("height");
+  $("#lbtheme").hidden=!hasDark;
+  document.querySelectorAll("#lbtheme button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===variant));
+  const nav=v.i>=0;$("#prev").hidden=$("#next").hidden=!nav;
+}
+function step(d){if(cur.i<0)return;const n=(cur.i+d+SHOTS.length)%SHOTS.length;const s=SHOTS[n];variant="light";cur={id:s[0],title:s[1],desc:s[3],i:n};paint()}
+function closeView(){$("#lb").hidden=true;document.body.style.overflow="";if(opener)opener.focus()}
+$("#lbtheme").onclick=e=>{const b=e.target.closest("[data-v]");if(b){variant=b.dataset.v;paint()}};
+$("#prev").onclick=()=>step(-1);$("#next").onclick=()=>step(1);$("#close").onclick=closeView;
+document.addEventListener("keydown",e=>{
+  if($("#lb").hidden)return;
+  if(e.key==="Escape")closeView();
+  else if(e.key==="ArrowLeft")step(-1);
+  else if(e.key==="ArrowRight")step(1);
+  else if(e.key==="Tab"){
+    const f=[...$("#lb").querySelectorAll("button,a")].filter(x=>!x.hidden&&!x.closest("[hidden]"));
+    const a=document.activeElement;
+    if(e.shiftKey&&a===f[0]){e.preventDefault();f[f.length-1].focus()}
+    else if(!e.shiftKey&&a===f[f.length-1]){e.preventDefault();f[0].focus()}
+  }
+});
+</script>
 </body>
 </html>
