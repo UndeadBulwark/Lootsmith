@@ -554,13 +554,23 @@ impl LootsmithApp {
                     .item_serial(edit.container, edit.occurrence)
                     .map(|s| items::encode_code(&s))
                     .unwrap_or_default();
+                // Default the field to the current item's code so it is copyable as
+                // well as editable.
+                if self.item_code.is_empty() {
+                    self.item_code = code.clone();
+                }
+                let field_w = (ui.available_width() - 200.0).max(120.0);
+                let mut apply_code = false;
                 ui.horizontal(|ui| {
-                    ui.add_sized(
-                        [ui.available_width() - 90.0, 24.0],
-                        egui::Label::new(crate::ui::widgets::text_with_nums(&code, p.fg, 15.0)),
+                    crate::ui::widgets::text_field(
+                        ui,
+                        "item_code_field",
+                        &mut self.item_code,
+                        "Paste a BL2(…) code…",
+                        field_w,
                     );
                     let (cr, _) =
-                        ui.allocate_exact_size(egui::vec2(80.0, 26.0), egui::Sense::click());
+                        ui.allocate_exact_size(egui::vec2(76.0, 26.0), egui::Sense::click());
                     if crate::ui::widgets::button(
                         ui,
                         cr,
@@ -569,9 +579,28 @@ impl LootsmithApp {
                     )
                     .clicked()
                     {
-                        ui.ctx().copy_text(code.clone());
+                        ui.ctx().copy_text(self.item_code.clone());
+                    }
+                    let (ar, _) =
+                        ui.allocate_exact_size(egui::vec2(100.0, 26.0), egui::Sense::click());
+                    if crate::ui::widgets::button(
+                        ui,
+                        ar,
+                        "Apply code",
+                        crate::ui::widgets::ButtonKind::Primary,
+                    )
+                    .clicked()
+                    {
+                        apply_code = true;
                     }
                 });
+                if apply_code {
+                    self.apply_code_to_selected();
+                }
+                theme::muted(
+                    ui,
+                    "Copy the current code, or paste a BL2(…) code and Apply to overwrite this item.",
+                );
             });
         });
         self.item_edit = edit_opt;

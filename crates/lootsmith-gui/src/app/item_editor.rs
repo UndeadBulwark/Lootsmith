@@ -609,6 +609,43 @@ impl LootsmithApp {
         true
     }
 
+    /// Replace the selected item with the first `BL2(...)` code in the box.
+    pub fn apply_code_to_selected(&mut self) -> bool {
+        let Some((container, occurrence)) = self.selected else {
+            self.status = "select an item first".into();
+            return false;
+        };
+        let codes = items::decode_codes(&self.item_code);
+        let Some(bytes) = codes.first() else {
+            self.status = "no BL2(...) code found".into();
+            return false;
+        };
+        let configs = self.configs();
+        let Ok(decoded) = items::unpack(bytes, &configs) else {
+            self.status = "invalid BL2(...) code".into();
+            return false;
+        };
+        let Ok(serial) = items::pack(&decoded, &configs) else {
+            self.status = "could not re-pack the code".into();
+            return false;
+        };
+        let Some(save_game) = self.save_game.as_mut() else {
+            return false;
+        };
+        if save_game
+            .replace_serial(container.field_number(), occurrence, &serial)
+            .is_err()
+        {
+            self.status = "failed to apply the code".into();
+            return false;
+        }
+        self.dirty = true;
+        self.item_code.clear();
+        self.refresh_rows();
+        self.status = "item code applied".into();
+        true
+    }
+
     /// Insert every `BL2(...)` code currently in the item-code box.
     pub fn insert_codes(&mut self, bank: bool) {
         let codes = items::decode_codes(&self.item_code);
