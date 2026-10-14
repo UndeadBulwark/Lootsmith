@@ -15,8 +15,8 @@ Status and the roadmap to 1.0 live in [`docs/PLAN.md`](docs/PLAN.md).
   <img src="docs/screenshots/lootsmith.png" width="320" alt="Lootsmith">
 </p>
 
-<sub>Lootsmith runs in a Light theme (default) and a Dark theme; the shots
-below are the light theme.</sub>
+<sub>Lootsmith runs in a Light theme (default) and a Dark theme — both are
+shown below.</sub>
 
 Lootsmith reads, edits, and writes Borderlands 2 save files: items, weapons,
 currency, skills, and progression. It ships as a library (`lootsmith-core`), a CLI
@@ -50,44 +50,23 @@ a facade crate.
 
 ## Screenshots
 
-Every page in the default **Light** theme — click any shot for full size:
+Two screens in both themes — every page is in the
+**[full gallery →](https://undeadbulwark.github.io/Lootsmith/)**.
 
 <table>
   <tr>
-    <td align="center"><a href="docs/screenshots/character-light.png"><img src="docs/screenshots/character-light.png" width="420" alt="Character"></a><br><sub><b>Character</b></sub></td>
-    <td align="center"><a href="docs/screenshots/skills-light.png"><img src="docs/screenshots/skills-light.png" width="420" alt="Skills"></a><br><sub><b>Skills</b></sub></td>
+    <td align="center"><a href="docs/screenshots/backpack-selected-light.png"><img src="docs/screenshots/backpack-selected-light.png" width="420" alt="Backpack &amp; workbench, light"></a><br><sub><b>Backpack &amp; workbench</b> — light</sub></td>
+    <td align="center"><a href="docs/screenshots/backpack-selected-dark.png"><img src="docs/screenshots/backpack-selected-dark.png" width="420" alt="Backpack &amp; workbench, dark"></a><br><sub><b>Backpack &amp; workbench</b> — dark</sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="docs/screenshots/currency-light.png"><img src="docs/screenshots/currency-light.png" width="420" alt="Currency"></a><br><sub><b>Currency</b></sub></td>
-    <td align="center"><a href="docs/screenshots/ammo-light.png"><img src="docs/screenshots/ammo-light.png" width="420" alt="Ammo &amp; SDUs"></a><br><sub><b>Ammo &amp; SDUs</b></sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="docs/screenshots/world-light.png"><img src="docs/screenshots/world-light.png" width="420" alt="World"></a><br><sub><b>World</b></sub></td>
-    <td align="center"><a href="docs/screenshots/travel-light.png"><img src="docs/screenshots/travel-light.png" width="420" alt="Fast Travel"></a><br><sub><b>Fast Travel</b></sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="docs/screenshots/vehicles-light.png"><img src="docs/screenshots/vehicles-light.png" width="420" alt="Vehicles"></a><br><sub><b>Vehicles</b></sub></td>
-    <td align="center"><a href="docs/screenshots/missions-light.png"><img src="docs/screenshots/missions-light.png" width="420" alt="Missions"></a><br><sub><b>Missions</b></sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="docs/screenshots/backpack-selected-light.png"><img src="docs/screenshots/backpack-selected-light.png" width="420" alt="Backpack &amp; workbench"></a><br><sub><b>Backpack &amp; workbench</b></sub></td>
-    <td align="center"><a href="docs/screenshots/bank-light.png"><img src="docs/screenshots/bank-light.png" width="420" alt="Bank"></a><br><sub><b>Bank</b></sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="docs/screenshots/raw-light.png"><img src="docs/screenshots/raw-light.png" width="420" alt="Raw"></a><br><sub><b>Raw</b></sub></td>
-    <td align="center"><a href="docs/screenshots/profile-light.png"><img src="docs/screenshots/profile-light.png" width="420" alt="Profile"></a><br><sub><b>Profile</b></sub></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="docs/screenshots/import-light.png"><img src="docs/screenshots/import-light.png" width="420" alt="Import"></a><br><sub><b>Import</b></sub></td>
-    <td align="center"><a href="docs/screenshots/about-light.png"><img src="docs/screenshots/about-light.png" width="420" alt="About"></a><br><sub><b>About</b></sub></td>
+    <td align="center"><a href="docs/screenshots/skills-light.png"><img src="docs/screenshots/skills-light.png" width="420" alt="Skills, light"></a><br><sub><b>Skills</b> — light</sub></td>
+    <td align="center"><a href="docs/screenshots/skills-dark.png"><img src="docs/screenshots/skills-dark.png" width="420" alt="Skills, dark"></a><br><sub><b>Skills</b> — dark</sub></td>
   </tr>
 </table>
 
-The **collapsed sidebar rail**:
-
-<p align="center">
-  <a href="docs/screenshots/sidebar-collapsed-light.png"><img src="docs/screenshots/sidebar-collapsed-light.png" width="200" alt="Collapsed sidebar rail"></a>
-</p>
+The **[full gallery](https://undeadbulwark.github.io/Lootsmith/)** has all 14
+pages (Character, Skills, Currency, Ammo & SDUs, World, Fast Travel, Vehicles,
+Missions, Backpack, Bank, Raw, Profile, Import, About) in light and dark.
 
 ## Install / build
 

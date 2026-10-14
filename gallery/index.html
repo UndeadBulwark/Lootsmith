@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lootsmith — screenshot gallery</title>
+<style>
+  @font-face {
+    font-family: "Pixelify Sans";
+    src: url("fonts/PixelifySans.ttf") format("truetype");
+    font-display: swap;
+  }
+  @font-face {
+    font-family: "VT323";
+    src: url("fonts/VT323.ttf") format("truetype");
+    font-display: swap;
+  }
+  :root {
+    --bg: #cdbb92;
+    --pan: #e8ddbf;
+    --fg: #3a2616;
+    --dim: #523d25;
+    --gold: #5e3e06;
+    --wd: #8a5a32;
+    --brd: #8a6a44;
+    --acc: #a8470f;
+    --on: #f6ebcf;
+    --tex: #c4b186;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background-color: var(--bg);
+    background-image:
+      repeating-conic-gradient(var(--tex) 0% 25%, transparent 0% 50%);
+    background-size: 4px 4px;
+    color: var(--fg);
+    font-family: "Pixelify Sans", system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    padding: 6vmin;
+    image-rendering: pixelated;
+  }
+  .card {
+    background: var(--pan);
+    border: 4px solid var(--wd);
+    outline: 2px dashed var(--brd);
+    outline-offset: -10px;
+    border-radius: 2px;
+    padding: 2.4rem 2.6rem 2.2rem;
+    max-width: 30rem;
+    width: 100%;
+    text-align: center;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
+                       calc(100% - 14px) 100%, 0 100%, 0 14px);
+  }
+  .crest { width: min(240px, 62%); height: auto; image-rendering: pixelated; }
+  .ribbon {
+    display: inline-block;
+    margin: 1.4rem 0 0.2rem;
+    background: var(--acc);
+    color: var(--on);
+    font-size: 1.5rem;
+    letter-spacing: 0.04em;
+    padding: 0.35rem 1.4rem;
+    clip-path: polygon(0.6rem 0, 100% 0, calc(100% - 0.6rem) 50%,
+                       100% 100%, 0.6rem 100%, 0 50%);
+  }
+  p { line-height: 1.5; margin: 0.9rem 0 0; }
+  .lead { color: var(--dim); }
+  .rule {
+    border: 0;
+    border-top: 2px dashed var(--brd);
+    margin: 1.4rem 0 1.1rem;
+  }
+  a {
+    color: var(--gold);
+    text-decoration: none;
+    border-bottom: 2px solid var(--gold);
+    font-family: "VT323", monospace;
+    font-size: 1.15rem;
+  }
+  a:hover { color: var(--acc); border-color: var(--acc); }
+  footer { margin-top: 1.1rem; color: var(--dim); font-size: 0.78rem; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <img class="crest" src="lootsmith.png" alt="Lootsmith crest">
+    <h1 class="ribbon">Screenshot gallery</h1>
+    <p class="lead">
+      Every page of <strong>Lootsmith</strong> — a Linux-native, Rust
+      save editor for Borderlands&nbsp;2 — in both the light and dark themes.
+    </p>
+    <hr class="rule">
+    <p>A full, styled gallery is on the way.</p>
+    <p><a href="https://github.com/UndeadBulwark/Lootsmith">github.com/UndeadBulwark/Lootsmith</a></p>
+    <footer>
+      Unofficial fan project · not affiliated with Gearbox Software or 2K.
+    </footer>
+  </main>
+</body>
+</html>
