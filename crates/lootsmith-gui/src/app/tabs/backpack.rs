@@ -10,6 +10,7 @@ impl LootsmithApp {
         let ppp = ui.ctx().pixels_per_point();
         let mut item_action: Option<ItemAction> = None;
         let mut clicked: Option<(Container, usize)> = None;
+        let mut mark_hit: Option<(Container, usize, i32)> = None;
         let mut apply = false;
         let mut move_to: Option<Container> = None;
         let mut remove = false;
@@ -96,10 +97,16 @@ impl LootsmithApp {
                 {
                     item_action = Some(ItemAction::NewWeapon);
                 }
-                ui.add_sized(
+                let filter = ui.add_sized(
                     [220.0, 24.0],
-                    egui::TextEdit::singleline(&mut self.filter).hint_text("Filter items…"),
+                    egui::TextEdit::singleline(&mut self.filter)
+                        .id(egui::Id::new("item_filter"))
+                        .hint_text("Filter items…"),
                 );
+                if self.focus_filter {
+                    filter.request_focus();
+                    self.focus_filter = false;
+                }
             });
         });
 
@@ -154,9 +161,17 @@ impl LootsmithApp {
                     .iter()
                     .position(|r| r.container == c && r.occurrence == o)
             });
-            if let Some(i) = crate::ui::item_table::item_table(ui, &p, &items, sel) {
-                let row = &visible[i];
-                clicked = Some((row.container, row.occurrence));
+            if let Some(hit) = crate::ui::item_table::item_table(ui, &p, &items, sel) {
+                match hit {
+                    crate::ui::item_table::RowHit::Select(i) => {
+                        let row = &visible[i];
+                        clicked = Some((row.container, row.occurrence));
+                    }
+                    crate::ui::item_table::RowHit::Mark(i, mark) => {
+                        let row = &visible[i];
+                        mark_hit = Some((row.container, row.occurrence, mark));
+                    }
+                }
             }
         });
         // action row under the list
@@ -486,6 +501,31 @@ impl LootsmithApp {
                             }
                         });
                 });
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    let (tr, _) =
+                        ui.allocate_exact_size(egui::vec2(88.0, 24.0), egui::Sense::click());
+                    let trash_kind = if edit.mark == 0 {
+                        crate::ui::widgets::ButtonKind::Primary
+                    } else {
+                        crate::ui::widgets::ButtonKind::Normal
+                    };
+                    if crate::ui::widgets::button(ui, tr, "Trash", trash_kind).clicked() {
+                        edit.mark = if edit.mark == 0 { 1 } else { 0 };
+                        edit.dirty = true;
+                    }
+                    let (fr, _) =
+                        ui.allocate_exact_size(egui::vec2(100.0, 24.0), egui::Sense::click());
+                    let fav_kind = if edit.mark == 2 {
+                        crate::ui::widgets::ButtonKind::Primary
+                    } else {
+                        crate::ui::widgets::ButtonKind::Normal
+                    };
+                    if crate::ui::widgets::button(ui, fr, "Favourite", fav_kind).clicked() {
+                        edit.mark = if edit.mark == 2 { 1 } else { 2 };
+                        edit.dirty = true;
+                    }
+                });
                 ui.add_space(12.0);
 
                 theme::section(ui, "Parts");
@@ -614,6 +654,9 @@ impl LootsmithApp {
         }
         if let Some((container, occurrence)) = clicked {
             self.select_entry(container, occurrence);
+        }
+        if let Some((container, occurrence, mark)) = mark_hit {
+            self.set_mark_at(container, occurrence, mark);
         }
         if apply {
             self.apply_item();

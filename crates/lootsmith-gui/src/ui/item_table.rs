@@ -6,7 +6,7 @@ use eframe::egui::{
     self, pos2, vec2, Align2, Color32, FontId, Sense, Stroke, StrokeKind, Ui, WidgetInfo,
     WidgetType,
 };
-use lootsmith_core::Rarity;
+use lootsmith_core::{player_mark_name, Rarity};
 
 pub const ROW_H: f32 = 40.0;
 pub const HEADER_H: f32 = 28.0;
@@ -40,16 +40,25 @@ pub struct ItemRow {
     pub rarity: Rarity,
 }
 
-/// Draws the list; returns the index clicked this frame.
+/// A click in the list.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RowHit {
+    /// Select the row.
+    Select(usize),
+    /// Set the row's `PLAYER_MARKS` value (0 = Trash, 1 = Standard, 2 = Favorite).
+    Mark(usize, i32),
+}
+
+/// Draws the list; returns what was clicked this frame.
 pub fn item_table(
     ui: &mut Ui,
     p: &Palette,
     rows: &[ItemRow],
     selected: Option<usize>,
-) -> Option<usize> {
+) -> Option<RowHit> {
     let ppp = ui.ctx().pixels_per_point();
     let w = ui.available_width();
-    let mut clicked = None;
+    let mut hit = None;
 
     let (x_name, x_type, x_lvl, x_mark) = (44.0, w * 0.52, w * 0.74, w * 0.88);
 
@@ -118,21 +127,49 @@ pub fn item_table(
                     crate::ui::widgets::num_font(15.0),
                     text,
                 );
-                // Mark: the mockup shows a diamond for a real favourite and a dim
-                // dot for Standard/Trash (never blank, never a diamond on every row).
-                let mark_c = pos2(rect.left() + x_mark + 6.0, cy);
-                match r.mark {
-                    2 => {
-                        crate::ui::pixel::diamond(ui.painter(), mark_c, 10.0, text, ppp, p);
-                    }
-                    0 | 1 => {
-                        ui.painter().circle_filled(
-                            crate::ui::pixel::snap_pos(mark_c, ppp),
-                            3.0,
-                            p.dim,
-                        );
-                    }
-                    _ => {}
+                // Mark: a trash can and a star, each its own click target. Trash is
+                // `PLAYER_MARKS` 0, Standard 1 (both dim), Favourite 2 (gold star).
+                let trash_c = pos2(rect.left() + x_mark + 8.0, cy);
+                let star_c = pos2(rect.left() + x_mark + 34.0, cy);
+                let trash_col = if r.mark == 0 { p.dng } else { p.dim };
+                let star_col = if r.mark == 2 { p.gold } else { p.dim };
+                crate::ui::pixel::nav_icon(
+                    ui.painter(),
+                    trash_c,
+                    crate::ui::pixel::NavIcon::Trash,
+                    trash_col,
+                    1.0,
+                    ppp,
+                );
+                crate::ui::pixel::nav_icon(
+                    ui.painter(),
+                    star_c,
+                    crate::ui::pixel::NavIcon::Star,
+                    star_col,
+                    1.0,
+                    ppp,
+                );
+                let trash_resp = ui.interact(
+                    egui::Rect::from_center_size(trash_c, vec2(22.0, 24.0)),
+                    egui::Id::new(("item-trash", i)),
+                    Sense::click(),
+                );
+                let star_resp = ui.interact(
+                    egui::Rect::from_center_size(star_c, vec2(22.0, 24.0)),
+                    egui::Id::new(("item-favourite", i)),
+                    Sense::click(),
+                );
+                trash_resp.widget_info(|| {
+                    WidgetInfo::labeled(WidgetType::Button, true, format!("trash {}", r.name))
+                });
+                star_resp.widget_info(|| {
+                    WidgetInfo::labeled(WidgetType::Button, true, format!("favourite {}", r.name))
+                });
+                let mut row_hit = None;
+                if trash_resp.clicked() {
+                    row_hit = Some(RowHit::Mark(i, if r.mark == 0 { 1 } else { 0 }));
+                } else if star_resp.clicked() {
+                    row_hit = Some(RowHit::Mark(i, if r.mark == 2 { 1 } else { 2 }));
                 }
                 if !sel {
                     crate::ui::pixel::trail_divider(
@@ -165,21 +202,25 @@ pub fn item_table(
                         WidgetType::Button,
                         true,
                         format!(
-                            "{} {} id={} level {} {}",
+                            "{} {} id={} level {} {} {}",
                             r.name,
                             r.kind,
                             r.id,
                             r.level,
-                            r.rarity.label()
+                            r.rarity.label(),
+                            player_mark_name(r.mark)
                         ),
                     )
                 });
-                if resp.clicked() {
-                    clicked = Some(i);
+                if row_hit.is_none() && resp.clicked() {
+                    row_hit = Some(RowHit::Select(i));
+                }
+                if row_hit.is_some() {
+                    hit = row_hit;
                 }
             }
         });
-    clicked
+    hit
 }
 
 /// Middle-elide `s` to at most `max_chars` characters, keeping both ends.

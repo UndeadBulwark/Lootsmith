@@ -798,3 +798,44 @@ fn require_fixtures_is_off_by_default_here() {
 /// Kept so the harness type is exercised even when no dumps exist.
 #[allow(dead_code)]
 fn _harness_type_is_used(_: Harness<'static, LootsmithApp>, _: Vec2) {}
+
+#[test]
+fn item_marks_and_copy_paste_cut_delete_round_trip() {
+    if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
+        eprintln!("skipped: no GPU adapter in this environment");
+        return;
+    }
+    let mut h = harness();
+    h.state_mut().set_tab(Tab::Backpack);
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.run();
+
+    // Marks round-trip through the save rows.
+    h.state_mut().set_selected_mark(0);
+    assert_eq!(h.state().selected_mark(), Some(0), "marked trash");
+    h.state_mut().toggle_selected_favorite();
+    assert_eq!(h.state().selected_mark(), Some(2), "marked favourite");
+    h.state_mut().toggle_selected_favorite();
+    assert_eq!(h.state().selected_mark(), Some(1), "back to standard");
+
+    // Copy in the backpack, switch tab, paste into the bank.
+    let backpack = h.state().backpack.len();
+    let bank = h.state().bank.len();
+    h.state_mut().copy_selected_item();
+    h.state_mut().set_tab(Tab::Bank);
+    h.state_mut().paste_item();
+    assert_eq!(h.state().bank.len(), bank + 1, "pasted into the bank");
+    assert_eq!(h.state().backpack.len(), backpack, "backpack untouched");
+
+    // The pasted item is selected; deleting it restores the bank count.
+    h.state_mut().remove_selected();
+    assert_eq!(h.state().bank.len(), bank, "pasted item removed");
+
+    // Cut removes it, paste brings it back.
+    h.state_mut().set_tab(Tab::Backpack);
+    h.state_mut().select_entry(Container::BackpackWeapon, 0);
+    h.state_mut().cut_selected_item();
+    assert_eq!(h.state().backpack.len(), backpack - 1, "cut removed it");
+    h.state_mut().paste_item();
+    assert_eq!(h.state().backpack.len(), backpack, "pasted back");
+}

@@ -68,12 +68,12 @@ fn build(ui: &mut egui::Ui, _: &mut S) {
     item_table(ui, &p, &rows, None);
 }
 
-/// The mockup: only a real **Favorite** (mark 2) draws a diamond; **Standard** (1)
-/// and **Trash** (0) draw a small dim dot. (The `bb6c772` render wrongly drew a
-/// diamond on every row.) Shapes are read from the frame: a diamond is a filled
-/// `Shape::Path` (convex polygon), the dot is a filled `Shape::Circle`.
+/// Every row draws **both** a trash can and a star. The Trash row's can uses
+/// `dng`, the Favourite row's star uses `gold`, and a Standard row stays `dim`.
+/// Shapes are read from the frame: the star is a filled `Shape::Path`, each
+/// trash-can stroke is a `Shape::LineSegment`.
 #[test]
-fn mark_is_a_diamond_only_for_a_favourite() {
+fn mark_icons_show_trash_and_favourite() {
     if std::env::var_os("LOOTSMITH_NO_GPU").is_some() {
         eprintln!("skipped: no GPU adapter in this environment");
         return;
@@ -82,34 +82,66 @@ fn mark_is_a_diamond_only_for_a_favourite() {
         .with_size(Vec2::new(420.0, 220.0))
         .build_ui_state(build, S);
     h.run();
+    let p = theme::DARK;
     let out = h.output();
-    let x_mark = 420.0_f32 * 0.88 + 6.0;
-    let in_mark_col = |x: f32| (x - x_mark).abs() < 20.0;
-    let (mut diamonds, mut dots) = (Vec::new(), Vec::new());
+    let x_mark = 420.0_f32 * 0.88;
+    let in_col = |x: f32| (x - x_mark).abs() < 44.0;
+    let (mut cans, mut dangers, mut golds) = (Vec::new(), Vec::new(), Vec::new());
     for cs in &out.shapes {
         match &cs.shape {
-            eframe::egui::Shape::Path(p) if p.fill.a() > 0 && !p.points.is_empty() => {
-                let cx = p.points.iter().map(|q| q.x).sum::<f32>() / p.points.len() as f32;
-                let cy = p.points.iter().map(|q| q.y).sum::<f32>() / p.points.len() as f32;
-                if in_mark_col(cx) {
-                    diamonds.push(cy);
+            eframe::egui::Shape::Path(sh) if sh.fill == p.gold && !sh.points.is_empty() => {
+                let cx = sh.points.iter().map(|q| q.x).sum::<f32>() / sh.points.len() as f32;
+                let cy = sh.points.iter().map(|q| q.y).sum::<f32>() / sh.points.len() as f32;
+                if in_col(cx) {
+                    golds.push(cy);
                 }
             }
-            eframe::egui::Shape::Circle(c) if c.fill.a() > 0 && in_mark_col(c.center.x) => {
-                dots.push(c.center.y);
+            eframe::egui::Shape::LineSegment { points, stroke }
+                // Only the trash-can strokes use dim/dng; the dotted row dividers
+                // are `brd` and must not be counted.
+                if (stroke.color == p.dim || stroke.color == p.dng)
+                    && in_col((points[0].x + points[1].x) / 2.0) =>
+            {
+                let y = (points[0].y + points[1].y) / 2.0;
+                cans.push(y);
+                if stroke.color == p.dng {
+                    dangers.push(y);
+                }
             }
             _ => {}
         }
     }
-    // Row order top-to-bottom: Standard (dot), Trash (dot), Favorite (diamond).    assert_eq!(diamonds.len(), 1, "exactly one row is a favourite: {diamonds:?}");
-    assert_eq!(dots.len(), 2, "Standard and Trash draw a dot: {dots:?}");
-    let d = diamonds[0];
+    // Cluster by y (rows are ~46 px apart, strokes within a row stay under 20).
+    let clusters = |mut ys: Vec<f32>| {
+        ys.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut out: Vec<f32> = Vec::new();
+        for y in ys {
+            if out.last().is_none_or(|l| (y - l).abs() > 20.0) {
+                out.push(y);
+            }
+        }
+        out
+    };
+    let rows = clusters(cans);
+    assert_eq!(rows.len(), 3, "one trash can per row: {rows:?}");
+    let danger = clusters(dangers);
+    assert_eq!(danger.len(), 1, "only one row's can is `dng`: {danger:?}");
+    let gold = clusters(golds);
+    assert_eq!(gold.len(), 1, "only one row's star is `gold`: {gold:?}");
+    // Rows top-to-bottom: Standard, Trash, Favourite.
     assert!(
-        d > dots[0] && d > dots[1],
-        "the diamond is the last (Favourite) row"
+        (danger[0] - rows[1]).abs() < 20.0,
+        "the Trash row (2nd) draws the dng can"
+    );
+    assert!(
+        (gold[0] - rows[2]).abs() < 20.0,
+        "the Favourite row (3rd) draws the gold star"
+    );
+    assert!(
+        (danger[0] - gold[0]).abs() > 20.0,
+        "the Trash and Favourite rows are different rows"
     );
 }
-
 fn synthetic(tag: &str) -> String {
     let path = std::env::temp_dir().join(format!("lootsmith-list-{tag}.sav"));
     lootsmith_core::fixture::write_synthetic_save(&path).expect("write synthetic save");

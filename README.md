@@ -40,6 +40,11 @@ a facade crate.
   rank/tokens, bonuses) or copy sections from another save.
 - **Save discovery:** native, Steam/Proton, and Wine prefixes.
 - **Platform conversion:** PC, Xbox 360, PS3, PS Vita, Shield, Switch.
+- **Keyboard:** `Ctrl+C` / `Ctrl+V` / `Ctrl+X` copy, paste and cut the selected
+  item, `Ctrl+D` duplicates, `Del` removes; `Ctrl+Shift+C` copies its `BL2(…)`
+  code; `Ctrl+F` focuses the filter, `Ctrl+N` / `Ctrl+Shift+N` add a weapon or
+  item; `Ctrl+S` / `Ctrl+O` / `Ctrl+R` save, open and reload. Items carry
+  clickable **trash** and **favourite** marks.
 - **Game data:** bundled community tables (with a user-folder override) so names
   resolve on a fresh run with no setup.
 

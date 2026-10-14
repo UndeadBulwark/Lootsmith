@@ -57,6 +57,12 @@ pub(crate) enum Cmd {
     NewWeapon,
     NewItem,
     Duplicate,
+    CopyItem,
+    CutItem,
+    PasteItem,
+    DeleteItem,
+    MarkTrash,
+    ToggleFavorite,
     CopyCode,
     SyncLevels,
     SyncEquipped,
@@ -79,6 +85,12 @@ pub(crate) const PALETTE: &[Cmd] = &[
     Cmd::NewWeapon,
     Cmd::NewItem,
     Cmd::Duplicate,
+    Cmd::CopyItem,
+    Cmd::CutItem,
+    Cmd::PasteItem,
+    Cmd::DeleteItem,
+    Cmd::MarkTrash,
+    Cmd::ToggleFavorite,
     Cmd::CopyCode,
     Cmd::SyncLevels,
     Cmd::SyncEquipped,
@@ -105,6 +117,12 @@ impl Cmd {
             Cmd::NewWeapon => "New weapon",
             Cmd::NewItem => "New item",
             Cmd::Duplicate => "Duplicate",
+            Cmd::CopyItem => "Copy item",
+            Cmd::CutItem => "Cut item",
+            Cmd::PasteItem => "Paste item",
+            Cmd::DeleteItem => "Delete item",
+            Cmd::MarkTrash => "Mark as trash",
+            Cmd::ToggleFavorite => "Toggle favourite",
             Cmd::CopyCode => "Copy code",
             Cmd::SyncLevels => "Sync levels",
             Cmd::SyncEquipped => "Sync equipped",
@@ -334,6 +352,13 @@ enum Action {
     Profile,
     PickData,
     ToggleTheme,
+    CopyItem,
+    CutItem,
+    PasteItem,
+    DuplicateItem,
+    DeleteItem,
+    MarkTrash,
+    ToggleFavorite,
 }
 
 /// Which auxiliary window is open.
@@ -534,6 +559,8 @@ pub struct LootsmithApp {
     pub palette_sel: usize,
     /// The "Paste BL2(…)" dialog.
     pub show_paste: bool,
+    /// One-shot: focus the item Filter field on the next Backpack/Bank frame.
+    pub focus_filter: bool,
     /// Test hook: force the workbench scroll offset (None = normal). Not set in
     /// normal use; lets a test jump the part list to a specific position.
     pub inspector_scroll: Option<f32>,
@@ -547,6 +574,8 @@ pub struct LootsmithApp {
     pub save_as: String,
     /// The `BL2(base64)` item-code box used for copy/paste.
     pub item_code: String,
+    /// The packed serial copied with Ctrl+C, pasted with Ctrl+V.
+    pub item_clipboard: Option<Vec<u8>>,
     /// Filter text for the backpack/bank table.
     pub filter: String,
     /// Decoded skill icon textures (lazy).
@@ -656,6 +685,8 @@ impl LootsmithApp {
             status: "Open a save to begin (Browse… or --open).".to_string(),
             save_as: String::new(),
             item_code: String::new(),
+            item_clipboard: None,
+            focus_filter: false,
             filter: String::new(),
             skill_icons: HashMap::new(),
             saves: Vec::new(),
@@ -798,6 +829,12 @@ impl LootsmithApp {
             Cmd::Duplicate => {
                 self.duplicate_selected();
             }
+            Cmd::CopyItem => self.copy_selected_item(),
+            Cmd::CutItem => self.cut_selected_item(),
+            Cmd::PasteItem => self.paste_item(),
+            Cmd::DeleteItem => self.remove_selected(),
+            Cmd::MarkTrash => self.toggle_selected_trash(),
+            Cmd::ToggleFavorite => self.toggle_selected_favorite(),
             Cmd::CopyCode => {
                 self.copy_selected_code(ctx);
             }
@@ -2205,17 +2242,48 @@ impl LootsmithApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
-        let (save_as, save, open, reload, palette) = ctx.input_mut(|input| {
+        // Item-level keys must never fire while the user is typing (Filter, name,
+        // item code, …), or Delete would remove an item mid-edit. When a text
+        // widget has focus we don't consume them, so the widget gets the key.
+        let typing = ctx.egui_wants_keyboard_input();
+        let (
+            save_as,
+            save,
+            open,
+            reload,
+            palette,
+            copy_item,
+            cut_item,
+            paste_item,
+            duplicate,
+            remove,
+            code_copy,
+            code_paste,
+            focus_filter,
+            new_weapon,
+            new_item,
+        ) = ctx.input_mut(|input| {
             use egui::{Key, KeyboardShortcut, Modifiers};
+            let c = |k| KeyboardShortcut::new(Modifiers::CTRL, k);
+            let cs = |k| KeyboardShortcut::new(Modifiers::CTRL | Modifiers::SHIFT, k);
             (
-                input.consume_shortcut(&KeyboardShortcut::new(
-                    Modifiers::CTRL | Modifiers::SHIFT,
-                    Key::S,
-                )),
-                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::S)),
-                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::O)),
-                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::R)),
-                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::K)),
+                input.consume_shortcut(&cs(Key::S)),
+                input.consume_shortcut(&c(Key::S)),
+                input.consume_shortcut(&c(Key::O)),
+                input.consume_shortcut(&c(Key::R)),
+                input.consume_shortcut(&c(Key::K)),
+                !typing && input.consume_shortcut(&c(Key::C)),
+                !typing && input.consume_shortcut(&c(Key::X)),
+                !typing && input.consume_shortcut(&c(Key::V)),
+                !typing && input.consume_shortcut(&c(Key::D)),
+                !typing
+                    && (input.consume_key(Modifiers::NONE, Key::Delete)
+                        || input.consume_key(Modifiers::NONE, Key::Backspace)),
+                !typing && input.consume_shortcut(&cs(Key::C)),
+                !typing && input.consume_shortcut(&cs(Key::V)),
+                !typing && input.consume_shortcut(&c(Key::F)),
+                !typing && input.consume_shortcut(&c(Key::N)),
+                !typing && input.consume_shortcut(&cs(Key::N)),
             )
         });
         if palette {
@@ -2232,6 +2300,43 @@ impl LootsmithApp {
         }
         if reload {
             self.load();
+        }
+        if copy_item {
+            self.copy_selected_item();
+        }
+        if cut_item {
+            self.cut_selected_item();
+        }
+        if paste_item {
+            self.paste_item();
+        }
+        if duplicate {
+            self.duplicate_selected();
+        }
+        if remove {
+            self.remove_selected();
+        }
+        if code_copy {
+            self.copy_selected_code(ctx);
+        }
+        if code_paste {
+            // egui can write the clipboard but not read it, so this opens the
+            // paste box (paste into it with Ctrl+V, then Insert).
+            self.show_paste = true;
+        }
+        if focus_filter {
+            if !matches!(self.tab, Tab::Backpack | Tab::Bank) {
+                self.tab = Tab::Backpack;
+            }
+            self.focus_filter = true;
+        }
+        if new_weapon {
+            let bank = self.is_bank();
+            self.new_item(bank, true);
+        }
+        if new_item {
+            let bank = self.is_bank();
+            self.new_item(bank, false);
         }
     }
 
@@ -2306,8 +2411,53 @@ impl LootsmithApp {
         ui.menu_button("Edit", |ui| {
             // Placeholders until the undo stack lands; shown disabled so the
             // menu matches the real command set.
-            ui.add_enabled(false, egui::Button::new("Undo"));
-            ui.add_enabled(false, egui::Button::new("Redo"));
+            ui.add_enabled(false, egui::Button::new("Undo").shortcut_text("Ctrl+Z"));
+            ui.add_enabled(false, egui::Button::new("Redo").shortcut_text("Ctrl+Y"));
+            ui.separator();
+            if ui
+                .add(egui::Button::new("Cut item").shortcut_text("Ctrl+X"))
+                .clicked()
+            {
+                action = Some(Action::CutItem);
+                ui.close();
+            }
+            if ui
+                .add(egui::Button::new("Copy item").shortcut_text("Ctrl+C"))
+                .clicked()
+            {
+                action = Some(Action::CopyItem);
+                ui.close();
+            }
+            if ui
+                .add(egui::Button::new("Paste item").shortcut_text("Ctrl+V"))
+                .clicked()
+            {
+                action = Some(Action::PasteItem);
+                ui.close();
+            }
+            if ui
+                .add(egui::Button::new("Duplicate item").shortcut_text("Ctrl+D"))
+                .clicked()
+            {
+                action = Some(Action::DuplicateItem);
+                ui.close();
+            }
+            if ui
+                .add(egui::Button::new("Delete item").shortcut_text("Del"))
+                .clicked()
+            {
+                action = Some(Action::DeleteItem);
+                ui.close();
+            }
+            ui.separator();
+            if ui.button("Mark as trash").clicked() {
+                action = Some(Action::MarkTrash);
+                ui.close();
+            }
+            if ui.button("Toggle favourite").clicked() {
+                action = Some(Action::ToggleFavorite);
+                ui.close();
+            }
         });
         ui.menu_button("View", |ui| {
             ui.menu_button("Theme", |ui| {
@@ -2400,6 +2550,13 @@ impl LootsmithApp {
                 };
                 self.theme_applied = false;
             }
+            Action::CopyItem => self.copy_selected_item(),
+            Action::CutItem => self.cut_selected_item(),
+            Action::PasteItem => self.paste_item(),
+            Action::DuplicateItem => self.duplicate_selected(),
+            Action::DeleteItem => self.remove_selected(),
+            Action::MarkTrash => self.toggle_selected_trash(),
+            Action::ToggleFavorite => self.toggle_selected_favorite(),
         }
     }
 

@@ -594,6 +594,131 @@ impl LootsmithApp {
         }
     }
 
+    /// Copy the selected entry's packed serial into the app item clipboard.
+    pub fn copy_selected_item(&mut self) {
+        let Some(serial) = self.selected.and_then(|(c, o)| self.item_serial(c, o)) else {
+            self.status = "select an item to copy".into();
+            return;
+        };
+        self.item_clipboard = Some(serial);
+        self.status = "item copied".into();
+    }
+
+    /// Cut the selected entry (copy, then remove).
+    pub fn cut_selected_item(&mut self) {
+        let Some(serial) = self.selected.and_then(|(c, o)| self.item_serial(c, o)) else {
+            self.status = "select an item to cut".into();
+            return;
+        };
+        self.item_clipboard = Some(serial);
+        self.remove_selected();
+        self.status = "item cut".into();
+    }
+
+    /// Paste the item clipboard as a new entry in the current container, with a
+    /// fresh unique id (so it never collides with the original).
+    pub fn paste_item(&mut self) {
+        let Some(serial) = self.item_clipboard.clone() else {
+            self.status = "nothing to paste".into();
+            return;
+        };
+        let configs = self.configs();
+        let Ok(mut decoded) = items::unpack(&serial, &configs) else {
+            self.status = "paste: cannot decode item".into();
+            return;
+        };
+        decoded.unique_id = items::random_unique_id();
+        let Ok(new_serial) = items::pack(&decoded, &configs) else {
+            self.status = "paste: cannot encode item".into();
+            return;
+        };
+        let container = if self.is_bank() {
+            Container::Bank
+        } else if decoded.is_weapon {
+            Container::BackpackWeapon
+        } else {
+            Container::BackpackItem
+        };
+        let result = match self.save_game.as_mut() {
+            Some(save_game) => save_game.append_entry(container, &new_serial),
+            None => return,
+        };
+        match result {
+            Ok(occurrence) => {
+                self.dirty = true;
+                self.refresh_rows();
+                self.select_entry(container, occurrence);
+                self.status = "item pasted".into();
+            }
+            Err(e) => self.status = format!("paste error: {e}"),
+        }
+    }
+
+    /// Set the `PLAYER_MARKS` value of the selected entry (0 = Trash, 1 =
+    /// Standard, 2 = Favorite).
+    pub fn set_selected_mark(&mut self, mark: i32) {
+        let Some((container, occurrence)) = self.selected else {
+            self.status = "select an item first".into();
+            return;
+        };
+        self.set_mark_at(container, occurrence, mark);
+    }
+
+    /// Set an entry's `PLAYER_MARKS` value and refresh the list + workbench.
+    pub fn set_mark_at(&mut self, container: Container, occurrence: usize, mark: i32) {
+        let result = match self.save_game.as_mut() {
+            Some(save_game) => save_game.set_entry_mark(container, occurrence, mark),
+            None => return,
+        };
+        match result {
+            Ok(()) => {
+                self.dirty = true;
+                self.refresh_rows();
+                if let Some(edit) = self.item_edit.as_mut() {
+                    if edit.container == container && edit.occurrence == occurrence {
+                        edit.mark = mark;
+                        edit.orig_mark = mark;
+                    }
+                }
+                self.status = format!(
+                    "marked {} #{} as {}",
+                    container.label(),
+                    occurrence + 1,
+                    player_mark_name(mark)
+                );
+            }
+            Err(e) => self.status = format!("mark error: {e}"),
+        }
+    }
+
+    /// The `PLAYER_MARKS` value of the selected entry, read from the loaded rows.
+    pub fn selected_mark(&self) -> Option<i32> {
+        let (container, occurrence) = self.selected?;
+        self.backpack
+            .iter()
+            .chain(self.bank.iter())
+            .find(|r| r.container == container && r.occurrence == occurrence)
+            .map(|r| r.mark)
+    }
+
+    /// Toggle the selected item between Trash (0) and Standard (1).
+    pub fn toggle_selected_trash(&mut self) {
+        let Some(current) = self.selected_mark() else {
+            self.status = "select an item first".into();
+            return;
+        };
+        self.set_selected_mark(if current == 0 { 1 } else { 0 });
+    }
+
+    /// Toggle the selected item between Favorite (2) and Standard (1).
+    pub fn toggle_selected_favorite(&mut self) {
+        let Some(current) = self.selected_mark() else {
+            self.status = "select an item first".into();
+            return;
+        };
+        self.set_selected_mark(if current == 2 { 1 } else { 2 });
+    }
+
     /// Encode the selected entry as a `BL2(...)` code and copy it.
     pub fn copy_selected_code(&mut self, ctx: &egui::Context) -> bool {
         let Some((container, occurrence)) = self.selected else {

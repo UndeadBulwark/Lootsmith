@@ -35,6 +35,7 @@ pub enum NavIcon {
     Info,
     Badge,
     Import,
+    Trash,
     Search,
     ChevronLeft,
     ChevronRight,
@@ -221,6 +222,29 @@ pub fn nav_icon(
                 ],
                 stroke,
             ));
+        }
+        NavIcon::Trash => {
+            // Lid, handle, tapered body and a base line.
+            seg(
+                center + vec2(-r * 0.7, -r * 0.45),
+                center + vec2(r * 0.7, -r * 0.45),
+            );
+            seg(
+                center + vec2(-r * 0.25, -r * 0.75),
+                center + vec2(r * 0.25, -r * 0.75),
+            );
+            seg(
+                center + vec2(-r * 0.5, -r * 0.3),
+                center + vec2(-r * 0.35, r * 0.85),
+            );
+            seg(
+                center + vec2(r * 0.5, -r * 0.3),
+                center + vec2(r * 0.35, r * 0.85),
+            );
+            seg(
+                center + vec2(-r * 0.35, r * 0.85),
+                center + vec2(r * 0.35, r * 0.85),
+            );
         }
         NavIcon::Search => {
             painter.circle_stroke(center + vec2(-r * 0.18, -r * 0.18), r * 0.6, stroke);
